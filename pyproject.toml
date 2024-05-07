@@ -1,0 +1,56 @@
+# pyproject.toml
+
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ragnarok"
+version = "0.0.0"
+description = "A package to running RAG models, especially for the TREC 2023 Retrieval Augmented Generation (RAG) track."
+readme = "README.md"
+authors = [
+    { name = "Ronak Pradeep", email = "rpradeep@uwaterloo.ca" },
+]
+license = { file = "LICENSE" }
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["Retrieval-Augmented Generation", "RAG", "OpenAI", "Cohere", "TREC", "LLM"]
+dynamic = ["dependencies"]
+requires-python = ">= 3.10"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+Homepage = "https://github.com/castorini/raganrok"
+
+[tool.bumpver]
+current_version = "0.12.8"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = false
+
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"', 'version = "{version}"'
+]
+"README.md" = [
+    "{version}",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = [
+    "rank_llm",
+    "rank_llm.analysis",
+    "rank_llm.evaluation",
+    "rank_llm.rerank",
+    "rank_llm.retrieve",
+]
+namespaces = false
