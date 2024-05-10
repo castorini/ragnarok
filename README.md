@@ -1,6 +1,6 @@
 # RAGnarok
 
-[![PyPI](https://img.shields.io/pypi/v/rank-llm?color=brightgreen)](https://pypi.org/project/rank-llm/)
+<!-- [![PyPI](https://img.shields.io/pypi/v/rank-llm?color=brightgreen)](https://pypi.org/project/rank-llm/) -->
 <!-- [![Downloads](https://static.pepy.tech/personalized-badge/rank-llm?period=total&units=international_system&left_color=grey&right_color=brightgreen&left_text=downloads)](https://pepy.tech/project/rank-llm) -->
 <!-- [![Downloads](https://static.pepy.tech/personalized-badge/rank-llm?period=week&units=international_system&left_color=grey&right_color=brightgreen&left_text=downloads/week)](https://pepy.tech/project/rank-llm) -->
 <!-- [![Generic badge](https://img.shields.io/badge/arXiv-2309.15088-red.svg)](https://arxiv.org/abs/2309.15088) -->
@@ -33,7 +33,9 @@ pip install -r requirements.txt
 
 ### Run generation test
 ```bash
-python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere-commandr-plus --top_k_candidates=20 --dataset=dl-raggy-topics \
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere-commandr-plus \
+  --top_k_candidates=20 
+  --dataset=dl-raggy-topics \
   --context_size=4096
 ```
 

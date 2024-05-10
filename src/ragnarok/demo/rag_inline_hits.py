@@ -10,9 +10,9 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from ragnarok.data import Request, DataWriter
-from src.ragnarok.generate.vicuna import Vicuna
-from src.ragnarok.generate.cohere import Cohere
-from src.ragnarok.generate.gpt import GPT
+from ragnarok.generate.vicuna import Vicuna
+from ragnarok.generate.cohere import Cohere
+from ragnarok.generate.gpt import GPT
 
 request_dict = {
     "query": {"text": "how long is life cycle of flea", "qid": "264014"},

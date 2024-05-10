@@ -9,18 +9,17 @@ sys.path.append(parent)
 
 import torch
 
-from rank_llm.rerank.rankllm import PromptMode
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.retriever import RetrievalMode
-from rank_llm.retrieve.topics_dict import TOPICS
-from rank_llm.retrieve_and_rerank import retrieve_and_rerank
+from ragnarok.generate.llm import PromptMode
+from ragnarok.retrieve.retriever import RetrievalMethod, RetrievalMode
+from ragnarok.retrieve.topics_dict import TOPICS
+from ragnarok.retrieve_and_generate import retrieve_and_generate
 
 
 def main(args):
     model_path = args.model_path
     use_azure_openai = args.use_azure_openai
     context_size = args.context_size
-    top_k_candidates = args.top_k_candidates
+    topk = args.topk
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
@@ -30,19 +29,14 @@ def main(args):
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
-    num_passes = args.num_passes
-    step_size = args.step_size
-    window_size = args.window_size
-    system_message = args.system_message
 
-    _ = retrieve_and_rerank(
+    _ = retrieve_and_generate(
         model_path,
         dataset,
         retrieval_mode,
         retrieval_method,
-        top_k_candidates,
+        topk,
         context_size,
         device,
         num_gpus,
@@ -51,16 +45,11 @@ def main(args):
         shuffle_candidates,
         print_prompts_responses,
         use_azure_openai=use_azure_openai,
-        variable_passages=variable_passages,
-        num_passes=num_passes,
-        window_size=window_size,
-        step_size=step_size,
-        system_message=system_message,
     )
 
 
 """ sample run:
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 --dataset=dl20  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere_command_r_plus  --topk=20 --dataset=researchy-questions  --retrieval_method=rank_zephyr --prompt_mode=chat_qa  --context_size=8192
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -73,17 +62,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_azure_openai",
         action="store_true",
-        help="If True, use Azure OpenAI. Requires env var to be set: "
+        help="If True, use Azure OpenAI instead of regular OpenAI. Requires env var to be set: "
         "`AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`",
     )
     parser.add_argument(
-        "--context_size", type=int, default=4096, help="context size used for model"
+        "--context_size", type=int, default=8192, help="context size used for model"
     )
     parser.add_argument(
-        "--top_k_candidates",
+        "--topk",
         type=int,
-        default=100,
-        help="the number of top candidates to rerank",
+        default=20,
+        help="the number of top candidates to use for RAG",
     )
     parser.add_argument(
         "--dataset",
@@ -122,36 +111,6 @@ if __name__ == "__main__":
         required=False,
         default=0,
         help="number of in context examples to provide",
-    )
-    parser.add_argument(
-        "--variable_passages",
-        action="store_true",
-        help="whether the model can account for variable number of passages in input",
-    )
-    parser.add_argument(
-        "--num_passes",
-        type=int,
-        required=False,
-        default=1,
-        help="number of passes to run the model",
-    )
-    parser.add_argument(
-        "--window_size",
-        type=int,
-        default=20,
-        help="window size for the sliding window approach",
-    )
-    parser.add_argument(
-        "--step_size",
-        type=int,
-        default=10,
-        help="step size for the sliding window approach",
-    )
-    parser.add_argument(
-        "--system_message",
-        type=str,
-        default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-        help="the system message used in prompts",
     )
     args = parser.parse_args()
     main(args)

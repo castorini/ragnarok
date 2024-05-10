@@ -22,3 +22,11 @@ def get_azure_openai_args() -> Dict[str, str]:
         list(azure_args.values())
     ), "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
     return azure_args
+
+def get_cohere_api_key() -> str:
+    load_dotenv(dotenv_path=f".env.local")
+    return os.getenv("COHERE_API_KEY")
+
+def get_anyscale_api_key() -> str:
+    load_dotenv(dotenv_path=f".env.local")
+    return os.getenv("ANYSCALE_API_KEY")

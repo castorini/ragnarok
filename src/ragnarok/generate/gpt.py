@@ -5,18 +5,18 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import openai
 import tiktoken
 
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from rank_llm.data import Result
+from src.ragnarok.generate.llm import PromptMode, LLM
+from ragnarok.data import Request
+from ragnarok.generate.templates.chat_qa import ChatQATemplate
 
-
-class SafeOpenai(RankLLM):
+class SafeOpenai(LLM):
     def __init__(
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_mode: PromptMode = PromptMode.RAGNAROK,
+        max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
-        window_size: int = 20,
         keys=None,
         key_start_id=None,
         proxy=None,
@@ -33,10 +33,10 @@ class SafeOpenai(RankLLM):
         - context_size (int): The maximum number of tokens that the model can handle in a single request.
         - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
          indicating that this class is designed primarily for listwise ranking tasks following the RANK_GPT methodology.
+        - max_output_tokens (int, optional): Maximum number of tokens that can be generated in a single response. Defaults to 1500.
         - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
         the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
         by default.
-        - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
         - keys (Union[List[str], str], optional): A list of OpenAI API keys or a single OpenAI API key.
         - key_start_id (int, optional): The starting index for the OpenAI API key cycle.
         - proxy (str, optional): The proxy configuration for OpenAI API calls.
@@ -51,18 +51,16 @@ class SafeOpenai(RankLLM):
         - This class supports cycling between multiple OpenAI API keys to distribute quota usage or handle rate limiting.
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
-        super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
+        super().__init__(model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples)
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide OpenAI Keys.")
-        if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
+        if prompt_mode not in [PromptMode.CHATQA]:
             raise ValueError(
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT} or {PromptMode.LRL}."
             )
 
-        self._window_size = window_size
-        self._output_token_estimate = None
         self._keys = keys
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
@@ -125,12 +123,12 @@ class SafeOpenai(RankLLM):
     def run_llm(
         self,
         prompt: Union[str, List[Dict[str, str]]],
-        current_window_size: Optional[int] = None,
+        logging: bool = False,
     ) -> Tuple[str, int]:
         model_key = "engine" if self.use_azure_ai else "model"
         response = self._call_completion(
             messages=prompt,
-            temperature=0,
+            temperature=0.1,
             completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
             **{model_key: self._model},
@@ -141,86 +139,26 @@ class SafeOpenai(RankLLM):
             encoding = tiktoken.get_encoding("cl100k_base")
         return response, len(encoding.encode(response))
 
-    def _get_prefix_for_rank_gpt_prompt(
-        self, query: str, num: int
-    ) -> List[Dict[str, str]]:
-        return [
-            {
-                "role": "system",
-                "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
-            },
-            {
-                "role": "user",
-                "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
-            },
-            {"role": "assistant", "content": "Okay, please provide the passages."},
-        ]
-
-    def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
-        return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
-
-    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
-        if current_window_size is None:
-            current_window_size = self._window_size
-        if self._output_token_estimate and self._window_size == current_window_size:
-            return self._output_token_estimate
-        else:
-            try:
-                encoder = tiktoken.get_encoding(self._model)
-            except:
-                encoder = tiktoken.get_encoding("cl100k_base")
-
-            _output_token_estimate = (
-                len(
-                    encoder.encode(
-                        " > ".join([f"[{i+1}]" for i in range(current_window_size)])
-                    )
-                )
-                - 1
-            )
-            if (
-                self._output_token_estimate is None
-                and self._window_size == current_window_size
-            ):
-                self._output_token_estimate = _output_token_estimate
-            return _output_token_estimate
-
     def create_prompt(
-        self, result: Result, rank_start: int, rank_end: int
+        self, request: Request, topk: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        if self._prompt_mode == PromptMode.RANK_GPT:
-            return self.create_rank_gpt_prompt(result, rank_start, rank_end)
-        else:
-            return self.create_LRL_prompt(result, rank_start, rank_end)
-
-    def create_rank_gpt_prompt(
-        self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[List[Dict[str, str]], int]:
-        query = result.query.text
-        num = len(result.candidates[rank_start:rank_end])
-
-        max_length = 300 * (self._window_size / (rank_end - rank_start))
+        query = request.query.text
+        max_length = (self._context_size - 200) // topk
         while True:
-            messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
-            for cand in result.candidates[rank_start:rank_end]:
+            context = []
+            for cand in request.candidates[:topk]:
                 rank += 1
-                content = self.covert_doc_to_prompt_content(cand.doc, max_length)
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": f"[{rank}] {self._replace_number(content)}",
-                    }
+                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
+                context.append(
+                    f"[{rank}] {self._replace_number(content)}", 
                 )
-                messages.append(
-                    {"role": "assistant", "content": f"Received passage [{rank}]."}
+            if self._prompt_mode == PromptMode.CHATQA:
+                messages = ChatQATemplate(query, context, "gpt")
+            else:
+                raise ValueError(
+                    f"Unsupported prompt mode: {self._prompt_mode}, expected {PromptMode.CHATQA}."
                 )
-            messages.append(
-                {
-                    "role": "user",
-                    "content": self._get_suffix_for_rank_gpt_prompt(query, num),
-                }
-            )
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
@@ -228,38 +166,7 @@ class SafeOpenai(RankLLM):
                 max_length -= max(
                     1,
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // ((rank_end - rank_start) * 4),
-                )
-        return messages, self.get_num_tokens(messages)
-
-    def create_LRL_prompt(
-        self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[List[Dict[str, str]], int]:
-        query = result.query.text
-        num = len(result.candidates[rank_start:rank_end])
-        max_length = 300 * (20 / (rank_end - rank_start))
-        psg_ids = []
-        while True:
-            message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
-            rank = 0
-            for cand in result.candidates[rank_start:rank_end]:
-                rank += 1
-                psg_id = f"PASSAGE{rank}"
-                content = self.covert_doc_to_prompt_content(cand.doc, max_length)
-                message += f'{psg_id} = "{self._replace_number(content)}"\n'
-                psg_ids.append(psg_id)
-            message += f'QUESTION = "{query}"\n'
-            message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
-            message += "SORTED_PASSAGES = [\n"
-            messages = [{"role": "user", "content": message}]
-            num_tokens = self.get_num_tokens(messages)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens():
-                break
-            else:
-                max_length -= max(
-                    1,
-                    (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // ((rank_end - rank_start) * 4),
+                    // (topk * 4),
                 )
         return messages, self.get_num_tokens(messages)
 

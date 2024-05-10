@@ -28,16 +28,23 @@ class Request:
 @dataclass
 class RAGExecInfo:
     prompt: Any
-    response: str
+    response: Any
     input_token_count: int
     output_token_count: int
+    candidates: List[Candidate] = field(default_factory=list)
 
+
+@dataclass
+class CitedSentence:
+    text: str
+    citations: List[int] = field(default_factory=list)
 
 @dataclass
 class Result:
     query: Query
-    candidates: list[Candidate] = field(default_factory=list)
-    rag_exec_summary: list[RAGExecInfo] = (field(default_factory=list),)
+    references: List[Union[str | int]] = field(default_factory=list)
+    answer: List[CitedSentence] = field(default_factory=list)
+    rag_exec_summary: List[RAGExecInfo] = (field(default_factory=list),)
 
 
 def read_requests_from_file(file_path: str) -> List[Request]:
@@ -85,24 +92,23 @@ class DataWriter:
         with open(filename, "a" if self._append else "w") as f:
             json.dump(exec_summary, f, indent=2)
 
+    def _convert_result_to_dict(self, result: Result) -> Dict:
+        result_dict = {
+            "topic_id": result.query.qid,
+            "topic": result.query.text,
+            "references": result.references,
+            "response_length": sum(len(sentence.text) for sentence in result.answer),
+            "answer": [{"text": sentence.text, "citations": sentence.citations} for sentence in result.answer]
+        }
+        return result_dict
+
     def write_in_json_format(self, filename: str):
-        results = []
-        for d in self._data:
-            candidates = [candidate.__dict__ for candidate in d.candidates]
-            results.append({"query": d.query.__dict__, "candidates": candidates})
-        with open(filename, "a" if self._append else "w") as f:
-            json.dump(results, f, indent=2)
+        formatted_data = [self._convert_result_to_dict(d) for d in self._data]
+        with open(filename, 'a' if self._append else 'w') as f:
+            json.dump(formatted_data, f, indent=2)
 
     def write_in_jsonl_format(self, filename: str):
-        with open(filename, "a" if self._append else "w") as f:
+        with open(filename, 'a' if self._append else 'w') as f:
             for d in self._data:
-                candidates = [candidate.__dict__ for candidate in d.candidates]
-                json.dump({"query": d.query.__dict__, "candidates": candidates}, f)
-                f.write("\n")
-
-    def write_in_trec_eval_format(self, filename: str):
-        with open(filename, "a" if self._append else "w") as f:
-            for d in self._data:
-                qid = d.query.qid
-                for rank, cand in enumerate(d.candidates, start=1):
-                    f.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank_llm\n")
+                json.dump(self._convert_result_to_dict(d), f)
+                f.write('\n')
