@@ -11,7 +11,7 @@ ref:
 Before submitting your pull request, please review these items:
 
 - [ ] Have you followed the [contributing guidelines](CONTRIBUTING.md)?
-- [ ] Have you verified that there are no existing [Pull Requests](https://github.com/castorini/rank_llm/pulls) for the same update/change?
+- [ ] Have you verified that there are no existing [Pull Requests](https://github.com/castorini/ragnarok/pulls) for the same update/change?
 - [ ] Have you updated any relevant documentation or added new tests where needed?
 
 # PR Type

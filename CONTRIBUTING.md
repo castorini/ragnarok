@@ -1,4 +1,4 @@
-# Contributing to RankLLM
+# Contributing to RAGnarok
 
 RankLLM Contribution flow
 
