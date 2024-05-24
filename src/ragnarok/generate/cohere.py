@@ -42,6 +42,7 @@ class Cohere(LLM):
             )
         super().__init__(model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples)
         self._client = cohere.Client(key)
+        self._post_processor = CoherePostProcessor()
 
     def run_llm(
         self,
@@ -59,16 +60,16 @@ class Cohere(LLM):
                     message=query,
                     documents=top_k_docs
                 )
+                break
             except Exception as e:
                 print(str(e))
                 time.sleep(60)
         if logging:
             print(f"Response: {response}")
-        post_processor = CoherePostProcessor()
-        answers = post_processor(response)
+        answers = self._post_processor(response)
         if logging:
             print(f"Answers: {answers}")
-        return answer, -1
+        return answers, -1
 
     def create_prompt(
         self, request: Request, topk: int
