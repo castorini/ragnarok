@@ -7,21 +7,21 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.data import read_requests_from_file, DataWriter
-from rank_llm.rerank.zephyr_reranker import ZephyrReranker
+from ragnarok.data import read_requests_from_file, DataWriter
+from ragnarok.generate.os_llm import OSLLM
 
 file_name = (
     "retrieve_results/BM25/retrieve_results_dl23_top20.json"
 )
 requests = read_requests_from_file(file_name)
 
-reranker = ZephyrReranker()
-rerank_results = reranker.rerank_batch(requests=requests)
-print(rerank_results)
+generator = OSLLM("meta-llama/Meta-Llama-3-8B-Instruct")
+rag_results = OSLLM.answer_batch(requests)
+print(rag_results)
 
 # write rerank results
-writer = DataWriter(rerank_results)
+writer = DataWriter(rag_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
-writer.write_in_json_format(f"demo_outputs/rerank_results.json")
+writer.write_in_json_format(f"demo_outputs/rag_results.json")
 writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
 writer.write_ranking_exec_summary(f"demo_outputs/ranking_execution_summary.json")

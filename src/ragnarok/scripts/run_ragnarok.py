@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from typing import List
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
@@ -10,10 +11,9 @@ sys.path.append(parent)
 import torch
 
 from ragnarok.generate.llm import PromptMode
-from ragnarok.retrieve.retriever import RetrievalMethod, RetrievalMode
-from ragnarok.retrieve.topics_dict import TOPICS
+from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMode
+from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
 from ragnarok.retrieve_and_generate import retrieve_and_generate
-
 
 def main(args):
     model_path = args.model_path
@@ -28,6 +28,7 @@ def main(args):
     shuffle_candidates = args.shuffle_candidates
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
+    max_output_tokens = args.max_output_tokens
     device = "cuda" if torch.cuda.is_available() else "cpu"
     retrieval_mode = RetrievalMode.DATASET
 
@@ -38,6 +39,7 @@ def main(args):
         retrieval_method,
         topk,
         context_size,
+        max_output_tokens,
         device,
         num_gpus,
         prompt_mode,
@@ -49,7 +51,7 @@ def main(args):
 
 
 """ sample run:
-python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere_command_r_plus  --topk=20 --dataset=researchy-questions  --retrieval_method=rank_zephyr --prompt_mode=chat_qa  --context_size=8192
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere_command_r_plus  --topk=20 --dataset=researchy-questions  --retrieval_method=bm25,rank_zephyr --prompt_mode=chat_qa  --context_size=8192 --max_output_tokens=1500
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -70,9 +72,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--topk",
-        type=int,
-        default=20,
-        help="the number of top candidates to use for RAG",
+        type=List[int],
+        default=[100, 20],
+        help="Comma-separated list of top k values for each retrieval method. Example: 100,20",
     )
     parser.add_argument(
         "--dataset",
@@ -85,9 +87,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--retrieval_method",
-        type=RetrievalMethod,
+        type=List[RetrievalMethod],
         required=True,
-        choices=list(RetrievalMethod),
+        help="Comma-separated list of retrieval methods. Choices: " + ", ".join([e.value for e in RetrievalMethod]),
     )
     parser.add_argument(
         "--prompt_mode",
@@ -111,6 +113,13 @@ if __name__ == "__main__":
         required=False,
         default=0,
         help="number of in context examples to provide",
+    )
+    parser.add_argument(
+        "--max_output_tokens",
+        type=int,
+        required=False,
+        default=1500,
+        help="maximum number of tokens in the output",
     )
     args = parser.parse_args()
     main(args)

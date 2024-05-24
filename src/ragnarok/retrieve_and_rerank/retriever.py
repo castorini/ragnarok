@@ -16,6 +16,7 @@ class RetrievalMode(Enum):
     def __str__(self):
         return self.value
 
+
 class RetrievalMethod(Enum):
     UNSPECIFIED = "unspecified"
     BM25 = "bm25"
@@ -24,40 +25,40 @@ class RetrievalMethod(Enum):
     def __str__(self):
         return self.value
 
+
 class Retriever:
     def __init__(
         self,
         retrieval_mode: RetrievalMode,
         dataset: Union[str, List[str], List[Dict[str, Any]]],
-        retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
+        retrieval_method: Union[RetrievalMethod, List[RetrievalMethod]] = RetrievalMethod.UNSPECIFIED,
         query: str = None,
         index_path: str = None,
         topics_path: str = None,
     ) -> None:
         self._retrieval_mode = retrieval_mode
         self._dataset = dataset
-        self._retrieval_method = retrieval_method
+        self._retrieval_method = retrieval_method if isinstance(retrieval_method, list) else [retrieval_method]
         self._query = query
         self._index_path = index_path
         self._topics_path = topics_path
 
-
     @staticmethod
     def from_dataset_with_prebuilt_index(
         dataset_name: str,
-        retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
-        k: int = 100,
+        retrieval_method: Union[RetrievalMethod, List[RetrievalMethod]] = RetrievalMethod.BM25,
+        k: List[int] = [100, 20],
     ):
         """
         Creates a Retriever instance for a dataset with a prebuilt index.
 
         Args:
             dataset_name (str): The name of the dataset.
-            retrieval_method (RetrievalMethod): The retrieval method to be used. Defaults to BM25.
-            k (int, optional): The top k hits to retrieve. Defaults to 20.
+            retrieval_method (Union[RetrievalMethod, List[RetrievalMethod]]): The retrieval method(s) to be used. Defaults to BM25.
+            k (List[int], optional): The top k hits to retrieve. Defaults to [100, 20].
 
         Returns:
-            List[Request]: The list of requests. Each request has a query and list of candidates
+            List[Request]: The list of requests. Each request has a query and list of candidates.
 
         Raises:
             ValueError: If dataset name or retrieval method is invalid or missing.
@@ -70,7 +71,7 @@ class Retriever:
             )
         if not retrieval_method:
             raise "Please provide a retrieval method."
-        if retrieval_method == RetrievalMethod.UNSPECIFIED:
+        if RetrievalMethod.UNSPECIFIED in retrieval_method:
             raise ValueError(
                 f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
             )
@@ -82,20 +83,20 @@ class Retriever:
         return retriever.retrieve(k=k)
 
     def retrieve(
-        self, retrieve_results_dirname: str = "retrieve_results", k: int = 100
+        self, retrieve_results_dirname: str = "retrieve_results", k: List[int] = [100, 20]
     ) -> List[Request]:
         """
-        Executes the retrieval process based on the configation provided with the Retriever instance.
+        Executes the retrieval process based on the configuration provided with the Retriever instance.
 
         Returns:
-            List[Request]: The list of requests. Each request has a query and list of candidates
+            List[Request]: The list of requests. Each request has a query and list of candidates.
 
         Raises:
             ValueError: If the retrieval mode is invalid or the format is not as expected.
         """
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
-                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
+                f"{retrieve_results_dirname}/{self._retrieval_method[-1].name}/retrieve_results_{self._dataset}_top{k[-1]}.jsonl"
             )
             if not candidates_file.is_file():
                 # Read JSON file

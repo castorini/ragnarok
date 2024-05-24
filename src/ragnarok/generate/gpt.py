@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import openai
 import tiktoken
 
-from src.ragnarok.generate.llm import PromptMode, LLM
+from ragnarok.generate.llm import PromptMode, LLM
 from ragnarok.data import Request
 from ragnarok.generate.templates.chat_qa import ChatQATemplate
 

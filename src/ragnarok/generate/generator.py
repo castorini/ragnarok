@@ -35,7 +35,7 @@ class RAG:
         """
         results = []
         for request in tqdm(requests):
-            result = self._agent.generate(
+            result = self._agent.answer_batch(
                 request,
                 rank_start=max(rank_start, 0),
                 rank_end=min(rank_end, len(request.candidates)),

@@ -91,3 +91,4 @@ class CoherePostProcessor:
                 "citations": citations
             })
         return answers
+
