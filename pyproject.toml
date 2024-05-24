@@ -28,7 +28,7 @@ dependencies = {file = ["requirements.txt"]}
 Homepage = "https://github.com/castorini/raganrok"
 
 [tool.bumpver]
-current_version = "0.12.8"
+current_version = "0.0.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
@@ -47,10 +47,12 @@ push = false
 [tool.setuptools.packages.find]
 where = ["src"]
 include = [
-    "rank_llm",
-    "rank_llm.analysis",
-    "rank_llm.evaluation",
-    "rank_llm.rerank",
-    "rank_llm.retrieve",
+    "ragnarok",
+    "ragnarok.analyze",
+    "ragnarok.demo",
+    "ragnarok.evaluate",
+    "ragnarok.generate",
+    "ragnarok.retrieve_and_rerank",
+    "ragnarok.serve",
 ]
 namespaces = false

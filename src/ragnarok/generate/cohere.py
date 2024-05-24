@@ -8,6 +8,7 @@ import os
 from ragnarok.generate.llm import PromptMode, LLM
 from ragnarok.data import Request
 from ragnarok.generate.post_processor import CoherePostProcessor
+from ragnarok.generate.api_keys import get_cohere_api_key
 
 class Cohere(LLM):
     def __init__(
@@ -17,7 +18,7 @@ class Cohere(LLM):
         prompt_mode: PromptMode = PromptMode.RAGNAROK,
         max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
-        key: str = os.getenv("COHERE_API_KEY"),
+        key: str = get_cohere_api_key(),
     ) -> None:
         """
         Creates instance of the Cohere class, to deal with Cohere Command R models.
