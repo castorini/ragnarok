@@ -14,7 +14,7 @@ class SafeOpenai(LLM):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode = PromptMode.RAGNAROK,
+        prompt_mode: PromptMode = PromptMode.CHATQA,
         max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
         keys=None,

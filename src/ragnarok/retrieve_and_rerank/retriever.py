@@ -101,6 +101,8 @@ class Retriever:
             if not candidates_file.is_file():
                 # Read JSON file
                 try:
+                    # Replace jsonl with json in path
+                    candidates_file = str(candidates_file)
                     with open(candidates_file.replace("jsonl", "json"), "r") as f:
                         loaded_results = json.load(f)
                     retrieved_results = [

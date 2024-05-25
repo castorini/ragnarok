@@ -15,8 +15,7 @@ class RAG:
     def answer_batch(
         self,
         requests: List[Request],
-        rank_start: int = 0,
-        rank_end: int = 20,
+        topk: int = 20,
         shuffle_candidates: bool = False,
         logging: bool = False,
     ) -> List[Result]:
@@ -25,8 +24,7 @@ class RAG:
 
         Args:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.
-            rank_start (int, optional): The starting rank for processing. Defaults to 0.
-            rank_end (int, optional): The end rank for processing. Defaults to 20.
+            topk (int, optional): The end rank for processing. Defaults to 20.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before answering. Defaults to False.
             logging (bool, optional): Enables logging of the answering process. Defaults to False.
 
@@ -36,13 +34,12 @@ class RAG:
         results = []
         for request in tqdm(requests):
             result = self._agent.answer_batch(
-                request,
-                rank_start=max(rank_start, 0),
-                rank_end=min(rank_end, len(request.candidates)),
+                [request],
+                topk=min(topk, len(request.candidates)),
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
             )
-            results.append(result)
+            results.append(result[0])
         return results
 
     def answer(

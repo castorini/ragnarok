@@ -15,6 +15,19 @@ from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMod
 from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
 from ragnarok.retrieve_and_generate import retrieve_and_generate
 
+def parse_topk(value):
+    try:
+        return [int(k) for k in value.split(',')]
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid comma-separated list of integers: {value}")
+
+def parse_retrieval_methods(value):
+    try:
+        # Ensure it is of type RetrievalMethod
+        return [RetrievalMethod(e) for e in value.split(',')]
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid comma-separated list of retrieval methods: {value}")
+
 def main(args):
     model_path = args.model_path
     use_azure_openai = args.use_azure_openai
@@ -72,7 +85,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--topk",
-        type=List[int],
+        type=parse_topk,
         default=[100, 20],
         help="Comma-separated list of top k values for each retrieval method. Example: 100,20",
     )
@@ -87,7 +100,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--retrieval_method",
-        type=List[RetrievalMethod],
+        type=parse_retrieval_methods,
         required=True,
         help="Comma-separated list of retrieval methods. Choices: " + ", ".join([e.value for e in RetrievalMethod]),
     )

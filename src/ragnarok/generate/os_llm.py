@@ -16,7 +16,7 @@ class OSLLM(LLM):
         self,
         model: str,
         context_size: int = 8192,
-        prompt_mode: PromptMode = PromptMode.RAGNAROK,
+        prompt_mode: PromptMode = PromptMode.CHATQA,
         max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
         device: str = "cuda",
@@ -110,7 +110,7 @@ class OSLLM(LLM):
             for cand in request.candidates[:topk]:
                 rank += 1
                 # For Japanese should cut by character: content = content[:int(max_length)]
-                content = self.covert_doc_to_prompt_content(cand.doc, max_length)
+                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 input_context += f"[{rank}] {self._replace_number(content)}\n"
 
             input_context += self._add_post_prompt(query, num)

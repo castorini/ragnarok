@@ -157,7 +157,7 @@ class LLM(ABC):
             List[Result]: The list of results after answering the requests.
         """
         results = []
-        for request in tqdm(requests):
+        for request in requests:
             if shuffle_candidates:
                 # First randomly shuffle rerank_result in first topk ranks
                 request.candidates[:topk] = random.sample(
@@ -166,7 +166,7 @@ class LLM(ABC):
                 )
             prompt, input_token_count = self.create_prompt(request, topk)
             answer, rag_exec_summary = self.run_llm(
-                prompt, topk, logging
+                prompt, logging
             )
             results.append(
                 Result(query=request.query,
@@ -184,7 +184,7 @@ class LLM(ABC):
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
-    def covert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
+    def convert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
         if "text" in doc:
             content = doc["text"]
         elif "segment" in doc:

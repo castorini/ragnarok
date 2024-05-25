@@ -42,7 +42,7 @@ class CoherePostProcessor:
             citations = sorted(citations)
         return citations
 
-    def __call__(self, response: cohere.responses.Chat) -> List[Dict[str, Any]]:
+    def __call__(self, response) -> List[Dict[str, Any]]:
         text_output = response.text
         citations = [{
             "start": citation.start,

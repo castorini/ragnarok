@@ -25,7 +25,7 @@ def get_azure_openai_args() -> Dict[str, str]:
 
 def get_cohere_api_key() -> str:
     load_dotenv(dotenv_path=f".env.local")
-    return os.getenv("COHERE_API_KEY")
+    return os.getenv("CO_API_KEY")
 
 def get_anyscale_api_key() -> str:
     load_dotenv(dotenv_path=f".env.local")

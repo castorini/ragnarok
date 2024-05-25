@@ -24,7 +24,7 @@ def retrieve_and_generate(
     max_output_tokens: int = 1500,
     device: str = "cuda",
     num_gpus: int = 1,
-    prompt_mode: PromptMode = PromptMode.RANK_GPT,
+    prompt_mode: PromptMode = PromptMode.CHATQA,
     num_few_shot_examples: int = 0,
     shuffle_candidates: bool = False,
     print_prompts_responses: bool = False,
@@ -50,7 +50,7 @@ def retrieve_and_generate(
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
-    elif "cohere" in model_path:
+    elif "command-r" in model_path:
         agent = Cohere(
             model=model_path,
             context_size=context_size,
@@ -88,18 +88,17 @@ def retrieve_and_generate(
                 dataset_name=dataset, retrieval_method=retrieval_method,
                 k=k,
             )
+            print()
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print("Fimbulvetr!")
     rag = RAG(agent)
     rag_results = rag.answer_batch(
         requests,
-        rank_end=k[-1],
+        topk=k[-1],
         shuffle_candidates=shuffle_candidates,
         logging=print_prompts_responses,
-        step=step_size,
     )
-
     if isinstance(dataset, str):
         file_name = rag.write_answer_results(
             retrieval_method[-1].name,

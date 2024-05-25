@@ -23,6 +23,8 @@ class Candidate:
 class Request:
     query: Query
     candidates: List[Candidate] = field(default_factory=list)
+    # Optional Ranking Exec Summary
+    ranking_exec_summary: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -93,12 +95,13 @@ class DataWriter:
             json.dump(exec_summary, f, indent=2)
 
     def _convert_result_to_dict(self, result: Result) -> Dict:
+        print(result)
         result_dict = {
             "topic_id": result.query.qid,
             "topic": result.query.text,
             "references": result.references,
-            "response_length": sum(len(sentence.text) for sentence in result.answer),
-            "answer": [{"text": sentence.text, "citations": sentence.citations} for sentence in result.answer]
+            "response_length": sum(len(sentence["text"]) for sentence in result.answer),
+            "answer": [{"text": sentence["text"], "citations": sentence["citations"]} for sentence in result.answer]
         }
         return result_dict
 
@@ -110,5 +113,6 @@ class DataWriter:
     def write_in_jsonl_format(self, filename: str):
         with open(filename, 'a' if self._append else 'w') as f:
             for d in self._data:
+                print(d)
                 json.dump(self._convert_result_to_dict(d), f)
                 f.write('\n')

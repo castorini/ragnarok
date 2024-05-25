@@ -34,6 +34,47 @@ class Restriever:
         if retrieval_method == RetrievalMethod.UNSPECIFIED:
             raise ValueError(f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method.")
 
+    @staticmethod
+    def from_dataset_with_prebuilt_index(
+        dataset_name: str,
+        host: str,
+        retrieval_method: Union[RetrievalMethod, List[RetrievalMethod]] = RetrievalMethod.BM25,
+        k: List[int] = [100, 100],
+        retriever_port: str = "8081",
+        request: Request = None,
+    ):
+        """
+        Creates a Retriever instance for a dataset with a prebuilt index.
+
+        Args:
+            dataset_name (str): The name of the dataset.
+            retrieval_method (Union[RetrievalMethod, List[RetrievalMethod]]): The retrieval method(s) to be used. Defaults to BM25.
+            k (List[int], optional): The top k hits to retrieve. Defaults to [100, 20].
+
+        Returns:
+            List[Request]: The list of requests. Each request has a query and list of candidates.
+
+        Raises:
+            ValueError: If dataset name or retrieval method is invalid or missing.
+        """
+        if not dataset_name:
+            raise ValueError("Please provide name of the dataset.")
+        if not isinstance(dataset_name, str):
+            raise ValueError(
+                f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
+            )
+        if not retrieval_method:
+            raise "Please provide a retrieval method."
+        if RetrievalMethod.UNSPECIFIED in retrieval_method:
+            raise ValueError(
+                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
+            )
+        retriever = Restriever(
+            RetrievalMode.DATASET,
+            retrieval_method=retrieval_method,
+        )
+        return retriever.retrieve(dataset=dataset_name, k=k, host=host, request=request, retriever_port=retriever_port)
+
     def retrieve(
         self,
         dataset: Union[str, List[str], List[Dict[str, Any]]],
@@ -58,11 +99,13 @@ class Restriever:
         """
 
         parsed_query = parse.quote(request.query.text)
-        url = f"{host}/api/model/rank_zephyr/collection/{dataset}/retriever/{retriever_port}/search?query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}"
-
+        url = f"{host}/api/model/rank_zephyr/collection/{dataset}/retriever/{retriever_port}/query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}"
+        print(url)
         response = requests.get(url)
+        print(response)
         if response.ok:
             data = response.json()
+            data = data[0]
             retrieved_results = Request(
                 query = Query(text = data["query"]["text"], qid = data["query"]["qid"])
             )
@@ -76,5 +119,5 @@ class Restriever:
                 ))
             retrieved_results.candidates = candidates
         else: 
-            raise ValueError(f"Failed to retrieve data from Anserini server. Error code: {response.status_code}")
+            raise ValueError(f"Failed to retrieve data from RankLLM server. Error code: {response.status_code}")
         return retrieved_results

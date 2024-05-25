@@ -10,12 +10,14 @@ from ragnarok.data import Request
 from ragnarok.generate.post_processor import CoherePostProcessor
 from ragnarok.generate.api_keys import get_cohere_api_key
 
+from ftfy import fix_text
+
 class Cohere(LLM):
     def __init__(
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode = PromptMode.RAGNAROK,
+        prompt_mode: PromptMode = PromptMode.COHERE,
         max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
         key: str = get_cohere_api_key(),
@@ -77,6 +79,7 @@ class Cohere(LLM):
     ) -> Tuple[List[Dict[str, Any]], int]:
         query = request.query.text
         max_length = (self._context_size - 200) // topk
+        self._prompt_mode = PromptMode.COHERE
         while True:
             rank = 0
             context = []
@@ -105,3 +108,23 @@ class Cohere(LLM):
     def cost_per_1k_token(self, input_token: bool) -> float:
         # TODO(ronak): Add support
         return -1
+
+    def convert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
+        if "text" in doc:
+            content = doc["text"]
+        elif "segment" in doc:
+            content = doc["segment"]
+        elif "contents" in doc:
+            content = doc["contents"]
+        else:
+            content = doc["passage"]
+        content = {"snippet": content}
+        if "title" in doc:
+            content["title"] = doc["title"]
+        for key in content:
+            content[key] = content[key].strip()
+            content[key] = fix_text(content[key])
+            content[key] = content[key].replace("\n", " ")
+            content[key] = " ".join(content[key].split()[: int(max_length)])
+            content[key] = self._replace_number(content[key])
+        return content
