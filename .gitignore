@@ -174,3 +174,5 @@ repro/
 demo_outputs/
 src/results/
 results/
+nuggetized_results/
+pool_results/
