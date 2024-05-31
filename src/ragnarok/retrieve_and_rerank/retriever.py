@@ -16,11 +16,21 @@ class RetrievalMode(Enum):
     def __str__(self):
         return self.value
 
+class CacheInputFormat(Enum):
+    JSON = "json"
+    JSONL = "jsonl"
+
+    def __str__(self):
+        return self.value
 
 class RetrievalMethod(Enum):
     UNSPECIFIED = "unspecified"
     BM25 = "bm25"
     RANK_ZEPHYR = "rank_zephyr"
+    RANK_ZEPHYR_RHO = "rank_zephyr_rho"
+    RANK_VICUNA = "rank_vicuna"
+    RANK_GPT4O = "gpt_4o"
+    RANK_GPT4 = "gpt_4"
 
     def __str__(self):
         return self.value
@@ -47,6 +57,7 @@ class Retriever:
     def from_dataset_with_prebuilt_index(
         dataset_name: str,
         retrieval_method: Union[RetrievalMethod, List[RetrievalMethod]] = RetrievalMethod.BM25,
+        cache_input_format: CacheInputFormat = CacheInputFormat.JSONL,
         k: List[int] = [100, 20],
     ):
         """
@@ -80,10 +91,10 @@ class Retriever:
             dataset=dataset_name,
             retrieval_method=retrieval_method,
         )
-        return retriever.retrieve(k=k)
+        return retriever.retrieve(k=k, cache_input_format=cache_input_format)
 
     def retrieve(
-        self, retrieve_results_dirname: str = "retrieve_results", k: List[int] = [100, 20]
+        self, retrieve_results_dirname: str = "retrieve_results",  cache_input_format: CacheInputFormat = CacheInputFormat.JSONL, k: List[int] = [100, 20]
     ) -> List[Request]:
         """
         Executes the retrieval process based on the configuration provided with the Retriever instance.
@@ -96,27 +107,34 @@ class Retriever:
         """
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
-                f"{retrieve_results_dirname}/{self._retrieval_method[-1].name}/retrieve_results_{self._dataset}_top{k[-1]}.jsonl"
+                f"{retrieve_results_dirname}/{self._retrieval_method[-1].name}/retrieve_results_{self._dataset}_top{k[-1]}.{cache_input_format}"
             )
+            print(f"Loading candidates from {candidates_file}.")
             if not candidates_file.is_file():
-                # Read JSON file
+                # Get top100 file instead
                 try:
-                    # Replace jsonl with json in path
-                    candidates_file = str(candidates_file)
-                    with open(candidates_file.replace("jsonl", "json"), "r") as f:
-                        loaded_results = json.load(f)
-                    retrieved_results = [
-                        from_dict(data_class=Request, data=r) for r in loaded_results
-                    ]
+                    candidates_file = Path(
+                        f"{retrieve_results_dirname}/{self._retrieval_method[-1].name}/retrieve_results_{self._dataset}_top100.{cache_input_format}"
+                    )
+                    print()
+                    if not candidates_file.is_file():
+                        raise ValueError(f"File not found: {candidates_file}")
                 except ValueError as e:
                     print(f"Failed to load JSON file: {candidates_file}")
-            else:
-                # Load JSONL
-                with open(candidates_file, "r") as f:
-                    loaded_results = [json.loads(l) for l in f]
+            if candidates_file.is_file():
+                if cache_input_format == CacheInputFormat.JSON:
+                    with open(candidates_file, "r") as f:
+                        loaded_results = json.load(f)
+                elif cache_input_format == CacheInputFormat.JSONL:
+                    with open(candidates_file, "r") as f:
+                        loaded_results = [json.loads(l) for l in f]
                 retrieved_results = [
                     from_dict(data_class=Request, data=r) for r in loaded_results
                 ]
+                # Ensure the candidates are of at most k length
+                for r in retrieved_results:
+                    r.candidates = r.candidates[:k[-1]]
+                print(f"Loaded {len(retrieved_results)} requests from {candidates_file}.")                
         else:
             raise ValueError(f"Invalid retrieval mode: {self._retrieval_mode}")
         return retrieved_results

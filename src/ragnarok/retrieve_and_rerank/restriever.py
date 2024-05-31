@@ -99,19 +99,19 @@ class Restriever:
         """
 
         parsed_query = parse.quote(request.query.text)
-        url = f"{host}/api/model/rank_zephyr/collection/{dataset}/retriever/{retriever_port}/query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}"
+        method = self._retrieval_method[-1]
+        url = f"{host}/api/model/{method}/index/{dataset}/retriever/{retriever_port}/query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}"
         print(url)
         response = requests.get(url)
         print(response)
         if response.ok:
             data = response.json()
-            data = data[0]
+            print(data)
             retrieved_results = Request(
                 query = Query(text = data["query"]["text"], qid = data["query"]["qid"])
             )
             candidates = []
-            #TODO(ronak) - Replace 20 with k[1] when fixed in RankLLM
-            for candidate in data["candidates"][:20]:
+            for candidate in data["candidates"]:
                 candidates.append(Candidate(
                     docid = candidate["docid"],
                     score = candidate["score"],

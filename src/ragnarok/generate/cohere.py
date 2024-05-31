@@ -6,7 +6,7 @@ import cohere
 import os
 
 from ragnarok.generate.llm import PromptMode, LLM
-from ragnarok.data import Request
+from ragnarok.data import RAGExecInfo, Request
 from ragnarok.generate.post_processor import CoherePostProcessor
 from ragnarok.generate.api_keys import get_cohere_api_key
 
@@ -69,10 +69,13 @@ class Cohere(LLM):
                 time.sleep(60)
         if logging:
             print(f"Response: {response}")
-        answers = self._post_processor(response)
+        answers, rag_exec_response = self._post_processor(response)
         if logging:
             print(f"Answers: {answers}")
-        return answers, -1
+        rag_exec_info = RAGExecInfo(prompt=prompt[0], response=rag_exec_response, input_token_count=len(query.split())+sum([len(doc["snippet"].split()) for doc in top_k_docs]), 
+                                    output_token_count=sum([len(ans.text) for ans in answers]), candidates=top_k_docs) 
+                    
+        return answers, rag_exec_info
 
     def create_prompt(
         self, request: Request, topk: int

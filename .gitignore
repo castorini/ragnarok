@@ -169,6 +169,7 @@ rerank_results/
 token_counts/
 retrieve_results/
 ranking_execution_summary/
+rag_execution_summary/
 repro/
 demo_outputs/
 src/results/

@@ -9,7 +9,7 @@ from ragnarok.generate.os_llm import OSLLM
 from ragnarok.generate.cohere import Cohere
 from ragnarok.generate.llm import PromptMode
 from ragnarok.generate.generator import RAG
-from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMode, Retriever
+from ragnarok.retrieve_and_rerank.retriever import CacheInputFormat, RetrievalMethod, RetrievalMode, Retriever
 from ragnarok.retrieve_and_rerank.restriever import Restriever
 from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
 
@@ -86,7 +86,7 @@ def retrieve_and_generate(
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset, retrieval_method=retrieval_method,
-                k=k,
+                k=k, cache_input_format=CacheInputFormat.JSONL
             )
             print()
     else:

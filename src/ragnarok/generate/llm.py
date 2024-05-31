@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple, Union
 from ftfy import fix_text
 from tqdm import tqdm
 
-from ragnarok.data import RAGExecInfo, Request, Result
+from ragnarok.data import RAGExecInfo, Request, Result, remove_unused_references
 
 
 class PromptMode(Enum):
@@ -168,10 +168,17 @@ class LLM(ABC):
             answer, rag_exec_summary = self.run_llm(
                 prompt, logging
             )
-            results.append(
-                Result(query=request.query,
-                       references=[cand.docid for cand in request.candidates[:topk]], 
-                       answer=answer, rag_exec_summary=rag_exec_summary))
+            rag_exec_summary.candidates = [candidate.__dict__ for candidate in request.candidates[:topk]]
+            result = Result(
+                query=request.query,
+                references=[cand.docid for cand in request.candidates[:topk]],
+                answer=answer,
+                rag_exec_summary=rag_exec_summary,
+            )
+            cleaned_result = remove_unused_references(result)
+            if logging:
+                print(f"Cleaned Result: {cleaned_result}")
+            results.append(cleaned_result)
         return results
 
     def num_output_tokens(self) -> int:

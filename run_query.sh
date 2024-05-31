@@ -13,4 +13,5 @@ encoded_query=$(echo "$query" | sed -e 's/ /%20/g')
 
 # Make the curl request
 # Make the curl request
-curl -X GET "http://localhost:8083/api/model/command-r-plus/collection/msmarco-v2.1-doc-segmented/retriever/8081/reranker/8082/query=$encoded_query&hits_retriever=40&hits_reranker=40&qid=1"
+curl -X GET "http://localhost:8084/api/model/command-r-plus/index/msmarco-v2.1-doc-segmented/8081/reranker/rank_zephyr/8082/query=$encoded_query&hits_retriever=100&hits_reranker=20&qid=1"
+curl -X GET "http://localhost:8084/api/model/command-r-plus/index/msmarco-v2.1-doc-segmented/8081/reranker/gpt_4o/8083/query=$encoded_query&hits_retriever=100&hits_reranker=20&qid=1"

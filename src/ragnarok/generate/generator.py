@@ -5,7 +5,7 @@ from typing import List
 from tqdm import tqdm
 
 from ragnarok.generate.llm import LLM
-from ragnarok.data import Request, Result, DataWriter
+from ragnarok.data import Request, Result, DataWriter, OutputFormat
 
 
 class RAG:
@@ -80,6 +80,8 @@ class RAG:
         top_k_candidates: int = 20,
         dataset_name: str = None,
         results_dirname: str = "results",
+        rag_execution_summary_dirname: str = "rag_execution_summary",
+        output_format: OutputFormat = OutputFormat.JSONL,
     ) -> str:
         """
         Writes the attributed answers to files in specified formats.
@@ -93,6 +95,8 @@ class RAG:
             top_k_candidates (int, optional): The number of top candidates considered. Defaults to 20.
             dataset_name (str, optional): The name of the dataset used. Defaults to None.
             results_dirname (str, optional): The directory name to save the results. Defaults to "results".
+            rag_execution_summary_dirname (str, optional): The directory name to save the RAG execution summary. Defaults to "rag_execution_summary".
+            output_format (OutputFormat, optional): The output format to save the results. Defaults to OutputFormat.JSONL.
 
         Returns:
             str: The file name of the saved results.
@@ -119,7 +123,20 @@ class RAG:
         Path(f"{results_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        writer.write_in_json_format(
-            f"{results_dirname}/{retrieval_method_name}/{name}.json"
+        if output_format == OutputFormat.JSON:
+            output_file = f"{results_dirname}/{retrieval_method_name}/{name}.json"
+            writer.write_in_json_format(
+                output_file
+            )
+        else:
+            output_file = f"{results_dirname}/{retrieval_method_name}/{name}.jsonl"
+            writer.write_in_jsonl_format(
+                output_file
+            )
+        Path(f"{rag_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
+            parents=True, exist_ok=True
         )
-        return f"{results_dirname}/{retrieval_method_name}/{name}.json"
+        writer.write_rag_exec_summary(
+            f"{rag_execution_summary_dirname}/{retrieval_method_name}/{name}.jsonl"
+        )
+        return output_file

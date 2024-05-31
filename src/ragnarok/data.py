@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Union
-
+from enum import Enum
 
 from dacite import from_dict
 
@@ -46,8 +46,14 @@ class Result:
     query: Query
     references: List[Union[str | int]] = field(default_factory=list)
     answer: List[CitedSentence] = field(default_factory=list)
-    rag_exec_summary: List[RAGExecInfo] = (field(default_factory=list),)
+    rag_exec_summary: RAGExecInfo = None
 
+class OutputFormat(Enum):
+    JSON = "json"
+    JSONL = "jsonl"
+
+    def __str__(self):
+        return self.value    
 
 def read_requests_from_file(file_path: str) -> List[Request]:
     extension = file_path.split(".")[-1]
@@ -69,6 +75,24 @@ def read_requests_from_file(file_path: str) -> List[Request]:
     else:
         raise ValueError(f"Expected json or jsonl file format, got {extension}")
 
+def remove_unused_references(result: Result, max_per_sentence: int = 3) -> Result:
+    # Find all referenced document ids in the citations
+    cited_docids = set()
+    for cited_sentence in result.answer:
+        cited_sentence.citations = cited_sentence.citations[:max_per_sentence]
+        cited_docids.update(cited_sentence.citations)
+
+    # Filter the references list to only include cited docids
+    result.references = [ref for i, ref in enumerate(result.references) if i in cited_docids]
+
+    # Create a mapping from old indices to new indices
+    new_index_map = {old_idx: new_idx for new_idx, old_idx in enumerate(sorted(cited_docids))}
+
+    # Update citations in CitedSentence
+    for cited_sentence in result.answer:
+        cited_sentence.citations = [new_index_map[old_idx] for old_idx in cited_sentence.citations]
+
+    return result
 
 class DataWriter:
     def __init__(
@@ -84,24 +108,18 @@ class DataWriter:
 
     def write_rag_exec_summary(self, filename: str):
         exec_summary = []
-        for d in self._data:
-            values = []
-            for info in d.rag_exec_summary:
-                values.append(info.__dict__)
-            exec_summary.append(
-                {"query": d.query.__dict__, "rag_exec_summary": values}
-            )
         with open(filename, "a" if self._append else "w") as f:
-            json.dump(exec_summary, f, indent=2)
+            for d in self._data:
+                exec_summary = {"query": d.query.__dict__, "rag_exec_summary": d.rag_exec_summary.__dict__}
+                f.write(json.dumps(exec_summary) + "\n")
 
     def _convert_result_to_dict(self, result: Result) -> Dict:
-        print(result)
         result_dict = {
             "topic_id": result.query.qid,
             "topic": result.query.text,
             "references": result.references,
-            "response_length": sum(len(sentence["text"]) for sentence in result.answer),
-            "answer": [{"text": sentence["text"], "citations": sentence["citations"]} for sentence in result.answer]
+            "response_length": sum(len(sentence.text) for sentence in result.answer),
+            "answer": [{"text": sentence.text, "citations": sentence.citations} for sentence in result.answer]
         }
         return result_dict
 
@@ -113,6 +131,5 @@ class DataWriter:
     def write_in_jsonl_format(self, filename: str):
         with open(filename, 'a' if self._append else 'w') as f:
             for d in self._data:
-                print(d)
                 json.dump(self._convert_result_to_dict(d), f)
                 f.write('\n')
