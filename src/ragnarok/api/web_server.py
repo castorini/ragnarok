@@ -12,24 +12,13 @@ def query_model(model_path, dataset, host, host_reranker, top_k_retrieve, top_k_
             k=[top_k_retrieve, top_k_rerank],
             qid=qid,
         )
-        result = {
-            "topic_id": response.query.qid,
-            "topic": response.query.text,
-            "references": response.references,
-            "response_length": sum(len(sentence["text"]) for sentence in response.answer),
-            "answer": [{"text": sentence["text"], "citations": sentence["citations"]} for sentence in response.answer]
-        }
-        return result
+        return response
     except Exception as e:
         return {"error": str(e)}
 
-def highlight_json(json_data):
+def format_json(json_data):
     import json
-    from pygments import highlight, lexers, formatters
-    formatter = formatters.HtmlFormatter(style="colorful", full=True)
-    json_str = json.dumps(json_data, indent=2)
-    result = highlight(json_str, lexers.JsonLexer(), formatter)
-    return result
+    return json.dumps(json_data, indent=2)
 
 html_content = """
 <style>
@@ -73,64 +62,48 @@ html_content = """
 </div>
 """
 
-
 with gr.Blocks() as demo:
     gr.HTML(html_content)
     with gr.Row():
         with gr.Column():
-            Retriever_A = gr.Dropdown(label="Retriever A", choices=["BM25"])
-            Reranker_A = gr.Dropdown(label="Reranker A", choices=["RankZephyr", "RankVicuna", "RankGPT4o"])
-            LLM_A = gr.Dropdown(label="LLM A", choices=["commandR", "commandRPlus"])
+            Retriever_A = gr.Dropdown(label="Retriever A", choices=["BM25"], value="BM25")
+            Reranker_A = gr.Dropdown(label="Reranker A", choices=["RankZephyr", "RankVicuna", "RankGPT4o"], value="RankZephyr")
+            LLM_A = gr.Dropdown(label="LLM A", choices=["command-r", "command-r-plus"], value="command-r")
         with gr.Column():
-            Retriever_B = gr.Dropdown(label="Retriever B", choices=["BM25"])
-            Reranker_B = gr.Dropdown(label="Reranker B", choices=["RankZephyr", "RankVicuna", "RankGPT4o"])
-            LLM_B = gr.Dropdown(label="LLM B", choices=["commandR", "commandRPlus"])
+            Retriever_B = gr.Dropdown(label="Retriever B", choices=["BM25"], value="BM25")
+            Reranker_B = gr.Dropdown(label="Reranker B", choices=["RankZephyr", "RankVicuna", "RankGPT4o"], value="RankVicuna")
+            LLM_B = gr.Dropdown(label="LLM B", choices=["command-r", "command-r-plus"], value="command-r")
 
     with gr.Row():
-        input_text = gr.Textbox(label="Enter your prompt and press ENTER", placeholder="Type here...")
+        input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
     with gr.Row():
         button = gr.Button("Compare")
     with gr.Row():
-        output_a = gr.Textbox(label="Output from Model A")
-        output_b = gr.Textbox(label="Output from Model B")
+        output_a = gr.JSON(label="Output from Model A")
+        output_b = gr.JSON(label="Output from Model B")
+        # output_a = gr.Textbox(label="Output from Model A")
+        # output_b = gr.Textbox(label="Output from Model B")
 
-    button.click(inputs=[LLM_A, LLM_B, input_text], outputs=[output_a, output_b])
-
+    # button.click(inputs=[LLM_A, LLM_B, input_text], outputs=[output_a, output_b])
     with gr.Accordion(label="Parameters", open=False):
         with gr.Row():
             with gr.Column():
-                dataset_a = gr.Textbox(label="Dataset", value="msmarco-v2.1-doc-segmented")
-                host_a = gr.Textbox(label="Retriever Host", value="8081")
-                host_reranker_a = gr.Textbox(label="Reranker Host", value="8082")
-                top_k_retrieve_a = gr.Number(label="Hits Retriever", value=40)
-                top_k_rerank_a = gr.Number(label="Hits Reranker", value=40)
-                qid_a = gr.Number(label="QID", value=1)
-            with gr.Column():
-                dataset_b = gr.Textbox(label="Dataset", value="msmarco-v2.1-doc-segmented")
-                host_b = gr.Textbox(label="Retriever Host", value="8081")
-                host_reranker_b = gr.Textbox(label="Reranker Host", value="8082")
-                top_k_retrieve_b = gr.Number(label="Hits Retriever", value=40)
-                top_k_rerank_b = gr.Number(label="Hits Reranker", value=40)
-                qid_b = gr.Number(label="QID", value=1)
+                dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
+                host = gr.Textbox(label="Retriever Host", value="8081")
+                host_reranker = gr.Textbox(label="Reranker Host", value="8082")
+                top_k_retrieve = gr.Number(label="Hits Retriever", value=10)
+                top_k_rerank = gr.Number(label="Hits Reranker", value=5)
+                qid = gr.Number(label="QID", value=1)
 
-    def on_submit(model_path, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
-        result = query_model(model_path, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        if "error" in result:
-            return f"<pre>{result['error']}</pre>"
-        else:
-            highlighted_result = highlight_json(result)
-            query_response_html = f"""
-            <div style='width: 100%; padding: 10px;'>
-                <h3>Response</h3>
-                {highlighted_result}
-            </div>
-            """
-            return query_response_html
-
-    submit_btn.click(
+    def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
+        result = query_model(model_a, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+        result = query_model(model_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+        return [result, result]
+        
+    button.click(
         on_submit, 
-        inputs=[model_path, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query], 
-        outputs=result_output
+        inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],
+        outputs=[output_a, output_b]
     )
 
 demo.launch()
