@@ -100,7 +100,7 @@ class Restriever:
 
         parsed_query = parse.quote(request.query.text)
         method = self._retrieval_method[-1]
-        url = f"{host}/api/model/{method}/index/{dataset}/retriever/{retriever_port}/query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}"
+        url = f"{host}/api/model/{method}/index/{dataset}/{retriever_port}?query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}"
         print(url)
         response = requests.get(url)
         print(response)
