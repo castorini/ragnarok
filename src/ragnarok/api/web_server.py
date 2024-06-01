@@ -31,24 +31,44 @@ def highlight_json(json_data):
     result = highlight(json_str, lexers.JsonLexer(), formatter)
     return result
 
+
 with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column():
-            query = gr.Textbox(label="Query", value="What caused the second world war")
-            submit_btn = gr.Button("Submit")
+            Retriever_A = gr.Dropdown(label="Retriever A", choices=["BM25"])
+            Reranker_A = gr.Dropdown(label="Reranker A", choices=["RankZephyr", "RankVicuna", "RankGPT4o"])
+            LLM_A = gr.Dropdown(label="LLM A", choices=["commandR", "commandRPlus"])
         with gr.Column():
-            result_output = gr.HTML()
+            Retriever_B = gr.Dropdown(label="Retriever B", choices=["BM25"])
+            Reranker_B = gr.Dropdown(label="Reranker B", choices=["RankZephyr", "RankVicuna", "RankGPT4o"])
+            LLM_B = gr.Dropdown(label="LLM B", choices=["commandR", "commandRPlus"])
+
+    with gr.Row():
+        input_text = gr.Textbox(label="Enter your prompt and press ENTER", placeholder="Type here...")
+    with gr.Row():
+        button = gr.Button("Compare")
+    with gr.Row():
+        output_a = gr.Textbox(label="Output from Model A")
+        output_b = gr.Textbox(label="Output from Model B")
+
+    button.click(inputs=[LLM_A, LLM_B, input_text], outputs=[output_a, output_b])
 
     with gr.Accordion(label="Parameters", open=False):
         with gr.Row():
             with gr.Column():
-                model_path = gr.Textbox(label="Model Path", value="command-r-plus")
-                dataset = gr.Textbox(label="Dataset", value="msmarco-v2.1-doc-segmented")
-                host = gr.Textbox(label="Retriever Host", value="8081")
-                host_reranker = gr.Textbox(label="Reranker Host", value="8082")
-                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
-                top_k_rerank = gr.Number(label="Hits Reranker", value=40)
-                qid = gr.Number(label="QID", value=1)
+                dataset_a = gr.Textbox(label="Dataset", value="msmarco-v2.1-doc-segmented")
+                host_a = gr.Textbox(label="Retriever Host", value="8081")
+                host_reranker_a = gr.Textbox(label="Reranker Host", value="8082")
+                top_k_retrieve_a = gr.Number(label="Hits Retriever", value=40)
+                top_k_rerank_a = gr.Number(label="Hits Reranker", value=40)
+                qid_a = gr.Number(label="QID", value=1)
+            with gr.Column():
+                dataset_b = gr.Textbox(label="Dataset", value="msmarco-v2.1-doc-segmented")
+                host_b = gr.Textbox(label="Retriever Host", value="8081")
+                host_reranker_b = gr.Textbox(label="Reranker Host", value="8082")
+                top_k_retrieve_b = gr.Number(label="Hits Retriever", value=40)
+                top_k_rerank_b = gr.Number(label="Hits Reranker", value=40)
+                qid_b = gr.Number(label="QID", value=1)
 
     def on_submit(model_path, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
         result = query_model(model_path, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
