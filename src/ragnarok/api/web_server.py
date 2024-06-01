@@ -31,8 +31,51 @@ def highlight_json(json_data):
     result = highlight(json_str, lexers.JsonLexer(), formatter)
     return result
 
+html_content = """
+<style>
+    .navbar {
+        background-color: #333; /* Dark background color */
+        color: white;
+        padding: 10px 20px;
+        font-family: Arial, sans-serif;
+    }
+    .navbar h2 {
+        margin: 0;
+        padding-bottom: 8px;
+    }
+    .navbar a {
+        color: #f0db4f; /* Gold color for links */
+        text-decoration: none;
+        margin-right: 20px;
+        font-weight: bold;
+    }
+    .navbar a:hover {
+        text-decoration: underline;
+    }
+    .navbar ul {
+        list-style-type: none;
+        padding: 0;
+    }
+    .navbar li {
+        display: inline;
+    }
+</style>
+
+<div class='navbar'>
+    <h2>LMSYS Chatbot Arena: Benchmarking LLMs in the Wild</h2>
+
+    <p>Rules</p>
+    <ul>
+        <li>Ask any question to two chosen models (e.g., ChatGPT, Claude, Llama) and vote for the better one!</li>
+        <li>You can chat for multiple turns until you identify a winner.</li>
+    </ul>
+    <h3>👇 Choose two models to compare</h3>
+</div>
+"""
+
 
 with gr.Blocks() as demo:
+    gr.HTML(html_content)
     with gr.Row():
         with gr.Column():
             Retriever_A = gr.Dropdown(label="Retriever A", choices=["BM25"])
