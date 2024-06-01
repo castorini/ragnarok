@@ -32,20 +32,38 @@ Define the topics you want to search for.
 
 ```bash
 TOPICS=(rag24.raggy-dev)
-```
 
-## Step 5: Run Search and Output Reranker Requests
-
-```bash
 for t in "${TOPICS[@]}"; do
     java -cp $ANSERINI_JAR io.anserini.search.SearchCollection \
         -index msmarco-v2.1-doc-segmented \
         -topics $t \
-        -output $OUTPUT_DIR/run.msmarco-v2.1.doc-segmented.${t}.txt \
+        -output $OUTPUT_DIR/run.mmsmarco-v2.1-doc-segmented.bm25.${t}.txt \
         -threads 16 \
         -bm25 \
         -hits 100 \
-        -outputRerankerRequests $OUTPUT_DIR/retrieve_results_${t}_top100.jsonl
+        -outputRerankerRequests $OUTPUT_DIR/retrieve_results.msmarco-v2.1-doc-segmented.bm25.${t}.top100.jsonl
+    
+    java -cp $ANSERINI_JAR io.anserini.search.SearchCollection \
+        -index msmarco-v2.1-doc-segmented \
+        -topics $t \
+        -output $OUTPUT_DIR/run.msmarco-v2.1-doc-segmented.bm25-default+rm3.${t}.txt \
+        -threads 16 \
+        -bm25 -rm3 \
+        -hits 100 \
+        -outputRerankerRequests $OUTPUT_DIR/retrieve_results.msmarco-v2.1-doc-segmented.bm25-default+rm3.${t}.top100.jsonl
+    
+    # bm25 rocchio
+    java -cp $ANSERINI_JAR io.anserini.search.SearchCollection \
+        -index msmarco-v2.1-doc-segmented \
+        -topics $t \
+        -output $OUTPUT_DIR/run.msmarco-v2.1-doc-segmented.bm25-rocchio.${t}.txt \
+        -threads 16 \
+        -bm25 -rocchio \
+        -hits 100 \
+        -outputRerankerRequests $OUTPUT_DIR/retrieve_results.msmarco-v2.1-doc-segmented.bm25-rocchio.${t}.top100.jsonl
+    
+
+
 done
 ```
 
@@ -172,3 +190,5 @@ python src/ragnarok/scripts/run_ragnarok.py  --model_path=command-r  --topk=100,
 python src/ragnarok/scripts/run_ragnarok.py  --model_path=command-r  --topk=20 --dataset=${SET}  --retrieval_method=bm25 --prompt_mode=cohere  --context_size=8192 --max_output_tokens=1500 --print_prompts_responses
 ```
 ```
+
+
