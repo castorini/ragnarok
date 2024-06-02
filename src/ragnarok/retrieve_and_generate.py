@@ -106,7 +106,7 @@ def retrieve_and_generate(
     )
     if isinstance(dataset, str):
         file_name = rag.write_answer_results(
-            retrieval_method[-1].name,
+            reranker_path,
             rag_results,
             shuffle_candidates,
             top_k_candidates=k[-1],

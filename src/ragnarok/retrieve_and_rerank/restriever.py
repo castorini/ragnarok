@@ -66,14 +66,14 @@ class Restriever:
             )
         
         try:
-            retriever_path = RetrievalMethod[retriever_path]
-            reranker_path = RetrievalMethod[reranker_path]
+            retriever_path = RetrievalMethod.from_string(retriever_path.lower())
+            reranker_path = RetrievalMethod.from_string(reranker_path.lower())
         except KeyError:
             retriever_path = RetrievalMethod.UNSPECIFIED
             reranker_path = RetrievalMethod.UNSPECIFIED
         
         retrieval_method = [retriever_path, reranker_path]
-        
+
         if RetrievalMethod.UNSPECIFIED in retrieval_method:
             raise ValueError(
                 f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
@@ -111,7 +111,7 @@ class Restriever:
         rerank_method = self._retrieval_method[-1]
         retrieval_method = self._retrieval_method[0]
 
-        url = f"http://localhost:{host_reranker}/api/model/{retrieval_method}/index/{dataset}/{host_retriever}?query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}&retrieval_method={rerank_method}"
+        url = f"http://localhost:{host_reranker}/api/model/{rerank_method}/index/{dataset}/{host_retriever}?query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}&retrieval_method={retrieval_method}"
         print(url)
         response = requests.get(url)
         print(response)

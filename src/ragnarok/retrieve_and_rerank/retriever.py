@@ -34,6 +34,13 @@ class RetrievalMethod(Enum):
 
     def __str__(self):
         return self.value
+    
+    @staticmethod
+    def from_string(value):
+        for method in RetrievalMethod:
+            if method.value == value:
+                return method
+        raise ValueError(f"Unknown retrieval method: {value}")
 
 
 class Retriever:
