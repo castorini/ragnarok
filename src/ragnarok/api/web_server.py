@@ -102,11 +102,11 @@ with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column():
             Retriever_A = gr.Dropdown(label="Retriever A", choices=["bm25"], value="bm25")
-            Reranker_A = gr.Dropdown(label="Reranker A", choices=["rank_zephyr", "rank_vicuna", "gpt_4o", "unspecified"], value="rank_zephyr")
+            Reranker_A = gr.Dropdown(label="Reranker A", choices=["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"], value="rank_zephyr")
             LLM_A = gr.Dropdown(label="LLM A", choices=["command-r", "command-r-plus"], value="command-r")
         with gr.Column():
             Retriever_B = gr.Dropdown(label="Retriever B", choices=["bm25"], value="bm25")
-            Reranker_B = gr.Dropdown(label="Reranker B", choices=["rank_zephyr", "rank_vicuna", "gpt_4o", "unspecified"], value="rank_vicuna")
+            Reranker_B = gr.Dropdown(label="Reranker B", choices=["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"], value="rank_vicuna")
             LLM_B = gr.Dropdown(label="LLM B", choices=["command-r", "command-r-plus"], value="command-r")
 
     with gr.Row():
@@ -123,18 +123,21 @@ with gr.Blocks() as demo:
             response_b = gr.JSON(label="Response B")
 
     with gr.Accordion(label="Parameters", open=False):
-        with gr.Row():
-            with gr.Column():
-                dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
-                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
-                top_k_rerank = gr.Number(label="Hits Reranker", value=20)
-                host = gr.Textbox(label="Retriever Host", value="8081")
-                host_reranker = gr.Textbox(label="Reranker Host", value="8082")
-                qid = gr.Number(label="QID", value=1)
+        with gr.Column():
+            dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
+            top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
+            top_k_rerank = gr.Number(label="Hits Reranker", value=20)
+            with gr.Row():
+                host_retriever_a = gr.Textbox(label="Retriever Host A", value="8081")
+                host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
+            with gr.Row():
+                host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
+                host_reranker_b = gr.Textbox(label="Reranker Host B", value="8082")
+            qid = gr.Number(label="QID", value=1)
 
-    def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
-        def query_wrapper(retriever, reranker, model):
-            return query_model(retriever, reranker, model, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+    def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query):
+        def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
+            return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
         
         # results = []
         # executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
@@ -147,14 +150,14 @@ with gr.Blocks() as demo:
         
         # return results
 
-        resultA = query_wrapper(retriever_a, reranker_a, model_a)
-        resultB = query_wrapper(retriever_b, reranker_b, model_b)
+        [resultA, responseA] = query_wrapper(retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
+        [resultB, responseB] = query_wrapper(retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
 
-        return [resultA,resultB]
-    
+        return [resultA, resultB, responseA, responseB]
+
     button.click(
         on_submit, 
-        inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],
+        inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
         outputs=[output_a, output_b, response_a, response_b]
     )
 

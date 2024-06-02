@@ -29,8 +29,9 @@ class RetrievalMethod(Enum):
     RANK_ZEPHYR = "rank_zephyr"
     RANK_ZEPHYR_RHO = "rank_zephyr_rho"
     RANK_VICUNA = "rank_vicuna"
-    RANK_GPT4O = "gpt_4o"
-    RANK_GPT4 = "gpt_4"
+    RANK_GPT4O = "gpt-4o"
+    RANK_GPT4 = "gpt-4"
+    RANK_GPT35_TURBO = "gpt-3.5-turbo"
 
     def __str__(self):
         return self.value
