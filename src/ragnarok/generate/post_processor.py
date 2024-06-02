@@ -3,7 +3,7 @@ import time
 
 import spacy
 import stanza
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from ragnarok.data import CitedSentence
 
 class StanzaTokenizer:
@@ -76,7 +76,7 @@ class CoherePostProcessor:
             citations = sorted(citations)
         return citations
 
-    def __call__(self, response) -> List[Dict[str, Any]]:
+    def __call__(self, response) -> Tuple[List[CitedSentence], Dict[str, Any]]:
         text_output = response.text
         citations = [{
             "start": citation.start,
@@ -90,5 +90,67 @@ class CoherePostProcessor:
         for sentence in sentences:
             answer_citations = self._find_sentence_citations(text_output, sentence, citations)
             answers.append(CitedSentence(text=sentence, citations=answer_citations))
+        
+        return answers, rag_exec_response
+
+
+class GPTPostProcessor:
+    def __init__(self, tokenizer="spacy") -> None:
+        self.tokenizer = SpacyTokenizer(model='en_core_web_trf')
+
+    def _find_sentence_citations(self, sentence: str, citation_range: List[int] = list(range(20))) -> tuple[str, List[int]]:
+        # Regex pattern to find citations
+        pattern = re.compile(r'\[\d+\](?:,? ?)')
+
+        # Find all citations
+        citations = pattern.findall(sentence)
+        if citations:
+            # Remove citations from text
+            sentence = pattern.sub('', sentence).strip()
+
+            # Extract indices from citations
+            indices = [int(re.search(r'\d+', citation).group()) - 1 for citation in citations]
+            citations = [index for index in indices if index in citation_range]
+        else:
+            matches = re.findall(r'\[[^\]]*\]', sentence)
+            if not matches:
+                return sentence, []        
+            citations = []
+            for match in matches:
+                citation = match[1:-1]
+                try:
+                    if "," in citation:
+                        flag = False
+                        for cit in citation.split(","):
+                            cit = int(cit) - 1
+                            if cit in citation_range:
+                                flag = True
+                                citations.append(int(cit))
+                        if flag:
+                            sentence = sentence.replace(match, "")
+                    else:
+                        citation = int(citation) - 1
+                        if citation in citation_range:
+                            citations.append(citation)
+                            sentence = sentence.replace(match, "")
+                except:
+                    print(f"Not a valid citation: {match}")
+            
+        sentence = re.sub(' +', ' ', sentence)
+        if len(sentence) > 3:
+            if sentence[-2] == " ":
+                sentence = sentence[:-2] + sentence[-1]
+        return sentence, citations
+
+    def __call__(self, response) -> List[Dict[str, Any]]:
+        text_output = response
+        sentences = self.tokenizer.tokenize(text_output)
+        answers = []
+        citation_range = list(range(20))
+        for sentence in sentences:
+            sentence_parsed, citations = self._find_sentence_citations(sentence, citation_range)
+            answers.append(CitedSentence(text=sentence_parsed, citations=citations))
+        
+        rag_exec_response = {"text": response, "citations": citation_range}
         
         return answers, rag_exec_response

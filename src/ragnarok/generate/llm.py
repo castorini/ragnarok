@@ -10,7 +10,6 @@ from tqdm import tqdm
 
 from ragnarok.data import RAGExecInfo, Request, Result, remove_unused_references
 
-
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     COHERE = "cohere"

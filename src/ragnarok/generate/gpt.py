@@ -5,8 +5,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import openai
 import tiktoken
 
+from ragnarok.data import RAGExecInfo, Request
 from ragnarok.generate.llm import PromptMode, LLM
-from ragnarok.data import Request
+from ragnarok.generate.post_processor import GPTPostProcessor
 from ragnarok.generate.templates.chat_qa import ChatQATemplate
 
 class SafeOpenai(LLM):
@@ -64,6 +65,7 @@ class SafeOpenai(LLM):
         self._keys = keys
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
+        self._post_processor = GPTPostProcessor()
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
         self.use_azure_ai = False
@@ -124,8 +126,10 @@ class SafeOpenai(LLM):
         self,
         prompt: Union[str, List[Dict[str, str]]],
         logging: bool = False,
-    ) -> Tuple[str, int]:
-        model_key = "engine" if self.use_azure_ai else "model"
+    ) -> Tuple[str, RAGExecInfo]:
+        model_key = "model"
+        if logging:
+            print(f"Prompt: {prompt}")
         response = self._call_completion(
             messages=prompt,
             temperature=0.1,
@@ -137,8 +141,16 @@ class SafeOpenai(LLM):
             encoding = tiktoken.get_encoding(self._model)
         except:
             encoding = tiktoken.get_encoding("cl100k_base")
-        return response, len(encoding.encode(response))
-
+        if logging:
+            print(f"Response: {response}")
+        answers, rag_exec_response = self._post_processor(response)
+        if logging:
+            print(f"Answers: {answers}")
+        rag_exec_info = RAGExecInfo(prompt=prompt, response=rag_exec_response, input_token_count=self.get_num_tokens(prompt), 
+                                    output_token_count=sum([len(ans.text) for ans in answers]), candidates=[]) 
+        if logging:
+            print(f"RAG Exec Info: {rag_exec_info}")
+        return answers, rag_exec_info
     def create_prompt(
         self, request: Request, topk: int
     ) -> Tuple[List[Dict[str, str]], int]:
@@ -154,7 +166,8 @@ class SafeOpenai(LLM):
                     f"[{rank}] {self._replace_number(content)}", 
                 )
             if self._prompt_mode == PromptMode.CHATQA:
-                messages = ChatQATemplate(query, context, "gpt")
+                chat_qa_template = ChatQATemplate()
+                messages = chat_qa_template(query, context, "gpt")
             else:
                 raise ValueError(
                     f"Unsupported prompt mode: {self._prompt_mode}, expected {PromptMode.CHATQA}."

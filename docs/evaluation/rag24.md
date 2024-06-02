@@ -18,3 +18,8 @@ python3 src/ragnarok/evaluate/pooler.py --run_jsonl_files retrieve_results/BM25/
 # rag24.raggy-dev
 python3 src/ragnarok/evaluate/pooler.py --run_jsonl_files retrieve_results/BM25/retrieve_results_rag24.raggy-dev_top100.jsonl retrieve_results/RANK_ZEPHYR_RHO/retrieve_results_rag24.raggy-dev_top100.jsonl --output_jsonl_file pool_results/pooled_results_rag24.raggy-dev_pool20.jsonl --k 20
 ```
+
+
+```bash
+python3 src/ragnarok/evaluate/pooler.py --run_jsonl_files retrieve_results/BM25/retrieve_results_rag24.researchy-dev_small_top100.jsonl retrieve_results/RANK_ZEPHYR_RHO/retrieve_results_rag24.researchy-dev_small_top100.jsonl --output_jsonl_file pool_results/pooled_results_rag24.researchy-dev_small_pool20.jsonl --k 40
+```

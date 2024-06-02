@@ -159,7 +159,7 @@ class SafeOpenaiNuggetizer():
             },
             {
                 "role": "user",
-                "content": f"Update the list of atomic nuggets of information (1-9 words), if needed, so they best provide the information required for the query. Leverage only the initial list of nuggets (if exists) and the provided context (this is an iterative process).  Return only the final list of all nuggets in a Pythonic list format (even if no updates). Make sure there is no redundant information. Order them in decreasing order of importance. Prefer nuggets that provide more interesting information.\n\n",
+                "content": f"Update the list of atomic nuggets of information (1-12 words), if needed, so they best provide the information required for the query. Leverage only the initial list of nuggets (if exists) and the provided context (this is an iterative process).  Return only the final list of all nuggets in a Pythonic list format (even if no updates). Make sure there is no redundant information. The more nuggets, the merrier. Order them in decreasing order of importance. Prefer nuggets that provide more interesting information.\n\n",
             },
         ] 
     def _get_prefix_for_question_prompt(
@@ -168,11 +168,11 @@ class SafeOpenaiNuggetizer():
         return [
             {
                 "role": "system",
-                "content": "You are NuggetizeLLM, an intelligent assistant that can update a list of subquestion nuggets to best provide all the information required to answer the search query.",
+                "content": "You are NuggetizeLLM, an intelligent assistant that can update a list of subquery nuggets to best provide all the atomic subqueries that would best lead to information required to answer the main search query.",
             },
             {
                 "role": "user",
-                "content": f"Update the list of atomic subquestion nuggets, if needed, so they best provide the information required for the query. Leverage only the initial list of nuggets (if exists) and the provided context (this is an iterative process).  Return only the final list of all subquestion nuggets in a Pythonic list format (even if no updates). Make sure there is no redundant information. Order them in decreasing order of importance. Prefer subquestion nuggets that lead to more interesting information.\n\n",
+                "content": f"Update the list of atomic subquery nuggets, if needed, so they best provide the information required for the query. Leverage only the initial list of nuggets (if exists) and the provided context (this is an iterative process to identify such nugget subquestions.  Return only the final list of all subquestion nuggets in a Pythonic list format (even if no updates). Make sure there is no redundant information. Order them in decreasing order of importance. Prefer subquestion nuggets that lead to more interesting information.\n\n",
             },
         ]
 
@@ -203,7 +203,7 @@ class SafeOpenaiNuggetizer():
             
             all_context += f"[{rank}] {content}\n"
         message += f"Search Query: {request.query.text}\nContext:\n{all_context}"
-        message += f"Search Query: {query}\nInitial Nugget List: {nuggets}\nOnly update the list of atomic nuggets (if needed, else return as is). Do not say any word or explain.\nUpdated Nugget List:"
+        message += f"Search Query: {query}\nInitial Nugget List: {nuggets}\nOnly update the list of atomic nuggets (if needed, else return as is). Do not explain. Always answer in short nuggets (not questions). List in the form [\"a\", \"b\", ...] and a and b are strings with no mention of \".\nUpdated Nugget List:"
         messages[-1]["content"] = message
         return messages
     
