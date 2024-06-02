@@ -1,24 +1,19 @@
 import gradio as gr
 from ragnarok import retrieve_and_generate
 
-citation_texts = {
-    0: "Source 0 text: Details about the Second World War.",
-    1: "Source 1 text: Discussion on the Treaty of Versailles.",
-    2: "Source 2 text: Analysis of expansionism in the 20th century.",
-    3: "Source 3 text: Germany's imperial ambitions.",
-    4: "Source 4 text: Economic impacts of the Treaty of Versailles."
-}
-
 def generate_text_with_citations(response):
     output = []
+    citation_texts = response['rag_exec_summary']['candidates']    
     for sentence in response['answer']:
         text = sentence['text']
+        
         citations = sentence['citations']
         if citations:
-            citation_html = ' '.join([
-                f'<span class="citation" title="{citation_texts[citation]}">[{citation}]</span>'
-                for citation in citations
-            ])
+            citation_html = ''
+            for citation in citations:
+                citation_title = citation_texts[citation]['doc']['title']
+                citation_text = citation_texts[citation]['doc']['segment']
+                citation_html += f'<span class="citation" title="{citation_title}: {citation_text}">[{citation}]</span>' + ' '
             text += f' {citation_html}'
         output.append('<p>'+text+'</p>')
     return '<br/>'.join(output)
@@ -40,7 +35,7 @@ def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host
         result = generate_text_with_citations(response)
         return result
     except Exception as e:
-        return {"error": str(e)}
+        return f"ERROR: {str(e)}"
 
 tooltip_style = """
 <style>
