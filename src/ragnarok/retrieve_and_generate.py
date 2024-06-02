@@ -41,7 +41,9 @@ def retrieve_and_generate(
 ):
     # Construct Generation Agent
     model_full_path = ""        
-    if "gpt" in LLM_path or use_azure_openai:
+    if "gpt" in LLM_path:
+        print("Using OpenAI API")
+        print(LLM_path)
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
             model=LLM_path,

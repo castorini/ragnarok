@@ -41,7 +41,8 @@ def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host
             qid=qid,
             reranker_path=reranker_path,
             retriever_path=retriever_path,
-            LLM_path=LLM
+            LLM_path=LLM,
+            use_azure_openai=True
         )
         output = generate_text_with_citations(response)
         result = {
@@ -98,7 +99,7 @@ html_content = """
 
 retriever_options = ["bm25"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
-llm_options = ["command-r", "command-r-plus"]
+llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 
 with gr.Blocks() as demo:
     gr.HTML(tooltip_style)
@@ -143,7 +144,7 @@ with gr.Blocks() as demo:
                     host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
                 with gr.Row():
                     host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
-                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8082")
+                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8083")
                 qid = gr.Number(label="QID", value=1)
 
         def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query):
@@ -198,7 +199,7 @@ with gr.Blocks() as demo:
                     host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
                 with gr.Row():
                     host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
-                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8082")
+                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8083")
                 qid = gr.Number(label="QID", value=1)
 
         def on_submit(dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query):
