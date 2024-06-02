@@ -78,6 +78,7 @@ def read_requests_from_file(file_path: str) -> List[Request]:
 def remove_unused_references(result: Result, max_per_sentence: int = 3) -> Result:
     # Find all referenced document ids in the citations
     cited_docids = set()
+    print(result.answer)
     for cited_sentence in result.answer:
         cited_sentence.citations = cited_sentence.citations[:max_per_sentence]
         cited_docids.update(cited_sentence.citations)

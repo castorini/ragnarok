@@ -22,8 +22,7 @@ wget https://repo1.maven.org/maven2/io/anserini/anserini/0.36.1/anserini-0.36.1-
 ## Step 3: Set Environment Variables
 
 ```bash
-export ANSERINI_JAR="anserini-0.36.1-fatjar.jar"
-export OUTPUT_DIR="runs"
+
 ```
 
 ## Step 4: Define Topics
@@ -31,9 +30,10 @@ export OUTPUT_DIR="runs"
 Define the topics you want to search for.
 
 ```bash
-TOPICS=(rag24.raggy-dev)
+export ANSERINI_JAR="anserini-0.36.1-fatjar.jar"
+export OUTPUT_DIR="runs"
+TOPICS=(rag24.raggy-dev rag24.researchy-dev)
 
-for t in "${TOPICS[@]}"; do
     java -cp $ANSERINI_JAR io.anserini.search.SearchCollection \
         -index msmarco-v2.1-doc-segmented \
         -topics $t \
@@ -41,8 +41,9 @@ for t in "${TOPICS[@]}"; do
         -threads 16 \
         -bm25 \
         -hits 100 \
-        -outputRerankerRequests $OUTPUT_DIR/retrieve_results.msmarco-v2.1-doc-segmented.bm25.${t}.top100.jsonl
-    
+        -outputRerankerRequests $OUTPUT_DIR/retrieve_results_msmarco-v2.1-doc-segmented.bm25.${t}_top100.jsonl &
+for t in "${TOPICS[@]}"; do
+
     java -cp $ANSERINI_JAR io.anserini.search.SearchCollection \
         -index msmarco-v2.1-doc-segmented \
         -topics $t \
@@ -50,8 +51,9 @@ for t in "${TOPICS[@]}"; do
         -threads 16 \
         -bm25 -rm3 \
         -hits 100 \
-        -outputRerankerRequests $OUTPUT_DIR/retrieve_results.msmarco-v2.1-doc-segmented.bm25-default+rm3.${t}.top100.jsonl
-    
+        -outputRerankerRequests $OUTPUT_DIR/retrieve_results.msmarco-v2.1-doc-segmented.bm25+rm3.${t}.top100.jsonl &
+done
+   
     # bm25 rocchio
     java -cp $ANSERINI_JAR io.anserini.search.SearchCollection \
         -index msmarco-v2.1-doc-segmented \
@@ -60,10 +62,7 @@ for t in "${TOPICS[@]}"; do
         -threads 16 \
         -bm25 -rocchio \
         -hits 100 \
-        -outputRerankerRequests $OUTPUT_DIR/retrieve_results.msmarco-v2.1-doc-segmented.bm25-rocchio.${t}.top100.jsonl
-    
-
-
+        -outputRerankerRequests $OUTPUT_DIR/retrieve_results.msmarco-v2.1-doc-segmented.bm25+rocchio.${t}.top100.jsonl &
 done
 ```
 
@@ -135,6 +134,15 @@ shuf -n 2 retrieve_results_rag24.researchy-dev_top100.jsonl > retrieve_results_r
 # Extract qids from the tiny file
 jq -r '.query.qid' retrieve_results_rag24.researchy-dev_tiny_top100.jsonl > researchy-dev_tiny.qids
 
+# Randomly select 120 lines from the original file and save to the large file
+shuf -n 120 retrieve_results_rag24.researchy-dev_top100.jsonl > retrieve_results_rag24.researchy-dev_large_top100.jsonl
+
+# Extract qids from the large file
+jq -r '.query.qid' retrieve_results_rag24.researchy-dev_large_top100.jsonl > researchy-dev_large.qids
+
+```
+
+```bash
 
 # For small qids
 sed 's/^/"qid":"/;s/$/"/' RANK_ZEPHYR_RHO/researchy-dev_small.qids > RANK_ZEPHYR_RHO/formatted_small.qids
@@ -145,6 +153,12 @@ sed 's/^/"qid":"/;s/$/"/' RANK_ZEPHYR_RHO/researchy-dev_medium.qids > RANK_ZEPHY
 # For tiny qids
 sed 's/^/"qid":"/;s/$/"/' RANK_ZEPHYR_RHO/researchy-dev_tiny.qids > RANK_ZEPHYR_RHO/formatted_tiny.qids
 
+# For large qids
+sed 's/^/"qid":"/;s/$/"/' RANK_ZEPHYR_RHO/researchy-dev_large.qids > RANK_ZEPHYR_RHO/formatted_large.qids
+
+```
+
+```bash
 
 head -5 RANK_ZEPHYR_RHO/formatted_small.qids
 
@@ -156,6 +170,13 @@ grep -Ff RANK_ZEPHYR_RHO/formatted_medium.qids BM25/retrieve_results_rag24.resea
 
 # For tiny qids
 grep -Ff RANK_ZEPHYR_RHO/formatted_tiny.qids BM25/retrieve_results_rag24.researchy-dev_top100.jsonl > BM25/retrieve_results_rag24.researchy-dev_tiny_top100.jsonl
+
+# For large qids
+grep -Ff RANK_ZEPHYR_RHO/formatted_large.qids BM25/retrieve_results_rag24.researchy-dev_top100.jsonl > BM25/retrieve_results_rag24.researchy-dev_large_top100.jsonl
+
+```
+
+```bash
 
 
 # wc -l

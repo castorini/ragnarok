@@ -19,6 +19,7 @@ def pretty_print_file(filename):
         print("Nuggets:")
         for i, nugget in enumerate(nuggets, start=1):
             print(f" {i}) {nugget}")
+        print("\n\n\n\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Pretty print JSON file content.')

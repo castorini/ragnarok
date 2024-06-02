@@ -9,7 +9,7 @@ from ftfy import fix_text
 from tqdm import tqdm
 
 from ragnarok.data import RAGExecInfo, Request, Result, remove_unused_references
-
+from copy import deepcopy
 
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
@@ -168,7 +168,8 @@ class LLM(ABC):
             answer, rag_exec_summary = self.run_llm(
                 prompt, logging
             )
-            rag_exec_summary.candidates = [candidate.__dict__ for candidate in request.candidates[:topk]]
+            
+            rag_exec_summary.candidates = [copy.deepcopy(candidate.__dict__) for candidate in request.candidates[:topk]]
             result = Result(
                 query=request.query,
                 references=[cand.docid for cand in request.candidates[:topk]],

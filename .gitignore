@@ -173,6 +173,7 @@ rag_execution_summary/
 repro/
 demo_outputs/
 src/results/
+docs/retrieval/researgy.sh
 results/
 nuggetized_results/
 pool_results/
