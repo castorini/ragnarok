@@ -20,7 +20,6 @@ def retrieve_and_generate(
     LLM_path: str,
     dataset: Union[str, List[str], List[Dict[str, Any]]],
     retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
-    retrieval_method: List[RetrievalMethod] = [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR],
     k: List[int] = [100, 20],
     context_size: int = 8192,
     max_output_tokens: int = 1500,
@@ -82,7 +81,8 @@ def retrieve_and_generate(
         if interactive:
             requests = [Restriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset,
-                retrieval_method=retrieval_method, 
+                retriever_path=retriever_path,
+                reranker_path=reranker_path,
                 host_reranker=host_reranker,
                 host_retriever=host_retriever, 
                 request=Request(query=Query(text=query,qid=qid)),
@@ -92,7 +92,7 @@ def retrieve_and_generate(
             )]
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
-                dataset_name=dataset, retrieval_method=retrieval_method,
+                dataset_name=dataset, retriever_path=retriever_path, reranker_path=reranker_path,
                 k=k, cache_input_format=CacheInputFormat.JSONL
             )
             print()
