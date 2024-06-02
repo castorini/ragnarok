@@ -13,7 +13,7 @@ def generate_text_with_citations(response):
             for citation in citations:
                 citation_title = citation_texts[citation]['doc']['title']
                 citation_text = citation_texts[citation]['doc']['segment']
-                citation_html += f'<span class="citation" title="{citation_title}: {citation_text}">[{citation}]</span>' + ' '
+                citation_html += f'<span class="citation" text="{citation_title}: {citation_text}">[{citation}]</span>' + ' '
             text += f' {citation_html}'
         output.append('<p>'+text+'</p>')
     return '<br/>'.join(output)
@@ -46,18 +46,24 @@ tooltip_style = """
 }
 
 .citation:hover::after {
-    content: attr(title);
+    content: attr(text);
     position: absolute;
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #333;
+    width: 300px;
     color: #fff;
+    background-color: rgba(0, 0, 0, 0.9);
     padding: 5px;
     border-radius: 5px;
-    white-space: nowrap;
-    z-index: 1;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    z-index: 50;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
+
 </style>
 """
 
@@ -101,8 +107,7 @@ with gr.Blocks() as demo:
 
     def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
         resultA = query_model(retriever_a, reranker_a, model_a, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        # resultB = query_model(retriever_b, reranker_b, model_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        resultB = resultA
+        resultB = query_model(retriever_b, reranker_b, model_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
         return [resultA, resultB]
     button.click(
         on_submit, 
