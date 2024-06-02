@@ -1,6 +1,28 @@
 import gradio as gr
 from ragnarok import retrieve_and_generate
 
+citation_texts = {
+    0: "Source 0 text: Details about the Second World War.",
+    1: "Source 1 text: Discussion on the Treaty of Versailles.",
+    2: "Source 2 text: Analysis of expansionism in the 20th century.",
+    3: "Source 3 text: Germany's imperial ambitions.",
+    4: "Source 4 text: Economic impacts of the Treaty of Versailles."
+}
+
+def generate_text_with_citations(response):
+    output = []
+    for sentence in response['answer']:
+        text = sentence['text']
+        citations = sentence['citations']
+        if citations:
+            citation_html = ' '.join([
+                f'<span class="citation" title="{citation_texts[citation]}">[{citation}]</span>'
+                for citation in citations
+            ])
+            text += f' {citation_html}'
+        output.append('<p>'+text+'</p>')
+    return '<br/>'.join(output)
+
 def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
     try:
         response = retrieve_and_generate.retrieve_and_generate(
@@ -15,56 +37,44 @@ def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host
             retriever_path=retriever_path,
             LLM_path=LLM
         )
-        return response
+        result = generate_text_with_citations(response)
+        return result
     except Exception as e:
         return {"error": str(e)}
 
-def format_json(json_data):
-    import json
-    return json.dumps(json_data, indent=2)
+tooltip_style = """
+<style>
+.citation {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.citation:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 5px;
+    border-radius: 5px;
+    white-space: nowrap;
+    z-index: 1;
+}
+</style>
+"""
 
 html_content = """
-<style>
-    .navbar {
-        background-color: #333; /* Dark background color */
-        color: white;
-        padding: 10px 20px;
-        font-family: Arial, sans-serif;
-    }
-    .navbar h2 {
-        margin: 0;
-        padding-bottom: 8px;
-    }
-    .navbar a {
-        color: #f0db4f; /* Gold color for links */
-        text-decoration: none;
-        margin-right: 20px;
-        font-weight: bold;
-    }
-    .navbar a:hover {
-        text-decoration: underline;
-    }
-    .navbar ul {
-        list-style-type: none;
-        padding: 0;
-    }
-    .navbar li {
-        display: inline;
-    }
-</style>
-
 <div class='navbar'>
-    <h2>LMSYS Chatbot Arena: Benchmarking LLMs in the Wild</h2>
-
-    <p>Rules</p>
-    <ul>
-        <li>Ask any question to two chosen models (e.g., ChatGPT, Claude, Llama) and vote for the better one!</li>
-        <li>You can chat for multiple turns until you identify a winner.</li>
-    </ul>
+    <h2>Ragnarok Chatbot Arena</h2>
+    <p>Ask any question to two chosen RAG pipelines and compare the results</p>
 </div>
 """
 
 with gr.Blocks() as demo:
+    gr.HTML(tooltip_style)
     gr.HTML(html_content)
     with gr.Row():
         with gr.Column():
@@ -81,12 +91,9 @@ with gr.Blocks() as demo:
     with gr.Row():
         button = gr.Button("Compare")
     with gr.Row():
-        output_a = gr.JSON(label="Output from Model A")
-        output_b = gr.JSON(label="Output from Model B")
-        # output_a = gr.Textbox(label="Output from Model A")
-        # output_b = gr.Textbox(label="Output from Model B")
+        output_a = gr.HTML(label="Output from Model A")
+        output_b = gr.HTML(label="Output from Model B")
 
-    # button.click(inputs=[LLM_A, LLM_B, input_text], outputs=[output_a, output_b])
     with gr.Accordion(label="Parameters", open=False):
         with gr.Row():
             with gr.Column():
@@ -99,9 +106,9 @@ with gr.Blocks() as demo:
 
     def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
         resultA = query_model(retriever_a, reranker_a, model_a, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        resultB = query_model(retriever_b, reranker_b, model_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+        # resultB = query_model(retriever_b, reranker_b, model_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+        resultB = resultA
         return [resultA, resultB]
-        
     button.click(
         on_submit, 
         inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],
