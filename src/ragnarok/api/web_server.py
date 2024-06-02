@@ -6,7 +6,6 @@ def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host
         response = retrieve_and_generate.retrieve_and_generate(
             dataset=dataset,
             query=query,
-            model_path=LLM,
             host_reranker=host_reranker,
             host_retriever=host_retriever,
             interactive=True, 
@@ -14,6 +13,7 @@ def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host
             qid=qid,
             reranker_path=reranker_path,
             retriever_path=retriever_path,
+            LLM_path=LLM
         )
         return response
     except Exception as e:
