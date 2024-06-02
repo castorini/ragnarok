@@ -139,19 +139,17 @@ with gr.Blocks() as demo:
         def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
             return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
         
-        # results = []
-        # executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
-        # with executor:
-        #     future_a = executor.submit(query_wrapper, retriever_a, reranker_a, model_a)
-        #     future_b = executor.submit(query_wrapper, retriever_b, reranker_b, model_b)
-            
-        #     for future in concurrent.futures.as_completed([future_a, future_b]):
-        #         results.append(future.result())
-        
-        # return results
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
+        with executor:
+            futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
+            futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
 
-        [resultA, responseA] = query_wrapper(retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
-        [resultB, responseB] = query_wrapper(retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
+            resultA, responseA = futureA.result()
+            resultB, responseB = futureB.result()
+
+
+        # [resultA, responseA] = query_wrapper(retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
+        # [resultB, responseB] = query_wrapper(retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
 
         return [resultA, resultB, responseA, responseB]
 
