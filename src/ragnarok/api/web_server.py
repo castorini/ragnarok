@@ -96,67 +96,137 @@ html_content = """
 </div>
 """
 
+retriever_options = ["bm25"]
+reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
+llm_options = ["command-r", "command-r-plus"]
+
 with gr.Blocks() as demo:
     gr.HTML(tooltip_style)
     gr.HTML(html_content)
-    with gr.Row():
-        with gr.Column():
-            Retriever_A = gr.Dropdown(label="Retriever A", choices=["bm25"], value="bm25")
-            Reranker_A = gr.Dropdown(label="Reranker A", choices=["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"], value="rank_zephyr")
-            LLM_A = gr.Dropdown(label="LLM A", choices=["command-r", "command-r-plus"], value="command-r")
-        with gr.Column():
-            Retriever_B = gr.Dropdown(label="Retriever B", choices=["bm25"], value="bm25")
-            Reranker_B = gr.Dropdown(label="Reranker B", choices=["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"], value="rank_vicuna")
-            LLM_B = gr.Dropdown(label="LLM B", choices=["command-r", "command-r-plus"], value="command-r")
 
-    with gr.Row():
-        input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
-    with gr.Row():
-        button = gr.Button("Compare")
-    with gr.Tab("Output"):
+    with gr.Tab("ragnarok (side-by-side unblinded)"):
         with gr.Row():
-            output_a = gr.HTML(label="Output from Model A")
-            output_b = gr.HTML(label="Output from Model B")
-    with gr.Tab("Responses"):
+            with gr.Column():
+                Retriever_A = gr.Dropdown(label="Retriever A", choices=retriever_options, value="bm25")
+                Reranker_A = gr.Dropdown(label="Reranker A", choices=reranker_options, value="rank_zephyr")
+                LLM_A = gr.Dropdown(label="LLM A", choices=llm_options, value="command-r")
+            with gr.Column():
+                Retriever_B = gr.Dropdown(label="Retriever B", choices=retriever_options, value="bm25")
+                Reranker_B = gr.Dropdown(label="Reranker B", choices=reranker_options, value="rank_vicuna")
+                LLM_B = gr.Dropdown(label="LLM B", choices=llm_options, value="command-r-plus")
+
         with gr.Row():
-            response_a = gr.JSON(label="Response A")
-            response_b = gr.JSON(label="Response B")
-
-    with gr.Accordion(label="Parameters", open=False):
-        with gr.Column():
-            dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
-            top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
-            top_k_rerank = gr.Number(label="Hits Reranker", value=20)
+            input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
+        with gr.Row():
+            button = gr.Button("Compare")
+        with gr.Tab("Output"):
             with gr.Row():
-                host_retriever_a = gr.Textbox(label="Retriever Host A", value="8081")
-                host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
+                output_a = gr.HTML(label="Output from Model A")
+                output_b = gr.HTML(label="Output from Model B")
+        with gr.Tab("Responses"):
             with gr.Row():
-                host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
-                host_reranker_b = gr.Textbox(label="Reranker Host B", value="8082")
-            qid = gr.Number(label="QID", value=1)
+                response_a = gr.JSON(label="Response A")
+                response_b = gr.JSON(label="Response B")
+        with gr.Row():
+            a_better_button = gr.Button("👈 A is better")
+            b_better_button = gr.Button("👉 B is better")
+            both_good_button = gr.Button("🤝 Tie")
+            both_bad_button = gr.Button("👎 Both are bad")
 
-    def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query):
-        def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
-            return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
-        with executor:
-            futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
-            futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
+        with gr.Accordion(label="Parameters", open=False):
+            with gr.Column():
+                dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
+                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
+                top_k_rerank = gr.Number(label="Hits Reranker", value=20)
+                with gr.Row():
+                    host_retriever_a = gr.Textbox(label="Retriever Host A", value="8081")
+                    host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
+                with gr.Row():
+                    host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
+                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8082")
+                qid = gr.Number(label="QID", value=1)
 
-            resultA, responseA = futureA.result()
-            resultB, responseB = futureB.result()
+        def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query):
+            def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
+                return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+            
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
+            with executor:
+                futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
+                futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
 
+                resultA, responseA = futureA.result()
+                resultB, responseB = futureB.result()
 
-        # [resultA, responseA] = query_wrapper(retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
-        # [resultB, responseB] = query_wrapper(retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
+            return [resultA, resultB, responseA, responseB]
 
-        return [resultA, resultB, responseA, responseB]
+        button.click(
+            on_submit, 
+            inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
+            outputs=[output_a, output_b, response_a, response_b]
+        )
 
-    button.click(
-        on_submit, 
-        inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
-        outputs=[output_a, output_b, response_a, response_b]
-    )
+    with gr.Tab("ragnarok (side-by-side blind)"):
+        with gr.Row():
+            gr.Textbox(value="Unknown retriever + reranker + generation model", label="System A")
+            gr.Textbox(value="Unknown retriever + reranker + generation model", label="System B")
+        with gr.Row():
+            input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
+        with gr.Row():
+            button = gr.Button("Compare")
+        with gr.Tab("Output"):
+            with gr.Row():
+                output_a = gr.HTML(label="Output from Model A")
+                output_b = gr.HTML(label="Output from Model B")
+        with gr.Tab("Responses"):
+            with gr.Row():
+                response_a = gr.JSON(label="Response A")
+                response_b = gr.JSON(label="Response B")
+        with gr.Row():
+            a_better_button = gr.Button("👈 A is better")
+            b_better_button = gr.Button("👉 B is better")
+            both_good_button = gr.Button("🤝 Tie")
+            both_bad_button = gr.Button("👎 Both are bad")
+
+        with gr.Accordion(label="Parameters", open=False):
+            with gr.Column():
+                dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
+                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
+                top_k_rerank = gr.Number(label="Hits Reranker", value=20)
+                with gr.Row():
+                    host_retriever_a = gr.Textbox(label="Retriever Host A", value="8081")
+                    host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
+                with gr.Row():
+                    host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
+                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8082")
+                qid = gr.Number(label="QID", value=1)
+
+        def on_submit(dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query):
+            def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
+                return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+            
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
+            with executor:
+                import random
+                retriever_a = random.choice(retriever_options)
+                reranker_a = random.choice(reranker_options)
+                model_a = random.choice(llm_options)
+                retriever_b = random.choice(retriever_options)
+                reranker_b = random.choice(reranker_options)
+                model_b = random.choice(llm_options)
+
+                futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
+                futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
+
+                resultA, responseA = futureA.result()
+                resultB, responseB = futureB.result()
+
+            return [resultA, resultB, responseA, responseB]
+
+        button.click(
+            on_submit, 
+            inputs=[dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
+            outputs=[output_a, output_b, response_a, response_b]
+        )
 
 demo.launch()
