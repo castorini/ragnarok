@@ -68,56 +68,6 @@ with gr.Blocks() as demo:
     gr.HTML(html_content)
     with gr.Row():
         with gr.Column():
-<<<<<<< HEAD
-            Retriever_A = gr.Dropdown(label="Retriever A", choices=["bm25"])
-            Reranker_A = gr.Dropdown(label="Reranker A", choices=["RankZephyr", "RankVicuna", "RankGPT4o"])
-            LLM_A = gr.Dropdown(label="LLM A", choices=["commandR", "commandRPlus"])
-        with gr.Column():
-            Retriever_B = gr.Dropdown(label="Retriever B", choices=["bm25"])
-            Reranker_B = gr.Dropdown(label="Reranker B", choices=["RankZephyr", "RankVicuna", "RankGPT4o"])
-            LLM_B = gr.Dropdown(label="LLM B", choices=["commandR", "commandRPlus"])
-
-    with gr.Row():
-        query = gr.Textbox(label="Enter your prompt and press ENTER", placeholder="Type here...")
-    with gr.Row():
-        button = gr.Button("Compare")
-    with gr.Row():
-        output_a = gr.Textbox(label="Output from Model A")
-        output_b = gr.Textbox(label="Output from Model B")
-
-    with gr.Accordion(label="Parameters", open=False):
-        with gr.Row():
-            with gr.Column():
-                dataset = gr.Textbox(label="Dataset", value="msmarco-v2.1-doc-segmented")
-                host_retriever = gr.Textbox(label="Retriever Host", value="8081")
-                host_reranker = gr.Textbox(label="Reranker Host", value="8082")
-                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
-                top_k_rerank = gr.Number(label="Hits Reranker", value=40)
-                qid = gr.Number(label="QID", value=1)
-
-    def on_submit(Retriever_A, Reranker_A, LLM_A, Retriever_B, Reranker_B, LLM_B, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
-        
-
-        resultA = query_model(Retriever_A,Reranker_A, LLM_A, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        resultB = query_model(Retriever_B, Reranker_B, LLM_B, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-
-        if "error" in resultA:
-            return f"<pre>{resultA['error']}</pre>"
-        else:
-            highlighted_result = highlight_json(resultA)
-            query_response_html = f"""
-            <div style='width: 100%; padding: 10px;'>
-                <h3>Response</h3>
-                {highlighted_result}
-            </div>
-            """
-            return query_response_html
-        
-    button.click(
-        on_submit, 
-        inputs=[Retriever_A, Reranker_A, LLM_A, Retriever_B, Reranker_B, LLM_B, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query],
-        outputs=result_output
-=======
             Retriever_A = gr.Dropdown(label="Retriever A", choices=["BM25"], value="BM25")
             Reranker_A = gr.Dropdown(label="Reranker A", choices=["RankZephyr", "RankVicuna", "RankGPT4o"], value="RankZephyr")
             LLM_A = gr.Dropdown(label="LLM A", choices=["command-r", "command-r-plus"], value="command-r")
@@ -156,7 +106,6 @@ with gr.Blocks() as demo:
         on_submit, 
         inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],
         outputs=[output_a, output_b]
->>>>>>> 1a70c3e7190dc078bf1faf3a293ed61ed45dec69
     )
 
 demo.launch()
