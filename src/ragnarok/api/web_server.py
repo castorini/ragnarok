@@ -98,9 +98,9 @@ with gr.Blocks() as demo:
                 qid = gr.Number(label="QID", value=1)
 
     def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
-        result = query_model(retriever_a, reranker_a, model_a, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        result = query_model(retriever_b, reranker_b, model_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        return [result, result]
+        resultA = query_model(retriever_a, reranker_a, model_a, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+        resultB = query_model(retriever_b, reranker_b, model_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+        return [resultA, resultB]
         
     button.click(
         on_submit, 
