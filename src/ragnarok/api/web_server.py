@@ -68,12 +68,12 @@ with gr.Blocks() as demo:
     gr.HTML(html_content)
     with gr.Row():
         with gr.Column():
-            Retriever_A = gr.Dropdown(label="Retriever A", choices=["BM25"], value="BM25")
-            Reranker_A = gr.Dropdown(label="Reranker A", choices=["RankZephyr", "RankVicuna", "RankGPT4o"], value="RankZephyr")
+            Retriever_A = gr.Dropdown(label="Retriever A", choices=["bm25"], value="bm25")
+            Reranker_A = gr.Dropdown(label="Reranker A", choices=["rank_zephyr", "rank_vicuna", "gpt_4o"], value="rank_zephyr")
             LLM_A = gr.Dropdown(label="LLM A", choices=["command-r", "command-r-plus"], value="command-r")
         with gr.Column():
-            Retriever_B = gr.Dropdown(label="Retriever B", choices=["BM25"], value="BM25")
-            Reranker_B = gr.Dropdown(label="Reranker B", choices=["RankZephyr", "RankVicuna", "RankGPT4o"], value="RankVicuna")
+            Retriever_B = gr.Dropdown(label="Retriever B", choices=["bm25"], value="bm25")
+            Reranker_B = gr.Dropdown(label="Reranker B", choices=["rank_zephyr", "rank_vicuna", "gpt_4o"], value="rank_vicuna")
             LLM_B = gr.Dropdown(label="LLM B", choices=["command-r", "command-r-plus"], value="command-r")
 
     with gr.Row():
