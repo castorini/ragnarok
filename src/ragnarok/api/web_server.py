@@ -1,4 +1,6 @@
 import gradio as gr
+import concurrent.futures
+import os
 from ragnarok import retrieve_and_generate
 
 def generate_text_with_citations(response):
@@ -80,11 +82,11 @@ with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column():
             Retriever_A = gr.Dropdown(label="Retriever A", choices=["bm25"], value="bm25")
-            Reranker_A = gr.Dropdown(label="Reranker A", choices=["rank_zephyr", "rank_vicuna", "gpt_4o"], value="rank_zephyr")
+            Reranker_A = gr.Dropdown(label="Reranker A", choices=["rank_zephyr", "rank_vicuna", "gpt_4o", "none"], value="rank_zephyr")
             LLM_A = gr.Dropdown(label="LLM A", choices=["command-r", "command-r-plus"], value="command-r")
         with gr.Column():
             Retriever_B = gr.Dropdown(label="Retriever B", choices=["bm25"], value="bm25")
-            Reranker_B = gr.Dropdown(label="Reranker B", choices=["rank_zephyr", "rank_vicuna", "gpt_4o"], value="rank_vicuna")
+            Reranker_B = gr.Dropdown(label="Reranker B", choices=["rank_zephyr", "rank_vicuna", "gpt_4o", "none"], value="rank_vicuna")
             LLM_B = gr.Dropdown(label="LLM B", choices=["command-r", "command-r-plus"], value="command-r")
 
     with gr.Row():
@@ -106,9 +108,25 @@ with gr.Blocks() as demo:
                 qid = gr.Number(label="QID", value=1)
 
     def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
-        resultA = query_model(retriever_a, reranker_a, model_a, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        resultB = query_model(retriever_b, reranker_b, model_b, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-        return [resultA, resultB]
+        def query_wrapper(retriever, reranker, model):
+            return query_model(retriever, reranker, model, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+        
+        # results = []
+        # executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
+        # with executor:
+        #     future_a = executor.submit(query_wrapper, retriever_a, reranker_a, model_a)
+        #     future_b = executor.submit(query_wrapper, retriever_b, reranker_b, model_b)
+            
+        #     for future in concurrent.futures.as_completed([future_a, future_b]):
+        #         results.append(future.result())
+        
+        # return results
+
+        resultA = query_wrapper(retriever_a, reranker_a, model_a)
+        resultB = query_wrapper(retriever_b, reranker_b, model_b)
+
+        return [resultA,resultB]
+    
     button.click(
         on_submit, 
         inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],

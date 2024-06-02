@@ -36,8 +36,8 @@ def retrieve_and_generate(
     window_size: int = 20,
     step_size: int = 10,
     interactive: bool = False,
-    host_reranker: str = "http://localhost:8082",
-    host_retriever: str = "http://localhost:8081",
+    host_reranker: str = "8082",
+    host_retriever: str = "8081",
 ):
     # Construct Generation Agent
     model_full_path = ""        

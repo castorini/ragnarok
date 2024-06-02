@@ -74,7 +74,8 @@ class Restriever:
         
         retrieval_method = [retriever_path, reranker_path]
 
-        if RetrievalMethod.UNSPECIFIED in retrieval_method:
+        # Rerank method can be none (RetrievalMethod.UNSPECIFIED)
+        if retrieval_method[0] == RetrievalMethod.UNSPECIFIED:
             raise ValueError(
                 f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
             )
