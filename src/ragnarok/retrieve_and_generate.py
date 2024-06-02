@@ -15,7 +15,9 @@ from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
 
 
 def retrieve_and_generate(
-    model_path: str,
+    retriever_path: str,
+    reranker_path: str,
+    LLM_path: str,
     dataset: Union[str, List[str], List[Dict[str, Any]]],
     retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
     retrieval_method: List[RetrievalMethod] = [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR],
@@ -35,14 +37,15 @@ def retrieve_and_generate(
     window_size: int = 20,
     step_size: int = 10,
     interactive: bool = False,
-    host: str = "http://localhost:8082",
+    host_reranker: str = "http://localhost:8082",
+    host_retriever: str = "http://localhost:8081",
 ):
-    # Construct Rerank Agent
+    # Construct Generation Agent
     model_full_path = ""        
-    if "gpt" in model_path or use_azure_openai:
+    if "gpt" in LLM_path or use_azure_openai:
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
-            model=model_path,
+            model=LLM_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=max_output_tokens,
@@ -50,15 +53,15 @@ def retrieve_and_generate(
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
-    elif "command-r" in model_path:
+    elif "command-r" in LLM_path:
         agent = Cohere(
-            model=model_path,
+            model=LLM_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
         )
-    elif model_path.lower()=="llama":
+    elif LLM_path.lower()=="llama":
         agent = OSLLM(
             model=model_full_path,
             context_size=context_size,
@@ -69,19 +72,23 @@ def retrieve_and_generate(
             num_gpus=num_gpus,
         )
     else:
-        raise ValueError(f"Unsupported model: {model_path}")
+        raise ValueError(f"Unsupported model: {LLM_path}")
 
     # Retrieve
     print("Retrieving:")
     if interactive and retrieval_mode != RetrievalMode.DATASET: 
-        raise ValueError(f"Unsupport retrieval mode for interactive retrieval. Currently only DATASET mode is supported.")
+        raise ValueError(f"Unsupported retrieval mode for interactive retrieval. Currently only DATASET mode is supported.")
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
             requests = [Restriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset,
                 retrieval_method=retrieval_method, 
-                host=host, request=Request(query=Query(text=query,qid=qid)),
+                host_reranker=host_reranker,
+                host_retriever=host_retriever, 
+                request=Request(query=Query(text=query,qid=qid)),
                 k=k,
+                retriever_path=retriever_path,
+                reranker_path=reranker_path,
             )]
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(

@@ -37,10 +37,11 @@ class Restriever:
     @staticmethod
     def from_dataset_with_prebuilt_index(
         dataset_name: str,
-        host: str,
-        retrieval_method: Union[RetrievalMethod, List[RetrievalMethod]] = RetrievalMethod.BM25,
+        host_reranker: str,
+        host_retriever: str,
+        retriever_path: str = "bm25",
+        reranker_path: str = "rank_zephyr",
         k: List[int] = [100, 100],
-        retriever_port: str = "8081",
         request: Request = None,
     ):
         """
@@ -63,8 +64,16 @@ class Restriever:
             raise ValueError(
                 f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
             )
-        if not retrieval_method:
-            raise "Please provide a retrieval method."
+        
+        try:
+            retriever_path = RetrievalMethod[retriever_path]
+            reranker_path = RetrievalMethod[reranker_path]
+        except KeyError:
+            retriever_path = RetrievalMethod.UNSPECIFIED
+            reranker_path = RetrievalMethod.UNSPECIFIED
+        
+        retrieval_method = [retriever_path, reranker_path]
+        
         if RetrievalMethod.UNSPECIFIED in retrieval_method:
             raise ValueError(
                 f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
@@ -73,14 +82,14 @@ class Restriever:
             RetrievalMode.DATASET,
             retrieval_method=retrieval_method,
         )
-        return retriever.retrieve(dataset=dataset_name, k=k, host=host, request=request, retriever_port=retriever_port)
+        return retriever.retrieve(dataset=dataset_name, k=k, host_retriever=host_retriever, host_reranker=host_reranker, request=request)
 
     def retrieve(
         self,
         dataset: Union[str, List[str], List[Dict[str, Any]]],
         request: Request,
-        host: str = "http://localhost:8082",
-        retriever_port: str = "8081",
+        host_reranker: str = "8082",
+        host_retriever: str = "8081",
         k: List[int] = [100, 20],
     ) -> Request:
         """
@@ -99,8 +108,10 @@ class Restriever:
         """
 
         parsed_query = parse.quote(request.query.text)
-        method = self._retrieval_method[-1]
-        url = f"{host}/api/model/{method}/index/{dataset}/{retriever_port}?query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}"
+        rerank_method = self._retrieval_method[-1]
+        retrieval_method = self._retrieval_method[0]
+
+        url = f"http://localhost:{host_reranker}/api/model/{retrieval_method}/index/{dataset}/{host_retriever}?query={parsed_query}&hits_retriever={str(k[0])}&hits_reranker={str(k[1])}&qid={request.query.qid}&retrieval_method={rerank_method}"
         print(url)
         response = requests.get(url)
         print(response)
