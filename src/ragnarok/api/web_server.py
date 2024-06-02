@@ -1,6 +1,7 @@
 import gradio as gr
 import concurrent.futures
 import os
+import pandas as pd
 from ragnarok import retrieve_and_generate
 
 def generate_text_with_citations(response):
@@ -92,7 +93,7 @@ tooltip_style = """
 
 html_content = """
 <div class='navbar'>
-    <h2>Ragnarok Chatbot Arena</h2>
+    <h1>Ragnarok Chatbot Arena</h1>
     <p>Ask any question to two chosen RAG pipelines and compare the results</p>
 </div>
 """
@@ -229,5 +230,15 @@ with gr.Blocks() as demo:
             inputs=[dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
             outputs=[output_a, output_b, response_a, response_b]
         )
+
+    with gr.Tab("Leaderboard"):
+        html_content = """
+        <div class='navbar'>
+            <h2>Ragnarok Chatbot Arena Leaderboard</h2>
+        </div>
+        """
+        gr.HTML(html_content)
+
+
 
 demo.launch()
