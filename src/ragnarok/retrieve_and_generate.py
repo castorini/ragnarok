@@ -87,8 +87,6 @@ def retrieve_and_generate(
                 host_retriever=host_retriever, 
                 request=Request(query=Query(text=query,qid=qid)),
                 k=k,
-                retriever_path=retriever_path,
-                reranker_path=reranker_path,
             )]
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
