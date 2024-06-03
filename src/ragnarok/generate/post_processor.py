@@ -1,3 +1,4 @@
+import os
 import re
 import time
 
@@ -33,8 +34,12 @@ class StanzaTokenizer:
 
 class SpacyTokenizer:
     def __init__(self, model='en_core_web_trf'):
-        self.nlp = spacy.load(model)
-        
+        try:
+            self.nlp = spacy.load(model)
+        except:
+            os.system(f"python -m spacy download {model}")
+            self.nlp = spacy.load(model)
+
     def tokenize(self, text: str, replace_newline: str = " ") -> List[str]:
         """
         Tokenize the input text into sentences.
