@@ -49,10 +49,10 @@ where = ["src"]
 include = [
     "ragnarok",
     "ragnarok.analyze",
+    "ragnarok.api",
     "ragnarok.demo",
     "ragnarok.evaluate",
     "ragnarok.generate",
     "ragnarok.retrieve_and_rerank",
-    "ragnarok.serve",
 ]
 namespaces = false
