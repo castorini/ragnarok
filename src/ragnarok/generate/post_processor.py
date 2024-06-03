@@ -78,12 +78,15 @@ class CoherePostProcessor:
 
     def __call__(self, response) -> Tuple[List[CitedSentence], Dict[str, Any]]:
         text_output = response.text
-        citations = [{
-            "start": citation.start,
-            "end": citation.end,
-            "text": citation.text,
-            "document_ids": list(citation.document_ids)
-        } for citation in response.citations]
+        if not response.citations:
+            citations = []
+        else:
+            citations = [{
+                "start": citation.start,
+                "end": citation.end,
+                "text": citation.text,
+                "document_ids": list(citation.document_ids)
+            } for citation in response.citations]
         rag_exec_response = {"text": response.text, "citations": citations}
         sentences = self.tokenizer.tokenize(text_output)
         answers = []

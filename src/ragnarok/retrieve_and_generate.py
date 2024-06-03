@@ -23,7 +23,7 @@ def retrieve_and_generate(
     context_size: int = 8192,
     max_output_tokens: int = 1500,
     device: str = "cuda",
-    num_gpus: int = 1,
+    num_gpus: int = 2,
     prompt_mode: PromptMode = PromptMode.CHATQA,
     num_few_shot_examples: int = 0,
     shuffle_candidates: bool = False,
@@ -58,9 +58,9 @@ def retrieve_and_generate(
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
         )
-    elif model_path.lower()=="llama":
+    elif "llama" in model_path.lower() or "mistral" in model_path.lower():
         agent = OSLLM(
-            model=model_full_path,
+            model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=max_output_tokens,

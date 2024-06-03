@@ -66,6 +66,11 @@ class Cohere(LLM):
                 break
             except Exception as e:
                 print(str(e))
+                if "blocked output" in str(e):
+                    answers = []
+                    rag_exec_info = RAGExecInfo(prompt=prompt[0], response="Blocked output", input_token_count=len(query.split())+sum([len(doc["snippet"].split()) for doc in top_k_docs]), 
+                                                output_token_count=0, candidates=top_k_docs)
+                    return answers, rag_exec_info
                 time.sleep(60)
         if logging:
             print(f"Response: {response}")
