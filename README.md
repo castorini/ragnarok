@@ -1,8 +1,8 @@
 # RAGnarok
 
-<!-- [![PyPI](https://img.shields.io/pypi/v/rank-llm?color=brightgreen)](https://pypi.org/project/rank-llm/) -->
-<!-- [![Downloads](https://static.pepy.tech/personalized-badge/rank-llm?period=total&units=international_system&left_color=grey&right_color=brightgreen&left_text=downloads)](https://pepy.tech/project/rank-llm) -->
-<!-- [![Downloads](https://static.pepy.tech/personalized-badge/rank-llm?period=week&units=international_system&left_color=grey&right_color=brightgreen&left_text=downloads/week)](https://pepy.tech/project/rank-llm) -->
+[![PyPI](https://img.shields.io/pypi/v/pyragnarok?color=brightgreen)](https://pypi.org/project/pyragnarok/) -->
+[![Downloads](https://static.pepy.tech/personalized-badge/pyragnarok?period=total&units=international_system&left_color=grey&right_color=brightgreen&left_text=downloads)](https://pepy.tech/project/pyragnarok)
+[![Downloads](https://static.pepy.tech/personalized-badge/pyragnarok?period=week&units=international_system&left_color=grey&right_color=brightgreen&left_text=downloads/week)](https://pepy.tech/project/pyragnarok)
 <!-- [![Generic badge](https://img.shields.io/badge/arXiv-2309.15088-red.svg)](https://arxiv.org/abs/2309.15088) -->
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
@@ -29,6 +29,12 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ### Install Dependencies
 ```bash
 pip install -r requirements.txt
+```
+
+### PyPI Installation
+
+```bash
+pip install pyragnarok
 ```
 
 ### Run generation test

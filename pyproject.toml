@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyragnarok"
-version = "0.0.0.7"
+version = "0.0.0"
 description = "A package to running RAG models, especially for the TREC 2023 Retrieval Augmented Generation (RAG) track."
 readme = "README.md"
 authors = [
@@ -26,7 +26,7 @@ dependencies = {file = ["requirements.txt"]}
 Homepage = "https://github.com/castorini/ragnarok"
 
 [tool.bumpver]
-current_version = "0.0.0.6"
+current_version = "0.0.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
