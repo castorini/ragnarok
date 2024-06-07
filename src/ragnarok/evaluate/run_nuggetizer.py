@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--window_size', type=int, default=10, help='Window size for nuggetizing.')
     parser.add_argument('--stride', type=int, default=10, help='Stride for the sliding window.')
     parser.add_argument('--model', required=True, help='OpenAI model to use for nuggetizing.')
-
+    parser.add_argument('--logging', action='store_true', help='Log things')
     args = parser.parse_args()
 
     pooled_results = read_requests_from_file(args.pooled_jsonl_file)
