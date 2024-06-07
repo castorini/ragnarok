@@ -106,7 +106,7 @@ with gr.Blocks() as demo:
     gr.HTML(tooltip_style)
     gr.HTML(html_content)
 
-    with gr.Tab("ragnarok (side-by-side unblinded)"):
+    with gr.Tab("⚔️ ragnarok (side-by-side unblinded)"):
         with gr.Row():
             with gr.Column():
                 Retriever_A = gr.Dropdown(label="Retriever A", choices=retriever_options, value="bm25")
@@ -168,7 +168,7 @@ with gr.Blocks() as demo:
             outputs=[output_a, output_b, response_a, response_b]
         )
 
-    with gr.Tab("ragnarok (side-by-side blind)"):
+    with gr.Tab("⚔️ ragnarok (side-by-side blind)"):
         with gr.Row():
             gr.Textbox(value="Unknown retriever + reranker + generation model", label="System A")
             gr.Textbox(value="Unknown retriever + reranker + generation model", label="System B")
@@ -231,14 +231,50 @@ with gr.Blocks() as demo:
             outputs=[output_a, output_b, response_a, response_b]
         )
 
-    with gr.Tab("Leaderboard"):
+    with gr.Tab("💬 Direct Chat"):
+        with gr.Column():
+            Retriever = gr.Dropdown(label="Retriever", choices=retriever_options, value="bm25")
+            Reranker = gr.Dropdown(label="Reranker", choices=reranker_options, value="rank_zephyr")
+            LLM = gr.Dropdown(label="LLM", choices=llm_options, value="command-r")
+
+        with gr.Row():
+            input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
+        with gr.Row():
+            button = gr.Button("Compare")
+        with gr.Tab("Output"):
+            output = gr.HTML(label="Output")
+        with gr.Tab("Responses"):
+            response = gr.JSON(label="Response")
+
+        with gr.Accordion(label="Parameters", open=False):
+            with gr.Column():
+                dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
+                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
+                top_k_rerank = gr.Number(label="Hits Reranker", value=20)
+                host_retriever = gr.Textbox(label="Retriever Host A", value="8081")
+                host_reranker = gr.Textbox(label="Reranker Host A", value="8082")
+                qid = gr.Number(label="QID", value=1)
+
+        def on_submit(model, retriever, reranker, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
+            def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
+                return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+            
+            result, response = query_wrapper(retriever, reranker, model, host_retriever, host_reranker)
+
+            return [result, response]
+
+        button.click(
+            on_submit,
+            inputs=[LLM, Retriever, Reranker, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],
+            outputs=[output, response]
+        )
+
+    with gr.Tab("🏆 Leaderboard"):
         html_content = """
         <div class='navbar'>
             <h2>Ragnarok Chatbot Arena Leaderboard</h2>
         </div>
         """
         gr.HTML(html_content)
-
-
 
 demo.launch()
