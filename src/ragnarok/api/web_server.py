@@ -257,7 +257,7 @@ with gr.Blocks() as demo:
 
         dataset, top_k_retrieve, top_k_rerank, host_retriever, host_reranker, num_passes, qid = parameters_block(side_by_side=False)
 
-        def on_submit(model, retriever, reranker, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
+        def on_submit_single(model, retriever, reranker, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
             def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
                 return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
             
@@ -266,7 +266,7 @@ with gr.Blocks() as demo:
             return [result, response]
 
         button.click(
-            on_submit,
+            on_submit_single,
             inputs=[llm, retriever, reranker, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],
             outputs=[pretty_output, json_output]
         )
