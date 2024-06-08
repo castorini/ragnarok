@@ -57,6 +57,28 @@ def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host
         return [output, result]
     except Exception as e:
         return ["ERROR: " + str(e), None]
+    
+def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query, num_passes_a, num_passes_b, random):
+    def query_wrapper(retriever, reranker, model, host_retriever, host_reranker, num_passes):
+        return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query, num_passes)
+    
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
+    with executor:
+        if random:
+            retriever_a = random.choice(retriever_options)
+            reranker_a = random.choice(reranker_options)
+            model_a = random.choice(llm_options)
+            retriever_b = random.choice(retriever_options)
+            reranker_b = random.choice(reranker_options)
+            model_b = random.choice(llm_options)
+
+        futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a, num_passes_a)
+        futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b, num_passes_b)
+
+        resultA, responseA = futureA.result()
+        resultB, responseB = futureB.result()
+
+    return [resultA, resultB, responseA, responseB]
 
 tooltip_style = """
 <style>
@@ -152,23 +174,9 @@ with gr.Blocks() as demo:
                     num_passes_b = gr.Textbox(label="Number of rerank passes", value="1")
                 qid = gr.Number(label="QID", value=1)
 
-        def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query, num_passes_a, num_passes_b):
-            def query_wrapper(retriever, reranker, model, host_retriever, host_reranker, num_passes):
-                return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query, num_passes)
-            
-            executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
-            with executor:
-                futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a, num_passes_a)
-                futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b, num_passes_b)
-
-                resultA, responseA = futureA.result()
-                resultB, responseB = futureB.result()
-
-            return [resultA, resultB, responseA, responseB]
-
         button.click(
             on_submit, 
-            inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text, num_passes_a, num_passes_b],
+            inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text, num_passes_a, num_passes_b, False],
             outputs=[output_a, output_b, response_a, response_b]
         )
 
@@ -207,32 +215,10 @@ with gr.Blocks() as demo:
                     host_reranker_b = gr.Textbox(label="Reranker Host B", value="8083")
                 qid = gr.Number(label="QID", value=1)
 
-        def on_submit(dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query):
-            def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
-                return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
-            
-            executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
-            with executor:
-                import random
-                retriever_a = random.choice(retriever_options)
-                reranker_a = random.choice(reranker_options)
-                model_a = random.choice(llm_options)
-                retriever_b = random.choice(retriever_options)
-                reranker_b = random.choice(reranker_options)
-                model_b = random.choice(llm_options)
-
-                futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
-                futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
-
-                resultA, responseA = futureA.result()
-                resultB, responseB = futureB.result()
-
-            return [resultA, resultB, responseA, responseB]
-
         button.click(
             on_submit, 
-            inputs=[dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
-            outputs=[output_a, output_b, response_a, response_b]
+            inputs=["","","","","","",dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
+            outputs=[output_a, output_b, response_a, response_b, True]
         )
 
     with gr.Tab("💬 Direct Chat"):
