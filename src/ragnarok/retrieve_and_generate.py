@@ -97,7 +97,6 @@ def retrieve_and_generate(
 
     # Retrieve + Rerank
     print("Calling reranker API...")
-    
     # Only DATASET mode is currently supported.
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
