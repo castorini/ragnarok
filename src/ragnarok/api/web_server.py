@@ -131,125 +131,131 @@ html_content = """
 </div>
 """
 
+retriever_options = ["bm25"]
+reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
+llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
+
+def rag_pipeline_block(label_suffix="", default_retriever="bm25", default_reranker="rank_zephyr", default_llm="command-r"):
+    with gr.Column():
+        retriever = gr.Dropdown(label=f"Retriever {label_suffix}", choices=retriever_options, value=default_retriever)
+        reranker = gr.Dropdown(label=f"Reranker {label_suffix}", choices=reranker_options, value=default_reranker)
+        llm = gr.Dropdown(label=f"LLM {label_suffix}", choices=llm_options, value=default_llm)
+
+    return [retriever, reranker, llm]
+
+def input_block():
+    with gr.Row():
+        input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
+    with gr.Row():
+        button = gr.Button("Compare")
+    return [input_text, button]
+
+def output_block(side_by_side=True):
+    with gr.Tab("Output"):
+        with gr.Row():
+            if side_by_side:
+                pretty_output_a = gr.HTML(label="Pretty Output from Model A")
+                pretty_output_b = gr.HTML(label="Pretty Output from Model B")
+            else:
+                pretty_output = gr.HTML(label="Pretty Output")
+    with gr.Tab("Responses"):
+        with gr.Row():
+            if side_by_side:
+                json_output_a = gr.JSON(label="JSON Output from Model A")
+                json_output_b = gr.JSON(label="JSON Output from Model B")
+            else:
+                json_output = gr.JSON(label="JSON Output")
+
+    if side_by_side:
+        return [pretty_output_a, pretty_output_b, json_output_a, json_output_b]
+    else:
+        return [pretty_output, json_output]
+
+def comparison_block():
+    with gr.Row():
+        a_better_button = gr.Button("👈 A is better")
+        b_better_button = gr.Button("👉 B is better")
+        both_good_button = gr.Button("🤝 Tie")
+        both_bad_button = gr.Button("👎 Both are bad")
+
+    return [a_better_button, b_better_button, both_good_button, both_bad_button]
+
+def parameters_block(side_by_side=True):
+    with gr.Accordion(label="Parameters", open=False):
+        with gr.Column():
+            dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
+            top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
+            top_k_rerank = gr.Number(label="Hits Reranker", value=20)
+            if side_by_side:
+                with gr.Row():
+                    host_retriever_a = gr.Textbox(label="Retriever Host A", value="8081")
+                    host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
+                with gr.Row():
+                    host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
+                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8083")
+            else:
+                host_retriever = gr.Textbox(label="Retriever Host", value="8081")
+                host_reranker = gr.Textbox(label="Reranker Host", value="8082")
+            if side_by_side:
+                with gr.Row():
+                    num_passes_a = gr.Textbox(label="Number of rerank passes A", value="1")
+                    num_passes_b = gr.Textbox(label="Number of rerank passes B", value="1")
+            else:
+                num_passes = gr.Textbox(label="Number of rerank passes", value="1")
+            qid = gr.Number(label="QID", value=1)
+
+    if side_by_side:
+        return [dataset, top_k_retrieve, top_k_rerank, host_retriever_a, host_retriever_b, host_reranker_a, host_reranker_b, num_passes_a, num_passes_b, qid]
+    else:
+        return [dataset, top_k_retrieve, top_k_rerank, host_retriever, host_reranker, num_passes, qid]
+
 with gr.Blocks() as demo:
     gr.HTML(tooltip_style)
     gr.HTML(html_content)
 
     with gr.Tab("⚔️ ragnarok (side-by-side unblinded)"):
         with gr.Row():
-            with gr.Column():
-                Retriever_A = gr.Dropdown(label="Retriever A", choices=retriever_options, value="bm25")
-                Reranker_A = gr.Dropdown(label="Reranker A", choices=reranker_options, value="rank_zephyr")
-                LLM_A = gr.Dropdown(label="LLM A", choices=llm_options, value="command-r")
-            with gr.Column():
-                Retriever_B = gr.Dropdown(label="Retriever B", choices=retriever_options, value="bm25")
-                Reranker_B = gr.Dropdown(label="Reranker B", choices=reranker_options, value="rank_vicuna")
-                LLM_B = gr.Dropdown(label="LLM B", choices=llm_options, value="command-r-plus")
+            retriever_a, reranker_a, llm_a = rag_pipeline_block(label_suffix="A")
+            retriever_b, reranker_b, llm_b = rag_pipeline_block(label_suffix="B")
 
-        with gr.Row():
-            input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
-        with gr.Row():
-            button = gr.Button("Compare")
-        with gr.Tab("Output"):
-            with gr.Row():
-                output_a = gr.HTML(label="Output from Model A")
-                output_b = gr.HTML(label="Output from Model B")
-        with gr.Tab("Responses"):
-            with gr.Row():
-                response_a = gr.JSON(label="Response A")
-                response_b = gr.JSON(label="Response B")
-        with gr.Row():
-            a_better_button = gr.Button("👈 A is better")
-            b_better_button = gr.Button("👉 B is better")
-            both_good_button = gr.Button("🤝 Tie")
-            both_bad_button = gr.Button("👎 Both are bad")
+        input_text, button = input_block()
+        pretty_output_a, pretty_output_b, json_output_a, json_output_b = output_block(side_by_side=True)
+        a_better_button, b_better_button, both_good_button, both_bad_button = comparison_block()
 
-        with gr.Accordion(label="Parameters", open=False):
-            with gr.Column():
-                dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
-                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
-                top_k_rerank = gr.Number(label="Hits Reranker", value=20)
-                with gr.Row():
-                    host_retriever_a = gr.Textbox(label="Retriever Host A", value="8081")
-                    host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
-                with gr.Row():
-                    host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
-                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8083")
-                with gr.Row():
-                    num_passes_a = gr.Textbox(label="Number of rerank passes", value="1")
-                    num_passes_b = gr.Textbox(label="Number of rerank passes", value="1")
-                qid = gr.Number(label="QID", value=1)
+
+        dataset, top_k_retrieve, top_k_rerank, host_retriever_a, host_retriever_b, host_reranker_a, host_reranker_b, num_passes_a, num_passes_b, qid = parameters_block(side_by_side=True)
 
         button.click(
             on_submit_side_by_side,
-            inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text, num_passes_a, num_passes_b],
-            outputs=[output_a, output_b, response_a, response_b]
+            inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text, num_passes_a, num_passes_b],
+            outputs=[pretty_output_a, pretty_output_b, json_output_a, json_output_b]
         )
 
     with gr.Tab("⚔️ ragnarok (side-by-side blind)"):
         with gr.Row():
             gr.Textbox(value="Unknown retriever + reranker + generation model", label="System A")
             gr.Textbox(value="Unknown retriever + reranker + generation model", label="System B")
-        with gr.Row():
-            input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
-        with gr.Row():
-            button = gr.Button("Compare")
-        with gr.Tab("Output"):
-            with gr.Row():
-                output_a = gr.HTML(label="Output from Model A")
-                output_b = gr.HTML(label="Output from Model B")
-        with gr.Tab("Responses"):
-            with gr.Row():
-                response_a = gr.JSON(label="Response A")
-                response_b = gr.JSON(label="Response B")
-        with gr.Row():
-            a_better_button = gr.Button("👈 A is better")
-            b_better_button = gr.Button("👉 B is better")
-            both_good_button = gr.Button("🤝 Tie")
-            both_bad_button = gr.Button("👎 Both are bad")
+        
+        input_text, button = input_block()
 
-        with gr.Accordion(label="Parameters", open=False):
-            with gr.Column():
-                dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
-                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
-                top_k_rerank = gr.Number(label="Hits Reranker", value=20)
-                with gr.Row():
-                    host_retriever_a = gr.Textbox(label="Retriever Host A", value="8081")
-                    host_retriever_b = gr.Textbox(label="Retriever Host B", value="8081")
-                with gr.Row():
-                    host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
-                    host_reranker_b = gr.Textbox(label="Reranker Host B", value="8083")
-                qid = gr.Number(label="QID", value=1)
+        pretty_output_a, pretty_output_b, json_output_a, json_output_b = output_block(side_by_side=True)
+        a_better_button, b_better_button, both_good_button, both_bad_button = comparison_block()
+
+        dataset, top_k_retrieve, top_k_rerank, host_retriever_a, host_retriever_b, host_reranker_a, host_reranker_b, num_passes_a, num_passes_b, qid = parameters_block(side_by_side=True)
 
         button.click(
             on_submit_side_by_side_blinded,
             inputs=[dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
-            outputs=[output_a, output_b, response_a, response_b]
+            outputs=[pretty_output_a, pretty_output_b, json_output_a, json_output_b]
         )
 
     with gr.Tab("💬 Direct Chat"):
-        with gr.Column():
-            Retriever = gr.Dropdown(label="Retriever", choices=retriever_options, value="bm25")
-            Reranker = gr.Dropdown(label="Reranker", choices=reranker_options, value="rank_zephyr")
-            LLM = gr.Dropdown(label="LLM", choices=llm_options, value="command-r")
+        retriever, reranker, llm = rag_pipeline_block()
 
-        with gr.Row():
-            input_text = gr.Textbox(label="Enter your query and press ENTER", placeholder="Type here...", value="What caused the second world war?")
-        with gr.Row():
-            button = gr.Button("Compare")
-        with gr.Tab("Output"):
-            output = gr.HTML(label="Output")
-        with gr.Tab("Responses"):
-            response = gr.JSON(label="Response")
+        input_text, button = input_block()
+        pretty_output, json_output = output_block(side_by_side=False)
 
-        with gr.Accordion(label="Parameters", open=False):
-            with gr.Column():
-                dataset = gr.Dropdown(label="Dataset", choices=["msmarco-v2.1-doc-segmented"], value="msmarco-v2.1-doc-segmented")
-                top_k_retrieve = gr.Number(label="Hits Retriever", value=40)
-                top_k_rerank = gr.Number(label="Hits Reranker", value=20)
-                host_retriever = gr.Textbox(label="Retriever Host A", value="8081")
-                host_reranker = gr.Textbox(label="Reranker Host A", value="8082")
-                qid = gr.Number(label="QID", value=1)
+        dataset, top_k_retrieve, top_k_rerank, host_retriever, host_reranker, num_passes, qid = parameters_block(side_by_side=False)
 
         def on_submit(model, retriever, reranker, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
             def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
@@ -261,8 +267,8 @@ with gr.Blocks() as demo:
 
         button.click(
             on_submit,
-            inputs=[LLM, Retriever, Reranker, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],
-            outputs=[output, response]
+            inputs=[llm, retriever, reranker, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, input_text],
+            outputs=[pretty_output, json_output]
         )
 
     with gr.Tab("🏆 Leaderboard"):
