@@ -4,6 +4,10 @@ import os
 import pandas as pd
 from ragnarok import retrieve_and_generate
 
+retriever_options = ["bm25"]
+reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
+llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
+
 def generate_text_with_citations(response):
     output = []
     citation_texts = response.rag_exec_summary.candidates
@@ -80,6 +84,12 @@ def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b
 
     return [resultA, resultB, responseA, responseB]
 
+def on_submit_side_by_side(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query, num_passes_a, num_passes_b):
+    return on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query, num_passes_a, num_passes_b, False)
+
+def on_submit_side_by_side_blinded(dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query, num_passes_a, num_passes_b):
+    return on_submit("", "", "", "", "", "", dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query, num_passes_a, num_passes_b, True)
+
 tooltip_style = """
 <style>
 .tooltip {
@@ -120,10 +130,6 @@ html_content = """
     <p>Ask any question to two chosen RAG pipelines and compare the results</p>
 </div>
 """
-
-retriever_options = ["bm25"]
-reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
-llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 
 with gr.Blocks() as demo:
     gr.HTML(tooltip_style)
@@ -175,8 +181,8 @@ with gr.Blocks() as demo:
                 qid = gr.Number(label="QID", value=1)
 
         button.click(
-            on_submit, 
-            inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text, num_passes_a, num_passes_b, False],
+            on_submit_side_by_side,
+            inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text, num_passes_a, num_passes_b],
             outputs=[output_a, output_b, response_a, response_b]
         )
 
@@ -216,9 +222,9 @@ with gr.Blocks() as demo:
                 qid = gr.Number(label="QID", value=1)
 
         button.click(
-            on_submit, 
-            inputs=["","","","","","",dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
-            outputs=[output_a, output_b, response_a, response_b, True]
+            on_submit_side_by_side_blinded,
+            inputs=[dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
+            outputs=[output_a, output_b, response_a, response_b]
         )
 
     with gr.Tab("💬 Direct Chat"):
