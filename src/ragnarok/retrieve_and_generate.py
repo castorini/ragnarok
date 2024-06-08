@@ -14,6 +14,7 @@ from ragnarok.retrieve_and_rerank.restriever import Restriever
 from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
 
 
+
 def retrieve_and_generate(
     retriever_path: str,
     reranker_path: str,
@@ -39,6 +40,24 @@ def retrieve_and_generate(
     host_reranker: str = "8082",
     host_retriever: str = "8081",
 ):
+    """orchestrates 3 stage RAG process: Retrieval (e.g., BM25), reranking (e.g., RankZephyr), generation (e.g., GPT-4o)
+    
+    Args:
+        retriever_path (str): model name for retriever
+        reranker_path (str): model name for reranker
+        LLM_path (str): model name for generator 
+        dataset (str): dataset from which to search from
+        k (List[int]): [top_k_retrieve, top_k_rerank]. The top top_k_retrieve elements to retrieve from the dataset then the top top_k_rerank elements to return after reranking. 
+        qid (int): QID of the search query
+        query (str): The query to search for
+        interactive (bool): Setting interactive to true will call the Reranker API. Otherwise will obtain from pre-cached data
+        host_reranker (str): Host name of the Reranker API (will call Retriever API, so we need to pass in the retriever host)
+        host_retriever (str): Host name of the Retriever API 
+
+    Return: 
+        Returns the generation results in JSON format specified by TREC 2024
+    """
+    
     # Construct Generation Agent
     model_full_path = ""        
     if "gpt" in LLM_path:
@@ -75,12 +94,14 @@ def retrieve_and_generate(
     else:
         raise ValueError(f"Unsupported model: {LLM_path}")
 
-    # Retrieve
-    print("Retrieving:")
-    if interactive and retrieval_mode != RetrievalMode.DATASET: 
-        raise ValueError(f"Unsupported retrieval mode for interactive retrieval. Currently only DATASET mode is supported.")
+
+    # Retrieve + Rerank
+    print("Calling reranker API...")
+    
+    # Only DATASET mode is currently supported.
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
+            # Calls the host_reranker API to obtain the results after first 2 stages (retrieve+rerank)
             requests = [Restriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset,
                 retriever_path=retriever_path,
@@ -98,7 +119,9 @@ def retrieve_and_generate(
             print()
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
-    print("Fimbulvetr!")
+    
+    # Generation
+    print("Generating...")
     rag = RAG(agent)
     rag_results = rag.answer_batch(
         requests,

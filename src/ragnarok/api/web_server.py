@@ -30,7 +30,7 @@ def generate_text_with_citations(response):
         output.append(text)
     return '<br/><br/>'.join(output)
 
-def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query):
+def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query, num_passes):
     try:
         response = retrieve_and_generate.retrieve_and_generate(
             dataset=dataset,
@@ -43,7 +43,8 @@ def query_model(retriever_path,reranker_path, LLM, dataset, host_retriever, host
             reranker_path=reranker_path,
             retriever_path=retriever_path,
             LLM_path=LLM,
-            use_azure_openai=True
+            use_azure_openai=True,
+            num_passes=num_passes,
         )
         output = generate_text_with_citations(response)
         result = {
@@ -146,16 +147,19 @@ with gr.Blocks() as demo:
                 with gr.Row():
                     host_reranker_a = gr.Textbox(label="Reranker Host A", value="8082")
                     host_reranker_b = gr.Textbox(label="Reranker Host B", value="8083")
+                with gr.Row():
+                    num_passes_a = gr.Textbox(label="Number of rerank passes", value="1")
+                    num_passes_b = gr.Textbox(label="Number of rerank passes", value="1")
                 qid = gr.Number(label="QID", value=1)
 
-        def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query):
-            def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
-                return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query)
+        def on_submit(model_a, model_b, retriever_a, retriever_b, reranker_a, reranker_b, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, query, num_passes_a, num_passes_b):
+            def query_wrapper(retriever, reranker, model, host_retriever, host_reranker, num_passes):
+                return query_model(retriever, reranker, model, dataset, host_retriever, host_reranker, top_k_retrieve, top_k_rerank, qid, query, num_passes)
             
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
             with executor:
-                futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a)
-                futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b)
+                futureA = executor.submit(query_wrapper, retriever_a, reranker_a, model_a, host_retriever_a, host_reranker_a, num_passes_a)
+                futureB = executor.submit(query_wrapper, retriever_b, reranker_b, model_b, host_retriever_b, host_reranker_b, num_passes_b)
 
                 resultA, responseA = futureA.result()
                 resultB, responseB = futureB.result()
@@ -164,7 +168,7 @@ with gr.Blocks() as demo:
 
         button.click(
             on_submit, 
-            inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text],
+            inputs=[LLM_A, LLM_B, Retriever_A, Retriever_B, Reranker_A, Reranker_B, dataset, host_retriever_a, host_reranker_a, host_retriever_b, host_reranker_b, top_k_retrieve, top_k_rerank, qid, input_text, num_passes_a, num_passes_b],
             outputs=[output_a, output_b, response_a, response_b]
         )
 
