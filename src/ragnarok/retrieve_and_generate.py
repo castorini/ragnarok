@@ -20,7 +20,7 @@ from ragnarok.retrieve_and_rerank.retriever import (
 def retrieve_and_generate(
     retriever_path: str,
     reranker_path: str,
-    LLM_path: str,
+    generator_path: str,
     dataset: Union[str, List[str], List[Dict[str, Any]]],
     retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
     k: List[int] = [100, 20],
@@ -47,7 +47,7 @@ def retrieve_and_generate(
     Args:
         retriever_path (str): model name for retriever
         reranker_path (str): model name for reranker
-        LLM_path (str): model name for generator
+        generator_path (str): model name for generator
         dataset (str): dataset from which to search from
         k (List[int]): [top_k_retrieve, top_k_rerank]. The top top_k_retrieve elements to retrieve from the dataset then the top top_k_rerank elements to return after reranking.
         qid (int): QID of the search query
@@ -62,12 +62,12 @@ def retrieve_and_generate(
 
     # Construct Generation Agent
     model_full_path = ""
-    if "gpt" in LLM_path:
+    if "gpt" in generator_path:
         print("Using OpenAI API")
-        print(LLM_path)
+        print(generator_path)
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
-            model=LLM_path,
+            model=generator_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=max_output_tokens,
@@ -75,17 +75,17 @@ def retrieve_and_generate(
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
-    elif "command-r" in LLM_path:
+    elif "command-r" in generator_path:
         agent = Cohere(
-            model=LLM_path,
+            model=generator_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
         )
-    elif "llama" in LLM_path.lower() or "mistral" in LLM_path.lower():
+    elif "llama" in generator_path.lower() or "mistral" in generator_path.lower():
         agent = OSLLM(
-            model=LLM_path,
+            model=generator_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=max_output_tokens,
@@ -94,7 +94,7 @@ def retrieve_and_generate(
             num_gpus=num_gpus,
         )
     else:
-        raise ValueError(f"Unsupported model: {LLM_path}")
+        raise ValueError(f"Unsupported model: {generator_path}")
 
     # Retrieve + Rerank
     print("Calling reranker API...")
