@@ -1,3 +1,4 @@
+import re
 import time
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -5,16 +6,17 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import openai
 import tiktoken
 from ftfy import fix_text
-import re
+
 from ragnarok.data import Request
+
 
 class NuggetMode(Enum):
     ATOMIC = "atomic"
     NOUN_PHRASE = "noun_phrase"
     QUESTION = "question"
-    
 
-class SafeOpenaiNuggetizer():
+
+class SafeOpenaiNuggetizer:
     def __init__(
         self,
         model: str,
@@ -56,7 +58,7 @@ class SafeOpenaiNuggetizer():
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
         self._model = model
-        self._context_size  = context_size
+        self._context_size = context_size
         self._prompt_mode = prompt_mode
         if isinstance(keys, str):
             keys = [keys]
@@ -87,6 +89,7 @@ class SafeOpenaiNuggetizer():
         UNSPECIFIED = 0
         CHAT = 1
         TEXT = 2
+
     def _call_completion(
         self,
         *args,
@@ -161,7 +164,8 @@ class SafeOpenaiNuggetizer():
                 "role": "user",
                 "content": f"Update the list of atomic nuggets of information (1-12 words), if needed, so they best provide the information required for the query. Leverage only the initial list of nuggets (if exists) and the provided context (this is an iterative process).  Return only the final list of all nuggets in a Pythonic list format (even if no updates). Make sure there is no redundant information. The more nuggets, the merrier. Order them in decreasing order of importance. Prefer nuggets that provide more interesting information.\n\n",
             },
-        ] 
+        ]
+
     def _get_prefix_for_question_prompt(
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
@@ -177,8 +181,7 @@ class SafeOpenaiNuggetizer():
         ]
 
     def create_prompt(
-        self, request: Request, rank_start: int, rank_end: int,
-        nuggets: List[str] = []
+        self, request: Request, rank_start: int, rank_end: int, nuggets: List[str] = []
     ) -> Tuple[List[Dict[str, str]], int]:
         if self._prompt_mode == NuggetMode.ATOMIC:
             return self.create_atomic_prompt(request, rank_start, rank_end, nuggets)
@@ -200,17 +203,19 @@ class SafeOpenaiNuggetizer():
             rank += 1
             content = self.convert_doc_to_prompt_content(cand.doc, max_length)
             content = self._replace_number(content)
-            
+
             all_context += f"[{rank}] {content}\n"
         message += f"Search Query: {request.query.text}\nContext:\n{all_context}"
-        message += f"Search Query: {query}\nInitial Nugget List: {nuggets}\nOnly update the list of atomic nuggets (if needed, else return as is). Do not explain. Always answer in short nuggets (not questions). List in the form [\"a\", \"b\", ...] and a and b are strings with no mention of \".\nUpdated Nugget List:"
+        message += f'Search Query: {query}\nInitial Nugget List: {nuggets}\nOnly update the list of atomic nuggets (if needed, else return as is). Do not explain. Always answer in short nuggets (not questions). List in the form ["a", "b", ...] and a and b are strings with no mention of ".\nUpdated Nugget List:'
         messages[-1]["content"] = message
         return messages
-    
+
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
-    def convert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
+    def convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
         if "text" in doc:
             content = doc["text"]
         elif "segment" in doc:
@@ -242,17 +247,19 @@ class SafeOpenaiNuggetizer():
             rank += 1
             content = self.convert_doc_to_prompt_content(cand.doc, max_length)
             content = self._replace_number(content)
-            
+
             all_context += f"[{rank}] {content}\n"
         message += f"Search Query: {request.query.text}\nContext:\n{all_context}"
         message += f"Search Query: {query}\nInitial Nugget List: {nuggets}\nOnly update the list of subquestion nuggets (if needed, else return as is). Do not say any word or explain.\nUpdated Nugget List:"
         messages[-1]["content"] = message
         return messages
-    
+
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
-    def convert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
+    def convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
         if "text" in doc:
             content = doc["text"]
         elif "segment" in doc:

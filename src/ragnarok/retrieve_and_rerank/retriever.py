@@ -1,5 +1,4 @@
 import json
-import os
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Union
@@ -16,12 +15,14 @@ class RetrievalMode(Enum):
     def __str__(self):
         return self.value
 
+
 class CacheInputFormat(Enum):
     JSON = "json"
     JSONL = "jsonl"
 
     def __str__(self):
         return self.value
+
 
 class RetrievalMethod(Enum):
     UNSPECIFIED = "unspecified"
@@ -35,7 +36,7 @@ class RetrievalMethod(Enum):
 
     def __str__(self):
         return self.value
-    
+
     @staticmethod
     def from_string(value):
         for method in RetrievalMethod:
@@ -49,14 +50,20 @@ class Retriever:
         self,
         retrieval_mode: RetrievalMode,
         dataset: Union[str, List[str], List[Dict[str, Any]]],
-        retrieval_method: Union[RetrievalMethod, List[RetrievalMethod]] = RetrievalMethod.UNSPECIFIED,
+        retrieval_method: Union[
+            RetrievalMethod, List[RetrievalMethod]
+        ] = RetrievalMethod.UNSPECIFIED,
         query: str = None,
         index_path: str = None,
         topics_path: str = None,
     ) -> None:
         self._retrieval_mode = retrieval_mode
         self._dataset = dataset
-        self._retrieval_method = retrieval_method if isinstance(retrieval_method, list) else [retrieval_method]
+        self._retrieval_method = (
+            retrieval_method
+            if isinstance(retrieval_method, list)
+            else [retrieval_method]
+        )
         self._query = query
         self._index_path = index_path
         self._topics_path = topics_path
@@ -64,7 +71,9 @@ class Retriever:
     @staticmethod
     def from_dataset_with_prebuilt_index(
         dataset_name: str,
-        retrieval_method: Union[RetrievalMethod, List[RetrievalMethod]] = RetrievalMethod.BM25,
+        retrieval_method: Union[
+            RetrievalMethod, List[RetrievalMethod]
+        ] = RetrievalMethod.BM25,
         cache_input_format: CacheInputFormat = CacheInputFormat.JSONL,
         k: List[int] = [100, 20],
     ):
@@ -102,7 +111,10 @@ class Retriever:
         return retriever.retrieve(k=k, cache_input_format=cache_input_format)
 
     def retrieve(
-        self, retrieve_results_dirname: str = "retrieve_results",  cache_input_format: CacheInputFormat = CacheInputFormat.JSONL, k: List[int] = [100, 20]
+        self,
+        retrieve_results_dirname: str = "retrieve_results",
+        cache_input_format: CacheInputFormat = CacheInputFormat.JSONL,
+        k: List[int] = [100, 20],
     ) -> List[Request]:
         """
         Executes the retrieval process based on the configuration provided with the Retriever instance.
@@ -139,12 +151,18 @@ class Retriever:
                 retrieved_results = [
                     from_dict(data_class=Request, data=r) for r in loaded_results
                 ]
-                # TODO remove!!! Filter those if query.qid has _ and does not end with 0 
-                retrieved_results = [r for r in retrieved_results if "_" not in r.query.qid or r.query.qid.endswith("0")]
+                # TODO remove!!! Filter those if query.qid has _ and does not end with 0
+                retrieved_results = [
+                    r
+                    for r in retrieved_results
+                    if "_" not in r.query.qid or r.query.qid.endswith("0")
+                ]
                 # Ensure the candidates are of at most k length
                 for r in retrieved_results:
-                    r.candidates = r.candidates[:k[-1]]
-                print(f"Loaded {len(retrieved_results)} requests from {candidates_file}.")                
+                    r.candidates = r.candidates[: k[-1]]
+                print(
+                    f"Loaded {len(retrieved_results)} requests from {candidates_file}."
+                )
         else:
             raise ValueError(f"Invalid retrieval mode: {self._retrieval_mode}")
         return retrieved_results

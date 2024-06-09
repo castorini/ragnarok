@@ -1,4 +1,3 @@
-import copy
 import random
 import re
 from abc import ABC, abstractmethod
@@ -6,9 +5,9 @@ from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
 
 from ftfy import fix_text
-from tqdm import tqdm
 
-from ragnarok.data import RAGExecInfo, Request, Result, remove_unused_references
+from ragnarok.data import Request, Result, remove_unused_references
+
 
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
@@ -44,8 +43,9 @@ class LLM(ABC):
         return self._context_size
 
     @abstractmethod
-    def run_llm(self, prompt: Union[str, List[Dict[str, Any]]],
-                logging: bool = False) -> Tuple[Any, int]:
+    def run_llm(
+        self, prompt: Union[str, List[Dict[str, Any]]], logging: bool = False
+    ) -> Tuple[Any, int]:
         """
         Abstract method to run the target language model with a passed in prompt.
 
@@ -164,10 +164,10 @@ class LLM(ABC):
                     len(request.candidates[:topk]),
                 )
             prompt, input_token_count = self.create_prompt(request, topk)
-            answer, rag_exec_summary = self.run_llm(
-                prompt, logging
-            )
-            rag_exec_summary.candidates = [candidate.__dict__ for candidate in request.candidates[:topk]]
+            answer, rag_exec_summary = self.run_llm(prompt, logging)
+            rag_exec_summary.candidates = [
+                candidate.__dict__ for candidate in request.candidates[:topk]
+            ]
             result = Result(
                 query=request.query,
                 references=[cand.docid for cand in request.candidates[:topk]],
@@ -190,7 +190,9 @@ class LLM(ABC):
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
-    def convert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
+    def convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
         if "text" in doc:
             content = doc["text"]
         elif "segment" in doc:

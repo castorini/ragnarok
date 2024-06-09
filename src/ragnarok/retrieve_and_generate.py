@@ -1,18 +1,20 @@
-import copy
 from typing import Any, Dict, List, Union
 
-from ragnarok.data import Request, Query
+from ragnarok.data import Query, Request
+
 # from ragnarok.evaluation.nugget_eval import EvalFunction
 from ragnarok.generate.api_keys import get_azure_openai_args, get_openai_api_key
-from ragnarok.generate.gpt import SafeOpenai
-from ragnarok.generate.os_llm import OSLLM
 from ragnarok.generate.cohere import Cohere
-from ragnarok.generate.llm import PromptMode
 from ragnarok.generate.generator import RAG
-from ragnarok.retrieve_and_rerank.retriever import CacheInputFormat, RetrievalMethod, RetrievalMode, Retriever
+from ragnarok.generate.gpt import SafeOpenai
+from ragnarok.generate.llm import PromptMode
+from ragnarok.generate.os_llm import OSLLM
 from ragnarok.retrieve_and_rerank.restriever import Restriever
-from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
-
+from ragnarok.retrieve_and_rerank.retriever import (
+    CacheInputFormat,
+    RetrievalMode,
+    Retriever,
+)
 
 
 def retrieve_and_generate(
@@ -41,25 +43,25 @@ def retrieve_and_generate(
     host_retriever: str = "8081",
 ):
     """orchestrates 3 stage RAG process: Retrieval (e.g., BM25), reranking (e.g., RankZephyr), generation (e.g., GPT-4o)
-    
+
     Args:
         retriever_path (str): model name for retriever
         reranker_path (str): model name for reranker
-        LLM_path (str): model name for generator 
+        LLM_path (str): model name for generator
         dataset (str): dataset from which to search from
-        k (List[int]): [top_k_retrieve, top_k_rerank]. The top top_k_retrieve elements to retrieve from the dataset then the top top_k_rerank elements to return after reranking. 
+        k (List[int]): [top_k_retrieve, top_k_rerank]. The top top_k_retrieve elements to retrieve from the dataset then the top top_k_rerank elements to return after reranking.
         qid (int): QID of the search query
         query (str): The query to search for
         interactive (bool): Setting interactive to true will call the Reranker API. Otherwise will obtain from pre-cached data
         host_reranker (str): Host name of the Reranker API (will call Retriever API, so we need to pass in the retriever host)
-        host_retriever (str): Host name of the Retriever API 
+        host_retriever (str): Host name of the Retriever API
 
-    Return: 
+    Return:
         Returns the generation results in JSON format specified by TREC 2024
     """
-    
+
     # Construct Generation Agent
-    model_full_path = ""        
+    model_full_path = ""
     if "gpt" in LLM_path:
         print("Using OpenAI API")
         print(LLM_path)
@@ -81,7 +83,7 @@ def retrieve_and_generate(
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
         )
-    elif LLM_path.lower()=="llama":
+    elif LLM_path.lower() == "llama":
         agent = OSLLM(
             model=model_full_path,
             context_size=context_size,
@@ -94,31 +96,35 @@ def retrieve_and_generate(
     else:
         raise ValueError(f"Unsupported model: {LLM_path}")
 
-
     # Retrieve + Rerank
     print("Calling reranker API...")
     # Only DATASET mode is currently supported.
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
             # Calls the host_reranker API to obtain the results after first 2 stages (retrieve+rerank)
-            requests = [Restriever.from_dataset_with_prebuilt_index(
+            requests = [
+                Restriever.from_dataset_with_prebuilt_index(
+                    dataset_name=dataset,
+                    retriever_path=retriever_path,
+                    reranker_path=reranker_path,
+                    host_reranker=host_reranker,
+                    host_retriever=host_retriever,
+                    request=Request(query=Query(text=query, qid=qid)),
+                    k=k,
+                )
+            ]
+        else:
+            requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset,
                 retriever_path=retriever_path,
                 reranker_path=reranker_path,
-                host_reranker=host_reranker,
-                host_retriever=host_retriever, 
-                request=Request(query=Query(text=query,qid=qid)),
                 k=k,
-            )]
-        else:
-            requests = Retriever.from_dataset_with_prebuilt_index(
-                dataset_name=dataset, retriever_path=retriever_path, reranker_path=reranker_path,
-                k=k, cache_input_format=CacheInputFormat.JSONL
+                cache_input_format=CacheInputFormat.JSONL,
             )
             print()
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
-    
+
     # Generation
     print("Generating...")
     rag = RAG(agent)

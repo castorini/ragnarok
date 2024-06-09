@@ -1,14 +1,15 @@
 import time
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import openai
 import tiktoken
 
 from ragnarok.data import RAGExecInfo, Request
-from ragnarok.generate.llm import PromptMode, LLM
+from ragnarok.generate.llm import LLM, PromptMode
 from ragnarok.generate.post_processor import GPTPostProcessor
 from ragnarok.generate.templates.chat_qa import ChatQATemplate
+
 
 class SafeOpenai(LLM):
     def __init__(
@@ -52,7 +53,9 @@ class SafeOpenai(LLM):
         - This class supports cycling between multiple OpenAI API keys to distribute quota usage or handle rate limiting.
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
-        super().__init__(model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples)
+        super().__init__(
+            model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples
+        )
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
@@ -146,11 +149,17 @@ class SafeOpenai(LLM):
         answers, rag_exec_response = self._post_processor(response)
         if logging:
             print(f"Answers: {answers}")
-        rag_exec_info = RAGExecInfo(prompt=prompt, response=rag_exec_response, input_token_count=self.get_num_tokens(prompt), 
-                                    output_token_count=sum([len(ans.text) for ans in answers]), candidates=[]) 
+        rag_exec_info = RAGExecInfo(
+            prompt=prompt,
+            response=rag_exec_response,
+            input_token_count=self.get_num_tokens(prompt),
+            output_token_count=sum([len(ans.text) for ans in answers]),
+            candidates=[],
+        )
         if logging:
             print(f"RAG Exec Info: {rag_exec_info}")
         return answers, rag_exec_info
+
     def create_prompt(
         self, request: Request, topk: int
     ) -> Tuple[List[Dict[str, str]], int]:
@@ -163,7 +172,7 @@ class SafeOpenai(LLM):
                 rank += 1
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 context.append(
-                    f"[{rank}] {self._replace_number(content)}", 
+                    f"[{rank}] {self._replace_number(content)}",
                 )
             if self._prompt_mode == PromptMode.CHATQA:
                 chat_qa_template = ChatQATemplate()

@@ -1,16 +1,14 @@
 import time
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import cohere
-import os
-
-from ragnarok.generate.llm import PromptMode, LLM
-from ragnarok.data import RAGExecInfo, Request
-from ragnarok.generate.post_processor import CoherePostProcessor
-from ragnarok.generate.api_keys import get_cohere_api_key
-
 from ftfy import fix_text
+
+from ragnarok.data import RAGExecInfo, Request
+from ragnarok.generate.api_keys import get_cohere_api_key
+from ragnarok.generate.llm import LLM, PromptMode
+from ragnarok.generate.post_processor import CoherePostProcessor
+
 
 class Cohere(LLM):
     def __init__(
@@ -43,7 +41,9 @@ class Cohere(LLM):
             raise ValueError(
                 f"Unsupported model: {model}. The only models currently supported are 'command-r' and 'command-r-plus' in Cohere."
             )
-        super().__init__(model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples)
+        super().__init__(
+            model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples
+        )
         self._client = cohere.Client(key)
         self._post_processor = CoherePostProcessor()
 
@@ -59,9 +59,7 @@ class Cohere(LLM):
         while True:
             try:
                 response = self._client.chat(
-                    model=self._model,
-                    message=query,
-                    documents=top_k_docs
+                    model=self._model, message=query, documents=top_k_docs
                 )
                 break
             except Exception as e:
@@ -72,9 +70,15 @@ class Cohere(LLM):
         answers, rag_exec_response = self._post_processor(response)
         if logging:
             print(f"Answers: {answers}")
-        rag_exec_info = RAGExecInfo(prompt=prompt[0], response=rag_exec_response, input_token_count=len(query.split())+sum([len(doc["snippet"].split()) for doc in top_k_docs]), 
-                                    output_token_count=sum([len(ans.text) for ans in answers]), candidates=top_k_docs) 
-                    
+        rag_exec_info = RAGExecInfo(
+            prompt=prompt[0],
+            response=rag_exec_response,
+            input_token_count=len(query.split())
+            + sum([len(doc["snippet"].split()) for doc in top_k_docs]),
+            output_token_count=sum([len(ans.text) for ans in answers]),
+            candidates=top_k_docs,
+        )
+
         return answers, rag_exec_info
 
     def create_prompt(
@@ -112,7 +116,9 @@ class Cohere(LLM):
         # TODO(ronak): Add support
         return -1
 
-    def convert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
+    def convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
         if "text" in doc:
             content = doc["text"]
         elif "segment" in doc:

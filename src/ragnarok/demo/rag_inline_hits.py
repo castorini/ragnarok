@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from dacite import from_dict
 
@@ -9,8 +9,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from ragnarok.data import Request, DataWriter
-from ragnarok.generate.vicuna import Vicuna
+from ragnarok.data import DataWriter, Request
 from ragnarok.generate.cohere import Cohere
 from ragnarok.generate.gpt import GPT
 

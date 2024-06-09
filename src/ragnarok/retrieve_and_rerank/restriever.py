@@ -1,23 +1,27 @@
-import requests
-from urllib import parse
 from typing import List
+from urllib import parse
 
-from ragnarok.data import Request, Candidate, Query
-from ragnarok.retrieve_and_rerank.retriever import RetrievalMode, RetrievalMethod
+import requests
+
+from ragnarok.data import Candidate, Query, Request
+from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMode
 
 
 class Restriever:
     def __init__(
         self,
         retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
-        retrieval_method: List[RetrievalMethod] = [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR],
+        retrieval_method: List[RetrievalMethod] = [
+            RetrievalMethod.BM25,
+            RetrievalMethod.RANK_ZEPHYR,
+        ],
     ) -> None:
         """
         Creates a Restriever instance with a specified retrieval method and mode.
 
         Args:
             retrieval_mode (RetrievalMode): The retrieval mode to be used. Defaults to DATASET. Only DATASET mode is currently supported.
-            retrieval_method (List[RetrievalMethod]): A list of length 2 that contains: [retrieval method, reranking method]. Defaults to BM25 followed by RankZephyr. 
+            retrieval_method (List[RetrievalMethod]): A list of length 2 that contains: [retrieval method, reranking method]. Defaults to BM25 followed by RankZephyr.
 
         Raises:
             ValueError: If retrieval mode or retrieval method is invalid or missing.
@@ -26,11 +30,15 @@ class Restriever:
         self._retrieval_method = retrieval_method
 
         if retrieval_mode != RetrievalMode.DATASET:
-            raise ValueError(f"{retrieval_mode} is not supported for ServiceRetriever. Only DATASET mode is currently supported.")
+            raise ValueError(
+                f"{retrieval_mode} is not supported for ServiceRetriever. Only DATASET mode is currently supported."
+            )
         if not retrieval_method:
             raise "Please provide a retrieval method."
         if retrieval_method == RetrievalMethod.UNSPECIFIED:
-            raise ValueError(f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method.")
+            raise ValueError(
+                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
+            )
 
     @staticmethod
     def from_dataset_with_prebuilt_index(
@@ -63,7 +71,7 @@ class Restriever:
             raise ValueError(
                 f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
             )
-        
+
         # RetreivalMethod Options:
         # UNSPECIFIED = "unspecified"
         # BM25 = "bm25"
@@ -80,7 +88,7 @@ class Restriever:
         except KeyError:
             retriever_path = RetrievalMethod.UNSPECIFIED
             reranker_path = RetrievalMethod.UNSPECIFIED
-        
+
         retrieval_method = [retriever_path, reranker_path]
 
         # Rerank method can be none (RetrievalMethod.UNSPECIFIED)
@@ -92,7 +100,14 @@ class Restriever:
             RetrievalMode.DATASET,
             retrieval_method=retrieval_method,
         )
-        return retriever.retrieve(dataset=dataset_name, k=k, host_retriever=host_retriever, host_reranker=host_reranker, request=request, num_passes=num_passes)
+        return retriever.retrieve(
+            dataset=dataset_name,
+            k=k,
+            host_retriever=host_retriever,
+            host_reranker=host_reranker,
+            request=request,
+            num_passes=num_passes,
+        )
 
     def retrieve(
         self,
@@ -104,10 +119,10 @@ class Restriever:
         num_passes: int = 1,
     ) -> Request:
         """
-        Executes the 2 stage retrieval+rerank process based on the configation provided with the Retriever instance. Takes in a Request object with a query and empty candidates object and the top k items to retrieve. 
+        Executes the 2 stage retrieval+rerank process based on the configation provided with the Retriever instance. Takes in a Request object with a query and empty candidates object and the top k items to retrieve.
 
         Args:
-            request (Request): The request containing the query and qid. 
+            request (Request): The request containing the query and qid.
             dataset (str): The name of the dataset.
             k (List[int], optional): [top k hits to retrieve, top k hits to rerank]. Defaults to [20,10]
             host_reranker (str): The Anserini API host address. Defaults to 8081
@@ -131,23 +146,28 @@ class Restriever:
 
         # First 2 stages, retrieval and reranking, OK
         if response.ok:
-            
             # Parse information about the query
             data = response.json()
             retrieved_results = Request(
-                query = Query(text = data["query"]["text"], qid = data["query"]["qid"])
+                query=Query(text=data["query"]["text"], qid=data["query"]["qid"])
             )
 
             # Parse response into a list of candidates
             for candidate in data["candidates"]:
-                retrieved_results.candidates.append(Candidate(
-                    docid = candidate["docid"],
-                    score = candidate["score"],
-                    doc = candidate["doc"],
-                ))
+                retrieved_results.candidates.append(
+                    Candidate(
+                        docid=candidate["docid"],
+                        score=candidate["score"],
+                        doc=candidate["doc"],
+                    )
+                )
 
             print("Retrieval and reranking completed successfully...")
-            print(f"Candidates provided during retrieval+reranking: {len(retrieved_results.candidates)}")
-        else: 
-            raise ValueError(f"Failed to retrieve data from RankLLM server. Error code: {response.status_code}")
+            print(
+                f"Candidates provided during retrieval+reranking: {len(retrieved_results.candidates)}"
+            )
+        else:
+            raise ValueError(
+                f"Failed to retrieve data from RankLLM server. Error code: {response.status_code}"
+            )
         return retrieved_results

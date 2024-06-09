@@ -4,8 +4,8 @@ from typing import List
 
 from tqdm import tqdm
 
+from ragnarok.data import DataWriter, OutputFormat, Request, Result
 from ragnarok.generate.llm import LLM
-from ragnarok.data import Request, Result, DataWriter, OutputFormat
 
 
 class RAG:
@@ -125,14 +125,10 @@ class RAG:
         )
         if output_format == OutputFormat.JSON:
             output_file = f"{results_dirname}/{retrieval_method_name}/{name}.json"
-            writer.write_in_json_format(
-                output_file
-            )
+            writer.write_in_json_format(output_file)
         else:
             output_file = f"{results_dirname}/{retrieval_method_name}/{name}.jsonl"
-            writer.write_in_jsonl_format(
-                output_file
-            )
+            writer.write_in_jsonl_format(output_file)
         Path(f"{rag_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )

@@ -1,7 +1,6 @@
 import argparse
 import os
 import sys
-from typing import List
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
@@ -11,22 +10,29 @@ sys.path.append(parent)
 import torch
 
 from ragnarok.generate.llm import PromptMode
+from ragnarok.retrieve_and_generate import retrieve_and_generate
 from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMode
 from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
-from ragnarok.retrieve_and_generate import retrieve_and_generate
+
 
 def parse_topk(value):
     try:
-        return [int(k) for k in value.split(',')]
+        return [int(k) for k in value.split(",")]
     except ValueError:
-        raise argparse.ArgumentTypeError(f"Invalid comma-separated list of integers: {value}")
+        raise argparse.ArgumentTypeError(
+            f"Invalid comma-separated list of integers: {value}"
+        )
+
 
 def parse_retrieval_methods(value):
     try:
         # Ensure it is of type RetrievalMethod
-        return [RetrievalMethod(e) for e in value.split(',')]
+        return [RetrievalMethod(e) for e in value.split(",")]
     except ValueError:
-        raise argparse.ArgumentTypeError(f"Invalid comma-separated list of retrieval methods: {value}")
+        raise argparse.ArgumentTypeError(
+            f"Invalid comma-separated list of retrieval methods: {value}"
+        )
+
 
 def main(args):
     model_path = args.model_path
@@ -102,7 +108,8 @@ if __name__ == "__main__":
         "--retrieval_method",
         type=parse_retrieval_methods,
         required=True,
-        help="Comma-separated list of retrieval methods. Choices: " + ", ".join([e.value for e in RetrievalMethod]),
+        help="Comma-separated list of retrieval methods. Choices: "
+        + ", ".join([e.value for e in RetrievalMethod]),
     )
     parser.add_argument(
         "--prompt_mode",
