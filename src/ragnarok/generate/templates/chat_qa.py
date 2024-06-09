@@ -1,13 +1,13 @@
 from typing import List
 
-from fastchat.model import get_conversation_template
 from ftfy import fix_text
 
 
 class ChatQATemplate:
     def __init__(self):
-        self.system_message = "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question based on the context. The assistant should also indicate when the answer cannot be found in the context."
-        self.input_context = "{context}"
+        self.system_message_gpt = "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question based on the context. The assistant should also indicate when the answer cannot be found in the context."
+        self.system_message_osllm = "System: This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context. The assistant should also indicate when the answer cannot be found in the context."
+        self.input_context = "Context: {context}"
         self.instruction_official = (
             "Please give a full and complete answer for the question."
         )
@@ -21,22 +21,30 @@ class ChatQATemplate:
 
     def __call__(self, query: str, context: List[str], model: str) -> List[str]:
         str_context = self.sep.join(context)
-        user_input_context = (
-            f"Instruction: {self.instruction_ragnarok}"
-            + self.sep
-            + f"Context: {self.input_context.format(context=str_context)}"
-            + self.sep
-            + f"Query: {query}"
-            + self.sep
-            + f"Instruction: {self.instruction_ragnarok}"
-        )
-        user_input_context += "\n\nAnswer:"
-        if model == "gpt":
+        if "gpt" in model:
+            user_input_context = (
+                f"Instruction: {self.instruction_ragnarok}"
+                + self.sep
+                + f"Context: {self.input_context.format(context=str_context)}"
+                + self.sep
+                + f"Query: {query}"
+                + self.sep
+                + f"Instruction: {self.instruction_ragnarok}"
+            )
+            user_input_context += "\n\nAnswer:"
+        else:
+            user_input_context = (
+                f"Instruction: {self.instruction_ragnarok}"
+                + " "
+                + f"Question: {query}{self.sep}Assistant:"
+            )
+
+        if "gpt" in model:
             messages = []
             messages.append(
                 {
                     "role": "system",
-                    "content": self.system_message,
+                    "content": self.system_message_gpt,
                 }
             )
             messages.append(
@@ -46,13 +54,13 @@ class ChatQATemplate:
                 }
             )
             return messages
-        elif model == "chat-qa":
-            prompt = f"{self.system_message}{self.sep}{self.user_input_context.format(context=str_context)}{self.sep}User: {self.user_input.format(query)}Assistant:"
         else:
-            conv = get_conversation_template(model)
-            conv.set_system_message(self.system_message)
-            conv.append_message(conv.roles[0], user_input_context)
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt()
+            prompt = f"{self.system_message_osllm}{self.sep}{self.input_context.format(context=str_context)}{self.sep}User: {user_input_context}"
+        # else:
+        #     conv = get_conversation_template(model)
+        #     conv.set_system_message(self.system_message)
+        #     conv.append_message(conv.roles[0], user_input_context)
+        #     conv.append_message(conv.roles[1], None)
+        #     prompt = conv.get_prompt()
         prompt = fix_text(prompt)
         return prompt

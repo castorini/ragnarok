@@ -1,11 +1,9 @@
-# pyproject.toml
-
 [build-system]
-requires      = ["setuptools>=61.0.0", "wheel"]
+requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ragnarok"
+name = "pyragnarok"
 version = "0.0.0"
 description = "A package to running RAG models, especially for the TREC 2023 Retrieval Augmented Generation (RAG) track."
 readme = "README.md"
@@ -25,7 +23,7 @@ requires-python = ">= 3.10"
 dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
-Homepage = "https://github.com/castorini/raganrok"
+Homepage = "https://github.com/castorini/ragnarok"
 
 [tool.bumpver]
 current_version = "0.0.0"
@@ -34,7 +32,6 @@ commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
 tag = true
 push = false
-
 
 [tool.bumpver.file_patterns]
 "pyproject.toml" = [
@@ -49,10 +46,15 @@ where = ["src"]
 include = [
     "ragnarok",
     "ragnarok.analyze",
+    "ragnarok.api",
     "ragnarok.demo",
     "ragnarok.evaluate",
     "ragnarok.generate",
+    "ragnarok.generate.templates",
     "ragnarok.retrieve_and_rerank",
-    "ragnarok.serve",
+    "ragnarok.scripts",
 ]
 namespaces = false
+
+[tool.setuptools]
+provides = ["ragnarok"]

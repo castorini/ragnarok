@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Any, Dict, List, Tuple
 
@@ -37,7 +38,11 @@ class StanzaTokenizer:
 
 class SpacyTokenizer:
     def __init__(self, model="en_core_web_trf"):
-        self.nlp = spacy.load(model)
+        try:
+            self.nlp = spacy.load(model)
+        except:
+            os.system(f"python -m spacy download {model}")
+            self.nlp = spacy.load(model)
 
     def tokenize(self, text: str, replace_newline: str = " ") -> List[str]:
         """
@@ -100,15 +105,18 @@ class CoherePostProcessor:
 
     def __call__(self, response) -> Tuple[List[CitedSentence], Dict[str, Any]]:
         text_output = response.text
-        citations = [
-            {
-                "start": citation.start,
-                "end": citation.end,
-                "text": citation.text,
-                "document_ids": list(citation.document_ids),
-            }
-            for citation in response.citations
-        ]
+        if not response.citations:
+            citations = []
+        else:
+            citations = [
+                {
+                    "start": citation.start,
+                    "end": citation.end,
+                    "text": citation.text,
+                    "document_ids": list(citation.document_ids),
+                }
+                for citation in response.citations
+            ]
         rag_exec_response = {"text": response.text, "citations": citations}
         sentences = self.tokenizer.tokenize(text_output)
         answers = []

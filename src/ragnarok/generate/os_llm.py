@@ -1,14 +1,21 @@
-import json
-import random
+import os
 from typing import Tuple
 
 import torch
-from fastchat.model import get_conversation_template, load_model
-from ftfy import fix_text
+from fastchat.model import load_model
+
+try:
+    from vllm import LLM as VLLM
+    from vllm import SamplingParams
+except:
+    LLM = None
+    SamplingParams = None
 from transformers.generation import GenerationConfig
 
-from ragnarok.data import Request
+from ragnarok.data import RAGExecInfo, Request
 from ragnarok.generate.llm import LLM, PromptMode
+from ragnarok.generate.post_processor import GPTPostProcessor
+from ragnarok.generate.templates.chat_qa import ChatQATemplate
 
 
 class OSLLM(LLM):
@@ -21,7 +28,7 @@ class OSLLM(LLM):
         num_few_shot_examples: int = 0,
         device: str = "cuda",
         num_gpus: int = 1,
-        dtype: str = "float32",
+        dtype: str = "float16",
     ) -> None:
         """
         Creates instance of the OSLLM class, an extension of LLM designed for performing retrieval-augmented generation using
@@ -55,68 +62,102 @@ class OSLLM(LLM):
         self._device = device
         if self._device == "cuda":
             assert torch.cuda.is_available()
-        if prompt_mode not in [PromptMode.RAGNAROK]:
+        if prompt_mode not in [PromptMode.CHATQA]:
             raise ValueError(
-                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RAGNAROK} prompt."
+                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.CHATQA} prompt."
             )
         # ToDo: Make repetition_penalty configurable
-        self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
+        try:
+            print(model)
+            self._llm = VLLM(
+                model,
+                download_dir=os.getenv("HF_HOME"),
+                enforce_eager=False,
+                tensor_parallel_size=2,
+            )
+            self._tokenizer = self._llm.get_tokenizer()
+        except:
+            self._llm, self._tokenizer = load_model(
+                model, device=device, num_gpus=num_gpus
+            )
+        self._post_processor = GPTPostProcessor()
         if num_few_shot_examples > 0:
             # TODO(ronak): Add support for few-shot examples
             pass
 
-    def run_llm(self, prompt: str, logging: bool = False) -> Tuple[str, int]:
-        inputs = self._tokenizer([prompt])
-        inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
-        gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-        gen_cfg.max_new_tokens = self.num_output_tokens()
-        # gen_cfg.temperature = 0
-        gen_cfg.do_sample = False
-        output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
+    def run_llm(
+        self, prompt: str, logging: bool = False, vllm: bool = True
+    ) -> Tuple[str, int]:
+        if logging:
+            print(f"Prompt: {prompt}")
+        try:
+            inputs = self._tokenizer([prompt])
+            sampling_params = SamplingParams(
+                temperature=0.0,
+                max_tokens=self._output_token_estimate,
+                min_tokens=100,
+            )
+            output = self._llm.generate([prompt], sampling_params)
+            text = output[0].outputs[0].text
+            # Anything after a User: / Context: / References: / Note: remove
+            text = (
+                text.split("User:")[0]
+                .split("Context:")[0]
+                .split("References:")[0]
+                .split("Note:")[0]
+            )
+            if logging:
+                print(f"Response: {text}")
+            answers, rag_exec_response = self._post_processor(text)
+            if logging:
+                print(f"Answer: {answers}")
+            rag_exec_info = RAGExecInfo(
+                prompt=prompt,
+                response=rag_exec_response,
+                input_token_count=self.get_num_tokens(prompt),
+                output_token_count=sum([len(ans.text) for ans in answers]),
+                candidates=[],
+            )
+            return answers, rag_exec_info
+        except:
+            inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
+            gen_cfg = GenerationConfig.from_model_config(self._llm.config)
+            gen_cfg.max_new_tokens = self.num_output_tokens()
+            # gen_cfg.temperature = 0
+            gen_cfg.do_sample = False
+            output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
 
-        if self._llm.config.is_encoder_decoder:
-            output_ids = output_ids[0]
-        else:
-            output_ids = output_ids[0][len(inputs["input_ids"][0]) :]
-        outputs = self._tokenizer.decode(
-            output_ids, skip_special_tokens=True, spaces_between_special_tokens=False
-        )
-        return outputs, output_ids.size(0)
-
-    def _add_few_shot_examples(self, conv):
-        for _ in range(self._num_few_shot_examples):
-            ex = random.choice(self._examples)
-            obj = json.loads(ex)
-            prompt = obj["conversations"][0]["value"]
-            response = obj["conversations"][1]["value"]
-            conv.append_message(conv.roles[0], prompt)
-            conv.append_message(conv.roles[1], response)
-        return conv
+            if self._llm.config.is_encoder_decoder:
+                output_ids = output_ids[0]
+            else:
+                output_ids = output_ids[0][len(inputs["input_ids"][0]) :]
+            outputs = self._tokenizer.decode(
+                output_ids,
+                skip_special_tokens=True,
+                spaces_between_special_tokens=False,
+            )
+            return outputs, output_ids.size(0)
 
     def create_prompt(self, request: Request, topk: int) -> Tuple[str, int]:
         query = request.query.text
-        num = len(request.candidates[:topk])
-        max_length = (self._context_size - 200 - self.num_output_tokens()) // topk
+        max_length = (self._context_size - 200) // topk
         while True:
-            conv = get_conversation_template(self._model)
-            if self._system_message:
-                conv.set_system_message(self._system_message)
-            conv = self._add_few_shot_examples(conv)
-            prefix = self._add_prefix_prompt(query, num)
             rank = 0
-            input_context = f"{prefix}\n"
+            context = []
             for cand in request.candidates[:topk]:
                 rank += 1
-                # For Japanese should cut by character: content = content[:int(max_length)]
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-                input_context += f"[{rank}] {self._replace_number(content)}\n"
-
-            input_context += self._add_post_prompt(query, num)
-            conv.append_message(conv.roles[0], input_context)
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt()
-            prompt = fix_text(prompt)
-            num_tokens = self.get_num_tokens(prompt)
+                context.append(
+                    f"[{rank}] {self._replace_number(content)}",
+                )
+            if self._prompt_mode == PromptMode.CHATQA:
+                chat_qa_template = ChatQATemplate()
+                messages = chat_qa_template(query, context, "chatqa")
+            else:
+                raise ValueError(
+                    f"Unsupported prompt mode: {self._prompt_mode}, expected {PromptMode.CHATQA}."
+                )
+            num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
             else:
@@ -125,7 +166,7 @@ class OSLLM(LLM):
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
                     // (topk * 4),
                 )
-        return prompt, self.get_num_tokens(prompt)
+        return messages, self.get_num_tokens(messages)
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))
