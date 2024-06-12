@@ -45,8 +45,10 @@ class Restriever:
         dataset_name: str,
         host_reranker: str,
         host_retriever: str,
-        retriever_path: str = "bm25",
-        reranker_path: str = "rank_zephyr",
+        retrieval_method: List[RetrievalMethod] = [
+            RetrievalMethod.BM25,
+            RetrievalMethod.RANK_ZEPHYR,
+        ],
         k: List[int] = [100, 100],
         request: Request = None,
         num_passes: int = 1,
@@ -72,30 +74,6 @@ class Restriever:
                 f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
             )
 
-        # RetreivalMethod Options:
-        # UNSPECIFIED = "unspecified"
-        # BM25 = "bm25"
-        # RANK_ZEPHYR = "rank_zephyr"
-        # RANK_ZEPHYR_RHO = "rank_zephyr_rho"
-        # RANK_VICUNA = "rank_vicuna"
-        # RANK_GPT4O = "gpt-4o"
-        # RANK_GPT4 = "gpt-4"
-        # RANK_GPT35_TURBO = "gpt-3.5-turbo"
-
-        try:
-            retriever_path = RetrievalMethod.from_string(retriever_path.lower())
-            reranker_path = RetrievalMethod.from_string(reranker_path.lower())
-        except KeyError:
-            retriever_path = RetrievalMethod.UNSPECIFIED
-            reranker_path = RetrievalMethod.UNSPECIFIED
-
-        retrieval_method = [retriever_path, reranker_path]
-
-        # Rerank method can be none (RetrievalMethod.UNSPECIFIED)
-        if retrieval_method[0] == RetrievalMethod.UNSPECIFIED:
-            raise ValueError(
-                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
-            )
         retriever = Restriever(
             RetrievalMode.DATASET,
             retrieval_method=retrieval_method,

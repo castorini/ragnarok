@@ -12,14 +12,13 @@ from ragnarok.generate.os_llm import OSLLM
 from ragnarok.retrieve_and_rerank.restriever import Restriever
 from ragnarok.retrieve_and_rerank.retriever import (
     CacheInputFormat,
+    RetrievalMethod,
     RetrievalMode,
     Retriever,
 )
 
 
 def retrieve_and_generate(
-    retriever_path: str,
-    reranker_path: str,
     generator_path: str,
     dataset: Union[str, List[str], List[Dict[str, Any]]],
     retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
@@ -41,12 +40,15 @@ def retrieve_and_generate(
     interactive: bool = False,
     host_reranker: str = "8082",
     host_retriever: str = "8081",
+    retrieval_method: List[RetrievalMethod] = [
+        RetrievalMethod.BM25,
+        RetrievalMethod.RANK_ZEPHYR,
+    ],
 ):
     """orchestrates 3 stage RAG process: Retrieval (e.g., BM25), reranking (e.g., RankZephyr), generation (e.g., GPT-4o)
 
     Args:
-        retriever_path (str): model name for retriever
-        reranker_path (str): model name for reranker
+        retrieval_method (List[RetrievalMethod]): retrieval methods used for n stages of retrieval/reranking
         generator_path (str): model name for generator
         dataset (str): dataset from which to search from
         k (List[int]): [top_k_retrieve, top_k_rerank]. The top top_k_retrieve elements to retrieve from the dataset then the top top_k_rerank elements to return after reranking.
@@ -105,8 +107,7 @@ def retrieve_and_generate(
             requests = [
                 Restriever.from_dataset_with_prebuilt_index(
                     dataset_name=dataset,
-                    retriever_path=retriever_path,
-                    reranker_path=reranker_path,
+                    retrieval_method=retrieval_method,
                     host_reranker=host_reranker,
                     host_retriever=host_retriever,
                     request=Request(query=Query(text=query, qid=qid)),
@@ -116,8 +117,7 @@ def retrieve_and_generate(
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset,
-                retriever_path=retriever_path,
-                reranker_path=reranker_path,
+                retrieval_method=retrieval_method,
                 k=k,
                 cache_input_format=CacheInputFormat.JSONL,
             )
@@ -136,7 +136,7 @@ def retrieve_and_generate(
     )
     if isinstance(dataset, str):
         file_name = rag.write_answer_results(
-            reranker_path,
+            retrieval_method[1].value,
             rag_results,
             shuffle_candidates,
             top_k_candidates=k[-1],

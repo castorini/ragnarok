@@ -4,6 +4,7 @@ import os
 import gradio as gr
 
 from ragnarok import retrieve_and_generate
+from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod
 
 retriever_options = ["bm25"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
@@ -50,6 +51,31 @@ def query_model(
     query,
     num_passes,
 ):
+    # RetreivalMethod Options:
+    # UNSPECIFIED = "unspecified"
+    # BM25 = "bm25"
+    # RANK_ZEPHYR = "rank_zephyr"
+    # RANK_ZEPHYR_RHO = "rank_zephyr_rho"
+    # RANK_VICUNA = "rank_vicuna"
+    # RANK_GPT4O = "gpt-4o"
+    # RANK_GPT4 = "gpt-4"
+    # RANK_GPT35_TURBO = "gpt-3.5-turbo"
+
+    try:
+        retriever_path = RetrievalMethod.from_string(retriever_path.lower())
+        reranker_path = RetrievalMethod.from_string(reranker_path.lower())
+    except KeyError:
+        retriever_path = RetrievalMethod.UNSPECIFIED
+        reranker_path = RetrievalMethod.UNSPECIFIED
+
+    retrieval_method = [retriever_path, reranker_path]
+
+    # Rerank method can be none (RetrievalMethod.UNSPECIFIED)
+    if retrieval_method[0] == RetrievalMethod.UNSPECIFIED:
+        raise ValueError(
+            f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
+        )
+
     try:
         response = retrieve_and_generate.retrieve_and_generate(
             dataset=dataset,
@@ -59,9 +85,8 @@ def query_model(
             interactive=True,
             k=[top_k_retrieve, top_k_rerank],
             qid=qid,
-            reranker_path=reranker_path,
-            retriever_path=retriever_path,
-            LLM_path=LLM,
+            retrieval_method=retrieval_method,
+            generator_path=LLM,
             use_azure_openai=True,
             num_passes=num_passes,
         )
