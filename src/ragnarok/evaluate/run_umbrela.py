@@ -11,17 +11,30 @@ Usage:
 Example:
     python3 src/ragnarok/evaluate/run_umbrela.py --input_file pool_results/pooled_results_rag24.researgy-dev_pool20_s2.jsonl --output_file pool_results/pooled_results_rag24.researgy-dev_pool20_s2_umbrela.jsonl
 """
-import json
+
 import argparse
-from umbrela.gpt_judge import GPTJudge
-from tqdm import tqdm
+import json
+
 import numpy as np
+from tqdm import tqdm
+from umbrela.gpt_judge import GPTJudge
+
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate with UMBRELA")
-    parser.add_argument('--input_file', type=str, required=True, help="Input JSONL file with pooled results")
-    parser.add_argument('--output_file', type=str, required=True, help="Output JSONL file with UMBRELA scores")
-    parser.add_argument('--fewshot', action='store_true', help="Use few-shot prompting")
+    parser.add_argument(
+        "--input_file",
+        type=str,
+        required=True,
+        help="Input JSONL file with pooled results",
+    )
+    parser.add_argument(
+        "--output_file",
+        type=str,
+        required=True,
+        help="Output JSONL file with UMBRELA scores",
+    )
+    parser.add_argument("--fewshot", action="store_true", help="Use few-shot prompting")
 
     args = parser.parse_args()
 
@@ -35,7 +48,7 @@ def main():
     all_judgments = []
 
     # Read input JSONL file
-    with open(args.input_file, 'r') as infile:
+    with open(args.input_file, "r") as infile:
         for line in tqdm(infile, desc="Processing"):
             request_dict = json.loads(line)
             judgments = judge_gpt.judge(request_dict=request_dict)
@@ -47,10 +60,10 @@ def main():
             query_level_results.append(request_dict)
 
     # Write query-level results to output JSONL file
-    with open(args.output_file, 'w') as outfile:
+    with open(args.output_file, "w") as outfile:
         for result in query_level_results:
             json.dump(result, outfile)
-            outfile.write('\n')
+            outfile.write("\n")
     print(f"Results written to {args.output_file}")
 
     # Print judgment level stats
@@ -62,6 +75,7 @@ def main():
 
     print(f"Mean judgment score: {np.mean(all_judgments)}")
     print(f"Median judgment score: {np.median(all_judgments)}")
+
 
 if __name__ == "__main__":
     main()

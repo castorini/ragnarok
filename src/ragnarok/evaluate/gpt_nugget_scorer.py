@@ -1,3 +1,4 @@
+import re
 import time
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -5,14 +6,15 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import openai
 import tiktoken
 from ftfy import fix_text
-import re
+
 from ragnarok.data import Request
+
 
 class NuggetScoreMode(Enum):
     VITAL_OKAY = "vital_okay"
-    
 
-class SafeOpenaiNuggetScorer():
+
+class SafeOpenaiNuggetScorer:
     def __init__(
         self,
         model: str,
@@ -54,7 +56,7 @@ class SafeOpenaiNuggetScorer():
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
         self._model = model
-        self._context_size  = context_size
+        self._context_size = context_size
         self._prompt_mode = prompt_mode
         if isinstance(keys, str):
             keys = [keys]
@@ -85,6 +87,7 @@ class SafeOpenaiNuggetScorer():
         UNSPECIFIED = 0
         CHAT = 1
         TEXT = 2
+
     def _call_completion(
         self,
         *args,
@@ -159,11 +162,10 @@ class SafeOpenaiNuggetScorer():
                 "role": "user",
                 "content": f"Based on the query, label of the {num} nuggets either a vital or okay based on the following criteria. Vital nuggets represent concepts that must be present in a “good” answer; on the other hand, okay nuggets contribute worthwhile information about the target but are not essential. Return the list of labels in a Pythonic list format (type: List[str]). The list should be in the same order as the input nuggets. Make sure to provide a label for each nugget.\n\n",
             },
-        ] 
+        ]
 
     def create_prompt(
-        self, request: Request, rank_start: int, rank_end: int,
-        nuggets: List[str] = []
+        self, request: Request, rank_start: int, rank_end: int, nuggets: List[str] = []
     ) -> Tuple[List[Dict[str, str]], int]:
         if self._prompt_mode == NuggetScoreMode.VITAL_OKAY:
             return self.create_vital_okay_prompt(request, rank_start, rank_end, nuggets)
@@ -179,6 +181,6 @@ class SafeOpenaiNuggetScorer():
         message += f"Search Query: {query}\nNugget List: {nuggets}\nOnly return the list of labels (List[str]). Do not explain.\nLabels:"
         messages[-1]["content"] = message
         return messages
-    
+
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)

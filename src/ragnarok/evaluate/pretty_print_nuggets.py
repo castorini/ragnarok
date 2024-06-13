@@ -1,10 +1,10 @@
 import argparse
 import json
-from pprint import pprint
+
 
 def pretty_print_file(filename):
     dataset = []
-    with open(filename, 'r') as file:
+    with open(filename, "r") as file:
         for line in file:
             data = json.loads(line)
             dataset.append(data)
@@ -15,6 +15,7 @@ def pretty_print_file(filename):
         if 'nugget_labels' in data:
             nugget_labels = data['nugget_labels']
         nuggets = list(zip(nugget_labels, nuggets)) if 'nugget_labels' in data else nuggets
+
         print(f"QID: {qid}\n")
         print(f"Query: {text}\n")
         print(f"# Nuggets: {len(nuggets)}\n")
@@ -23,8 +24,11 @@ def pretty_print_file(filename):
             print(f" {i}) {nugget}")
         print("\n\n\n\n")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Pretty print JSON file content.')
-    parser.add_argument('filename', type=str, help='The filename of the JSON file to be pretty printed')
+    parser = argparse.ArgumentParser(description="Pretty print JSON file content.")
+    parser.add_argument(
+        "filename", type=str, help="The filename of the JSON file to be pretty printed"
+    )
     args = parser.parse_args()
     pretty_print_file(args.filename)

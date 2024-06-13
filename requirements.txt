@@ -1,5 +1,5 @@
 tqdm>=4.66.2
-openai>=1.23.6
+openai>=1.30.5
 cohere>=5.3.4
 tiktoken>=0.6.0
 transformers>=4.40.1
@@ -8,3 +8,6 @@ ftfy>=6.2.0
 dacite>=1.8.1
 fschat[model_worker]>=0.2.36
 stanza>=1.8.2
+gradio==4.26.0
+vllm>=0.4.3
+spacy==3.7.2
