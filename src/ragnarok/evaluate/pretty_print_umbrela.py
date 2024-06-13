@@ -9,18 +9,20 @@ def pretty_print_file(filename):
             data = json.loads(line)
             dataset.append(data)
     for data in dataset:
-        qid = data['qid'].replace("_0", "")
-        text = data['text']
-        nuggets = data['nuggets']
-        if 'nugget_labels' in data:
-            nugget_labels = data['nugget_labels']
-        nuggets = list(zip(nugget_labels, nuggets)) if 'nugget_labels' in data else nuggets
+        qid = data['query']['qid'].replace("_0", "")
+        text = data['query']['text']
+        candidates = data['candidates']
+        example_label = {}
+        for candidate in candidates:
+            if candidate["judgment"] not in example_label:
+                example_label[candidate["judgment"]] = candidate['doc']["segment"]
         print(f"QID: {qid}\n")
         print(f"Query: {text}\n")
-        print(f"# Nuggets: {len(nuggets)}\n")
-        print("Nuggets:")
-        for i, nugget in enumerate(nuggets, start=1):
-            print(f" {i}) {nugget}")
+        for ex in range(4):
+            if ex not in example_label:
+                print(f"Label: {ex} None")
+                continue
+            print(f"Label:{ex} {example_label[ex]}")
         print("\n\n\n\n")
 
 if __name__ == "__main__":

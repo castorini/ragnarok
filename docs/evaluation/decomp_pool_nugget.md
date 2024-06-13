@@ -96,7 +96,7 @@ Averaged number of query-document pairs per query: 30.5
 
 This would mean ~ 22 passes in setting 1 with memory and ~ 3 passes in setting 2 with memory for each query when we run nuggetization.
 
-Finally the results of nuggetization itself are compiled in this [spreadsheet](https://docs.google.com/spreadsheets/d/1EZH5oxb4DKdT_5FV4PF8mrLdHUSpQlujxOC3pCOtTWY/edit?usp=sharing)
+Finally the results of nuggetization itself are compiled in this [spreadsheet](https://docs.google.com/document/d/1ETBBjEprWspLv6mpS3mC7UeKiz-e_VAIKWJFlM3Ouko/edit?usp=sharing)
 
 The trajectories of nuggets across iterations can be visualized (perhaps useful to share with NIST assessors). This can be done running the following to generate git diff style outputs.
 
@@ -138,6 +138,20 @@ python3 src/ragnarok/evaluate/run_nugget_scorer.py --nuggetized_jsonl_file nugge
 
 python3 src/ragnarok/evaluate/run_nugget_scorer.py --nuggetized_jsonl_file nuggetized_results/nuggetized_results_rag24.researgy-dev_pool20_s1.jsonl --output_jsonl_file nuggetized_results/scored_nuggetized_results_rag24.researgy-dev_pool20_s1.jsonl --window_size 10 --stride 10 --model gpt-4o --logging
 ```
+
+# RAG
+
+Finally, we can run RAG on the retrieved results to generate the answers.
+
+## Let's first run with BM25
+
+```bash
+
+```
+
+```bash
+
+# Nugget Assignment
 
 
 
