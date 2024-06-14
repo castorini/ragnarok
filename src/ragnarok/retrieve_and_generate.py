@@ -22,6 +22,8 @@ def retrieve_and_generate(
     generator_path: str,
     dataset: Union[str, List[str], List[Dict[str, Any]]],
     retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
+    retrieval_method: List[RetrievalMethod] = [RetrievalMethod.BM25, 
+                                               RetrievalMethod.RANK_ZEPHYR_RHO],
     k: List[int] = [100, 20],
     context_size: int = 8192,
     max_output_tokens: int = 1500,
@@ -40,17 +42,13 @@ def retrieve_and_generate(
     interactive: bool = False,
     host_reranker: str = "8082",
     host_retriever: str = "8081",
-    retrieval_method: List[RetrievalMethod] = [
-        RetrievalMethod.BM25,
-        RetrievalMethod.RANK_ZEPHYR,
-    ],
 ):
     """orchestrates 3 stage RAG process: Retrieval (e.g., BM25), reranking (e.g., RankZephyr), generation (e.g., GPT-4o)
 
     Args:
-        retrieval_method (List[RetrievalMethod]): retrieval methods used for n stages of retrieval/reranking
         generator_path (str): model name for generator
         dataset (str): dataset from which to search from
+        retrieval_mode (RetrievalMode): mode of retrieval (e.g., DATASET)
         k (List[int]): [top_k_retrieve, top_k_rerank]. The top top_k_retrieve elements to retrieve from the dataset then the top top_k_rerank elements to return after reranking.
         qid (int): QID of the search query
         query (str): The query to search for
@@ -67,6 +65,7 @@ def retrieve_and_generate(
     if "gpt" in generator_path:
         print("Using OpenAI API")
         print(generator_path)
+        print("Using Azure OpenAI API" if use_azure_openai else "")
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
             model=generator_path,

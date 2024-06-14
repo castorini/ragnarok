@@ -151,11 +151,11 @@ class Retriever:
                 retrieved_results = [
                     from_dict(data_class=Request, data=r) for r in loaded_results
                 ]
-                # TODO remove!!! Filter those if query.qid has _ and does not end with 0
+                # TODO remove!!! Filter those if query.qid has _ and does not end with _0
                 retrieved_results = [
                     r
                     for r in retrieved_results
-                    if "_" not in r.query.qid or r.query.qid.endswith("0")
+                    if "_" not in r.query.qid or r.query.qid.endswith("_0")
                 ]
                 # Ensure the candidates are of at most k length
                 for r in retrieved_results:

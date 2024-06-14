@@ -70,7 +70,7 @@ def main(args):
 
 
 """ sample run:
-python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere_command_r_plus  --topk=20 --dataset=researchy-questions  --retrieval_method=bm25,rank_zephyr --prompt_mode=chat_qa  --context_size=8192 --max_output_tokens=1500
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere_command_r_plus  --topk=20 --dataset=researchy-questions  --retrieval_method=bm25,rank_zephyr --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

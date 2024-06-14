@@ -78,6 +78,55 @@ def read_requests_from_file(file_path: str) -> List[Request]:
     else:
         raise ValueError(f"Expected json or jsonl file format, got {extension}")
 
+def read_results_from_file(file_path: str) -> List[Result]:
+    extension = file_path.split(".")[-1]
+    if extension == "jsonl":
+        results = []
+        with open(file_path, "r") as f:
+            for l in f:
+                if not l.strip():
+                    continue
+                result_dict = json.loads(l)
+                result = Result(
+                    query=Query(
+                        text=result_dict["topic"], 
+                        qid=result_dict["topic_id"]
+                    ),
+                    references=result_dict["references"],
+                    answer=[
+                        CitedSentence(
+                            text=sentence["text"], 
+                            citations=sentence["citations"]
+                        )
+                        for sentence in result_dict["answer"]
+                    ],
+                    rag_exec_summary=None
+                )
+                results.append(result)
+        return results
+    elif extension == "json":
+        with open(file_path, "r") as f:
+            result_dicts = json.load(f)
+        return [
+            Result(
+                query=Query(
+                    text=result_dict["topic"], 
+                    qid=result_dict["topic_id"]
+                ),
+                references=result_dict["references"],
+                answer=[
+                    CitedSentence(
+                        text=sentence["text"], 
+                        citations=sentence["citations"]
+                    )
+                    for sentence in result_dict["answer"]
+                ],
+                rag_exec_summary=None
+            )
+            for result_dict in result_dicts
+        ]
+    else:
+        raise ValueError(f"Expected json or jsonl file format, got {extension}")
 
 def remove_unused_references(result: Result, max_per_sentence: int = 3) -> Result:
     # Find all referenced document ids in the citations

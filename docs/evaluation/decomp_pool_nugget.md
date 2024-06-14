@@ -146,8 +146,26 @@ Finally, we can run RAG on the retrieved results to generate the answers.
 ## Let's first run with BM25
 
 ```bash
-
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=command-r-plus  --topk=20 \
+  --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev  --retrieval_method=bm25 --prompt_mode=cohere  \
+  --context_size=8192 --max_output_tokens=512  --print_prompts_responses
+  
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=gpt-4o --topk=20   --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev  --retrieval_method=bm25   --context_size=8192 --max_output_tokens=512 --prompt_mode chatqa --use_azure_openai
 ```
+
+## Next BM25, RANK_ZEPHYR_RHO
+```bash  
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=command-r-plus  --topk=100,20 \
+    --dataset=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=cohere  \
+    --context_size=8192 --max_output_tokens=512  --print_prompts_responses
+
+
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=gpt-4o  --topk=100,20 \
+    --dataset=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=chatqa  \
+    --context_size=8192 --max_output_tokens=512  --print_prompts_responses --use_azure_openai
+```
+
+## L
 
 ```bash
 

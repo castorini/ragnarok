@@ -62,7 +62,7 @@ class SafeOpenai(LLM):
             raise ValueError("Please provide OpenAI Keys.")
         if prompt_mode not in [PromptMode.CHATQA]:
             raise ValueError(
-                f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT} or {PromptMode.LRL}."
+                f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.CHATQA}."
             )
 
         self._keys = keys
