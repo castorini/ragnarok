@@ -5,6 +5,15 @@
 This section is still a TODO, relies on Nandan's code.
 
 
+```bash
+#in: basilisk
+cd ${SCRATCH}/ragnarok
+shuf ../topics.rag24.researchy-dev.txt | head -50 > ../topics.rag24.researchy-dev-q.txt 
+python3 src/ragnarok/evaluate/run_query_decomposer.py --query_file ../topics.rag24.researchy-dev-q.txt \
+    --decomp_query_file ${SCRATCH}/topics.rag24.researchy-dev-qd.txt --num 10 --model gpt-4o
+scp ${SCRATCH}/topics.rag24.researchy-dev-qd.txt rpradeep@orca.cs.uwaterloo.ca:/store/scratch/rpradeep/nuggetizer/data/topics/
+```
+
 # Retrieval
 
 Let's first run Anserini BM25 over the corpora to get the top 100 results for each query.
@@ -148,28 +157,71 @@ Finally, we can run RAG on the retrieved results to generate the answers.
 ```bash
 python src/ragnarok/scripts/run_ragnarok.py  --model_path=command-r-plus  --topk=20 \
   --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev  --retrieval_method=bm25 --prompt_mode=cohere  \
-  --context_size=8192 --max_output_tokens=512  --print_prompts_responses
+  --context_size=8192 --max_output_tokens=1024 
   
-python src/ragnarok/scripts/run_ragnarok.py  --model_path=gpt-4o --topk=20   --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev  --retrieval_method=bm25   --context_size=8192 --max_output_tokens=512 --prompt_mode chatqa --use_azure_openai
+python src/ragnarok/scripts/run_ragnarok.py  --model_path=gpt-4o --topk=20   --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev  --retrieval_method=bm25   --context_size=8192 --max_output_tokens=1024 --prompt_mode chatqa --use_azure_openai
 ```
 
 ## Next BM25, RANK_ZEPHYR_RHO
 ```bash  
 python src/ragnarok/scripts/run_ragnarok.py  --model_path=command-r-plus  --topk=100,20 \
     --dataset=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=cohere  \
-    --context_size=8192 --max_output_tokens=512  --print_prompts_responses
+    --context_size=8192 --max_output_tokens=1024 
 
 
 python src/ragnarok/scripts/run_ragnarok.py  --model_path=gpt-4o  --topk=100,20 \
     --dataset=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=chatqa  \
-    --context_size=8192 --max_output_tokens=512  --print_prompts_responses --use_azure_openai
+    --context_size=8192 --max_output_tokens=1024  --use_azure_openai
 ```
-
-## L
-
-```bash
 
 # Nugget Assignment
 
+Finally, we can assign nuggets to the generated responses.
+
+```bash
+
+python3 src/ragnarok/evaluate/run_nugget_assigner.py --nuggetized_jsonl_file nuggetized_results/scored_nuggetized_results_rag24.researgy-dev_pool20_s1.jsonl \
+    --rag_jsonl_file results/bm25/command-r-plus_8192_20_cohere_msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev_2024-06-14T10:25:20.546665.jsonl  \
+    --output_jsonl_file nuggetized_results/assigned_nuggets_s1_command-r-plus_8192_20_cohere_msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev_2024-06-14T10:25:20.546665.jsonl --window_size 10 --stride 10 --model gpt-4o
+
+python3 src/ragnarok/evaluate/run_nugget_assigner.py --nuggetized_jsonl_file nuggetized_results/scored_nuggetized_results_rag24.researgy-dev_pool20_s1.jsonl \
+    --rag_jsonl_file results/bm25/gpt-4o_8192_20_chatqa_msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev_2024-06-14T10:24:31.460579.jsonl  \
+    --output_jsonl_file nuggetized_results/assigned_nuggets_s1_gpt-4o_8192_20_chatqa_msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev_2024-06-14T10:24:31.460579.jsonl --window_size 10 --stride 10 --model gpt-4o
+
+python3 src/ragnarok/evaluate/run_nugget_assigner.py --nuggetized_jsonl_file nuggetized_results/scored_nuggetized_results_rag24.researgy-dev_pool20_s1.jsonl \
+    --rag_jsonl_file results/rank_zephyr_rho/command-r-plus_8192_20_cohere_msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev_2024-06-14T10:21:23.199656.jsonl  \
+    --output_jsonl_file nuggetized_results/assigned_nuggets_s1_command-r-plus_8192_20_cohere_msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev_2024-06-14T10:21:23.199656.jsonl --window_size 10 --stride 10 --model gpt-4o
+
+python3 src/ragnarok/evaluate/run_nugget_assigner.py --nuggetized_jsonl_file nuggetized_results/scored_nuggetized_results_rag24.researgy-dev_pool20_s1.jsonl \
+    --rag_jsonl_file results/rank_zephyr_rho/gpt-4o_8192_20_chatqa_msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev_2024-06-14T10:20:29.570292.jsonl  \
+    --output_jsonl_file nuggetized_results/assigned_nuggets_s1_gpt-4o_8192_20_chatqa_msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev_2024-06-14T10:20:29.570292.jsonl --window_size 10 --stride 10 --model gpt-4o
+
+```
 
 
+```
+
+
+for file in results/bm25/command-r-plus_8192_20_cohere_msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev-qd_2024-06-20T15:36:16.601181.jsonl results/bm25/gpt-4o_8192_20_chatqa_msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev-qd_2024-06-20T15:29:56.953679.jsonl results/rank_zephyr_rho/command-r-plus_8192_20_cohere_msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researchy-dev-qd_2024-06-20T15:51:02.263640.jsonl results/rank_zephyr_rho/gpt-4o_8192_20_chatqa_msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researchy-dev-qd_2024-06-20T15:39:37.783009.jsonl;
+do
+wc -l $file;
+echo "Writing to nuggetized_results/assigned_nuggets_s1_$(basename $file)";
+
+python3 src/ragnarok/evaluate/run_nugget_assigner.py --nuggetized_jsonl_file nuggetized_results/scored_nuggetized_results_rag24.researchy-dev_pool20_s1.jsonl \
+    --rag_jsonl_file $file  \
+    --output_jsonl_file nuggetized_results/assigned_nuggets_s1_$(basename $file) --window_size 10 --stride 10 --model gpt-4o
+done
+```
+
+done
+Let's pretty print these:
+
+```bash
+python3 src/ragnarok/evaluate/pretty_print_nuggets.py nuggetized_results/assigned_nuggets_s1_command-r-plus_8192_20_cohere_msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev_2024-06-14T10:25:20.546665.jsonl
+
+python3 src/ragnarok/evaluate/pretty_print_nuggets.py nuggetized_results/assigned_nuggets_s1_gpt-4o_8192_20_chatqa_msmarco-v2.1-doc-segmented.bm25.rag24.researgy-dev_2024-06-14T10:24:31.460579.jsonl
+
+python3 src/ragnarok/evaluate/pretty_print_nuggets.py nuggetized_results/assigned_nuggets_s1_command-r-plus_8192_20_cohere_msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev_2024-06-14T10:21:23.199656.jsonl
+
+python3 src/ragnarok/evaluate/pretty_print_nuggets.py nuggetized_results/assigned_nuggets_s1_gpt-4o_8192_20_chatqa_msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researgy-dev_2024-06-14T10:20:29.570292.jsonl
+```

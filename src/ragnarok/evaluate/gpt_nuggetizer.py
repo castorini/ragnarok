@@ -134,14 +134,15 @@ class SafeOpenaiNuggetizer:
         self,
         prompt: Union[str, List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
+        temperature = 0.0,
     ) -> Tuple[str, int]:
         model_key = "model"
         response = self._call_completion(
             messages=prompt,
-            temperature=0,
+            temperature=temperature,
             completion_mode=SafeOpenaiNuggetizer.CompletionMode.CHAT,
             return_text=True,
-            max_tokens=512,
+            max_tokens=1024,
             frequency_penalty=0,
             presence_penalty=0,
             **{model_key: self._model},

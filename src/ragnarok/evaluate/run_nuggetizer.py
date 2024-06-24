@@ -3,11 +3,11 @@ Use argparse and using gpt_nuggetizer, load first the pooled results and then nu
 
 python3 src/ragnarok/evaluate/run_nuggetizer.py --pooled_jsonl_file pool_results/pooled_results_rag24.researchy-dev_tiny_pool20.jsonl --output_jsonl_file nuggetized_results/nuggetized_results_rag24.researchy-dev_tiny_pool20.jsonl --window_size 10 --stride 10 --model gpt-4o
 """
-
 import argparse
 import ast
 import copy
 import json
+import os
 
 from tqdm import tqdm
 
@@ -21,14 +21,19 @@ def load_pooled_results(pooled_jsonl_file):
         return [json.loads(line) for line in file]
 
 
-def save_nuggetized_results(output_jsonl_file, results):
-    with open(output_jsonl_file, "w") as file:
-        for result, nuggets, nugget_trajectory in results:
-            result_dict = result.query.__dict__
-            result_dict["nuggets"] = nuggets
-            result_dict["nugget_trajectory"] = nugget_trajectory
-            print(result_dict)
-            file.write(json.dumps(result_dict) + "\n")
+def load_existing_qids(output_jsonl_file):
+    if not os.path.exists(output_jsonl_file):
+        return set()
+    with open(output_jsonl_file, "r") as file:
+        return {json.loads(line)["qid"] for line in file}
+
+
+def append_nuggetized_result(output_jsonl_file, result, nuggets, nugget_trajectory):
+    with open(output_jsonl_file, "a") as file:
+        result_dict = result.query.__dict__
+        result_dict["nuggets"] = nuggets
+        result_dict["nugget_trajectory"] = nugget_trajectory
+        file.write(json.dumps(result_dict) + "\n")
 
 
 def main():
@@ -58,6 +63,7 @@ def main():
     args = parser.parse_args()
 
     pooled_results = read_requests_from_file(args.pooled_jsonl_file)
+    existing_qids = load_existing_qids(args.output_jsonl_file)
     openai_keys = get_openai_api_key()
     nuggetizer = SafeOpenaiNuggetizer(
         model=args.model,
@@ -68,14 +74,16 @@ def main():
         **(get_azure_openai_args()),
     )
 
-    nuggetized_results = []
     fail_count = 0
     fail_examples = []
     for request in tqdm(pooled_results):
+        if request.query.qid in existing_qids:
+            continue
+
         start = 0
         nuggets = []
         nugget_trajectory = []
-        print(request.query.text)
+        print(f"Query: {request.query.text}")
         while start < len(request.candidates):
             end = min(start + args.window_size, len(request.candidates))
             prompt = nuggetizer.create_prompt(request, start, end, nuggets)
@@ -84,19 +92,28 @@ def main():
                 response = response.replace("```python", "").replace("```", "").strip()
                 output = ast.literal_eval(response)
             except:
-                fail_count += 1
-                fail_examples.append(
-                    (request.query.qid, request.query.text, start, end, response)
-                )
-                output = nuggets
-
+                try:
+                    response, _ = nuggetizer.run_llm(prompt, temperature=0.1)
+                    response = response.replace("```python", "").replace("```", "").strip()
+                    output = ast.literal_eval(response)
+                except:
+                    try:
+                        response, _ = nuggetizer.run_llm(prompt, temperature=0.2)
+                        response = response.replace("```python", "").replace("```", "").strip()
+                        output = ast.literal_eval(response)
+                    except:
+                        fail_count += 1
+                        fail_examples.append(
+                            (request.query.qid, request.query.text, start, end, response)
+                        )
+                        output = nuggets
             nuggets = output
-            print(nuggets)
+            print(f"Start: {start}, End: {end}, Nuggets: {nuggets}")
             nugget_trajectory.append(copy.deepcopy(nuggets))
             start += args.stride
-        nuggetized_results.append((request, nuggets, nugget_trajectory))
 
-    save_nuggetized_results(args.output_jsonl_file, nuggetized_results)
+        append_nuggetized_result(args.output_jsonl_file, request, nuggets, nugget_trajectory)
+
     print(f"Failed to parse {fail_count} examples.")
     for example in fail_examples:
         print(example)

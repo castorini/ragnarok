@@ -88,7 +88,10 @@ def main():
     fail_count = 0
     fail_examples = []
     for result in tqdm(rag_results):
-        request = scored_nuggets[result.query.qid.replace("_0", "")]
+        qid = result.query.qid.replace("_0", "")
+        if qid not in scored_nuggets:
+            continue
+        request = scored_nuggets[qid]
         start = 0
         nuggets = request["nuggets"]
         query = request["text"]
@@ -123,13 +126,14 @@ def main():
             except:
                 fail_count += 1
                 fail_examples.append(
-                    (request.query.qid, request.query.text, answer_text_only, start, end, response)
+                    (result.query.qid, result.query.text, answer_text_only, start, end, response)
                 )
                 output = len(nuggets[start:end]) * ["fail"]
 
             nugget_assignment.extend(output)
             start += args.stride
-        print(f"Query: {request.query}\nNugget Assignment: {nugget_assignment}\nAnswer: {answer_text_only}")
+        map_nugget_assigned = {nugget: assignment for nugget, assignment in zip(nuggets, nugget_assignment)}
+        print(f"Query: {result.query.text}\nNugget Assignment: {map_nugget_assigned}\nAnswer: {answer_text_only}")
         nugget_assignment_results.append((request, nugget_assignment, answer_text_only))
 
     save_nuggetized_results(args.output_jsonl_file, nugget_assignment_results)

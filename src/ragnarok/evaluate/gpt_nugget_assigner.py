@@ -3,7 +3,7 @@ import time
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import openai
+from openai import OpenAI, AzureOpenAI
 import tiktoken
 from ftfy import fix_text
 
@@ -68,14 +68,19 @@ class SafeOpenaiNuggetAssigner:
         self._keys = keys
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
-        openai.proxy = proxy
-        openai.api_key = self._keys[self._cur_key_id]
-        self.use_azure_ai = False
+        self.openai = OpenAI() if not all([api_type, api_base, api_version]) else AzureOpenAI()
+        self.openai.proxy = proxy
+        print(self._keys)
+        print(proxy)
+        print(api_type, api_base, api_version)
+        self.openai.api_key = self._keys[self._cur_key_id]
+        self.use_azure_ai = True
 
         if all([api_type, api_base, api_version]):
-            openai.api_version = api_version
-            openai.api_type = api_type
-            openai.api_base = api_base
+            self.openai.api_version = api_version
+            self.openai.api_type = api_type
+            self.openai.api_base = api_base
+            print("Azure AI integration enabled.")
             self.use_azure_ai = True
 
     class CompletionMode(Enum):
@@ -94,11 +99,11 @@ class SafeOpenaiNuggetAssigner:
         while True:
             try:
                 if completion_mode == self.CompletionMode.CHAT:
-                    completion = openai.ChatCompletion.create(
+                    completion = self.openai.chat.completions.create(
                         *args, **kwargs, timeout=30
                     )
                 elif completion_mode == self.CompletionMode.TEXT:
-                    completion = openai.Completion.create(*args, **kwargs)
+                    completion = self.openai.Completion.create(*args, **kwargs)
                 else:
                     raise ValueError(
                         "Unsupported completion mode: %V" % completion_mode
@@ -113,7 +118,7 @@ class SafeOpenaiNuggetAssigner:
                     print("The response was filtered")
                     return "ERROR::The response was filtered"
                 self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
-                openai.api_key = self._keys[self._cur_key_id]
+                self.openai.api_key = self._keys[self._cur_key_id]
                 time.sleep(0.1)
         if return_text:
             completion = (
@@ -151,11 +156,11 @@ class SafeOpenaiNuggetAssigner:
         return [
             {
                 "role": "system",
-                "content": "You are NuggetizeAssignerLLM, an intelligent assistant that can label a list of atomic nuggets for the query based on their support by a given passage.",
+                "content": "You are NuggetizeAssignerLLM, an intelligent assistant that can label a list of atomic nuggets based on if they are captured by a given passage.",
             },
             {
                 "role": "user",
-                "content": f"Based on the query and passage, label each of the {num} nuggets either as support or not_support using the following criteria. Nuggets that are supported by the passage should be labeled as support; otherwise, label them as not_support. Return the list of labels in a Pythonic list format (type: List[str]). The list should be in the same order as the input nuggets. Make sure to provide a label for each nugget.\n\n",
+                "content": f"Based on the query and passage, label each of the {num} nuggets either as support or not_support using the following criteria. A nugget that is fully captured in the passage should be labeled as support; otherwise, label them as not_support. Return the list of labels in a Pythonic list format (type: List[str]). The list should be in the same order as the input nuggets. Make sure to provide a label for each nugget.\n\n",
             },
         ]
 
