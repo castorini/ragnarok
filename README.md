@@ -30,16 +30,17 @@ pip install pyragnarok
 ```
 
 
-## Let's generate!
+## RAG
 
-For example, to run the `command-r-plus` model on the `rag24.researchy-dev_large` dataset with `bm25` retrieval methods with augmented generation based on the top-20 segments, you can run the following command:
+We have a wide range of models supported by Ragnarök.
+To run the `command-r-plus` model on the `rag24.researchy-dev` topics using the top-20 `bm25` results from the MS MARCO v2.1 segment collection, you can run the following command:
 ```bash
 python src/ragnarok/scripts/run_ragnarok.py  --model_path=command-r-plus  --topk=20 \
   --dataset=rag24.researchy-dev  --retrieval_method=bm25 --prompt_mode=cohere  \
   --context_size=8192 --max_output_tokens=1024 
 ```
 
-Or to run the `gpt-4o` model on the `rag24.raggy-dev` dataset with `bm25` followed by `rank_zephyr_rho` retrieval methods, with augmented generation based on the top-5 segments, you can run the following command:
+Or to run the `gpt-4o` model (ChatQA inspired format) on the `rag24.raggy-dev` topics with multi-stage retrieval + reranking ()`bm25` followed by `rank_zephyr_rho`) and augmented-generation on the top-5 MS MARCO v2.1 segments, you can run the following command:
 ```bash
 python src/ragnarok/scripts/run_ragnarok.py  --model_path=gpt-4o  --topk=100,5 \
     --dataset=rag24.raggy-dev  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=chatqa  \
@@ -69,7 +70,17 @@ Most LLMs supported by VLLM/FastChat should additionally be supported by Ragnar�
 
 If you use Ragnarök, please cite the following:
 
-TODO
+[[2406.16828] Ragnarök: A Reusable RAG Framework and Baselines for TREC 2024 Retrieval-Augmented Generation Track](https://arxiv.org/abs/2406.16828)
+
+<!-- {% raw %} -->
+```
+@ARTICLE{pradeep2024ragnarok,
+  title   = {{Ragnarök}: A Reusable RAG Framework and Baselines for TREC 2024 Retrieval-Augmented Generation Track},
+  author  = {Ronak Pradeep and Nandan Thakur and Sahel Sharifymoghaddam and Eric Zhang and Ryan Nguyen and Daniel Campos and Nick Craswell and Jimmy Lin},
+  year    = {2024},
+  journal = {arXiv:2406.16828},
+}
+```
 
 ## 🙏 Acknowledgments
 

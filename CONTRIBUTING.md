@@ -1,6 +1,6 @@
 # Contributing to RAGnarok
 
-RankLLM Contribution flow
+Ragnarök Contribution flow
 
 ## Pull Requests 
 
@@ -18,4 +18,4 @@ We use GitHub issues to track public bugs and features requests. Please ensure y
 
 ## License
 
-By contributing to RankLLM, you agree that your contributions will be licensed under the LICENSE file in the root directory of this source tree.
+By contributing to Ragnarök, you agree that your contributions will be licensed under the LICENSE file in the root directory of this source tree.
