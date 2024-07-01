@@ -1,15 +1,26 @@
 import concurrent.futures
 import os
 import random
+import sqlite3
 
 import gradio as gr
 
 from ragnarok import retrieve_and_generate
 from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod
+from ragnarok.api.elo import *
 
 retriever_options = ["bm25"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
 llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
+
+conn = sqlite3.connect('elo.db')
+cursor = conn.cursor()
+cursor.execute(''' 
+    CREATE TABLE IF NOT EXISTS elo (
+        model_name TEXT PRIMARY KEY
+        score INTEGER NOT NULL
+    )
+''')
 
 
 def generate_text_with_citations(response):
@@ -626,4 +637,4 @@ with gr.Blocks() as demo:
         """
         gr.HTML(html_content)
 
-demo.launch()
+demo.launch(server_name="0.0.0.0", server_port="7860")
