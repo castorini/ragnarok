@@ -1,5 +1,5 @@
 import sqlite3
-import ragnarok.api.web_server
+from ragnarok.api.web_server import * 
 
 BASE=10
 SCALE=400

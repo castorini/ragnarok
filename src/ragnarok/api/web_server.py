@@ -2,6 +2,8 @@ import concurrent.futures
 import os
 import random
 import sqlite3
+import pandas as pd
+from enum import Enum
 
 import gradio as gr
 
@@ -9,18 +11,18 @@ from ragnarok import retrieve_and_generate
 from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod
 from ragnarok.api.elo import *
 
+# RAG pipeline options 
 retriever_options = ["bm25"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
 llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 
-conn = sqlite3.connect('elo.db')
-cursor = conn.cursor()
-cursor.execute(''' 
-    CREATE TABLE IF NOT EXISTS elo (
-        model_name TEXT PRIMARY KEY
-        score INTEGER NOT NULL
-    )
-''')
+class BattleResult(Enum):
+    answer_a = "answer_a" 
+    answer_tie = "answer_tie"
+    answer_b = "answer_b"
+    evidence_a = "evidence_a"
+    evidence_tie = "evidence_tie"
+    evidence_b = "evidence_b"
 
 
 def generate_text_with_citations(response):
@@ -307,10 +309,6 @@ html_content = """
 </div>
 """
 
-retriever_options = ["bm25"]
-reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
-llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
-
 
 def rag_pipeline_block(
     label_suffix="",
@@ -383,13 +381,24 @@ def output_block(side_by_side=True):
 
 
 def comparison_block():
+    
+    gr.Markdown(
+        "## Answer")
     with gr.Row():
-        a_better_button = gr.Button("👈 A is better")
-        b_better_button = gr.Button("👉 B is better")
-        both_good_button = gr.Button("🤝 Tie")
-        both_bad_button = gr.Button("👎 Both are bad")
+        answer_a = gr.Button("👈 A is better")
+        answer_tie = gr.Button("🤝 Tie")
+        answer_b = gr.Button("👉 B is better")
+    gr.Markdown("## Evidence")
+    with gr.Row():
+        evidence_a = gr.Button("👈 A is better")
+        evidence_tie = gr.Button("🤝 Tie")
+        evidence_b = gr.Button("👉 B is better")
 
-    return [a_better_button, b_better_button, both_good_button, both_bad_button]
+    return [answer_a, answer_tie, answer_b, evidence_a, evidence_tie, evidence_b]
+
+def handle_battle(result: BattleResult):
+
+    return True 
 
 
 def parameters_block(side_by_side=True):
@@ -452,7 +461,6 @@ def parameters_block(side_by_side=True):
             qid,
         ]
 
-
 with gr.Blocks() as demo:
     gr.HTML(tooltip_style)
     gr.HTML(html_content)
@@ -467,11 +475,20 @@ with gr.Blocks() as demo:
             side_by_side=True
         )
         (
-            a_better_button,
-            b_better_button,
-            both_good_button,
-            both_bad_button,
+            answer_a, 
+            answer_tie, 
+            answer_b, 
+            evidence_a, 
+            evidence_tie, 
+            evidence_b,
         ) = comparison_block()
+
+        answer_a.click(handle_battle, inputs=[BattleResult.answer_a])
+        answer_tie.click(handle_battle, inputs=[BattleResult.answer_tie])
+        answer_b.click(handle_battle, inputs=[BattleResult.answer_b])
+        evidence_a.click(handle_battle, inputs=[BattleResult.evidence_a])
+        evidence_tie.click(handle_battle, inputs=[BattleResult.evidence_tie])
+        evidence_b.click(handle_battle, inputs=[BattleResult.evidence_b])
 
         (
             dataset,
@@ -527,11 +544,20 @@ with gr.Blocks() as demo:
             side_by_side=True
         )
         (
-            a_better_button,
-            b_better_button,
-            both_good_button,
-            both_bad_button,
+            answer_a, 
+            answer_tie, 
+            answer_b, 
+            evidence_a, 
+            evidence_tie, 
+            evidence_b,
         ) = comparison_block()
+
+        answer_a.click(handle_battle, inputs=[BattleResult.answer_a])
+        answer_tie.click(handle_battle, inputs=[BattleResult.answer_tie])
+        answer_b.click(handle_battle, inputs=[BattleResult.answer_b])
+        evidence_a.click(handle_battle, inputs=[BattleResult.evidence_a])
+        evidence_tie.click(handle_battle, inputs=[BattleResult.evidence_tie])
+        evidence_b.click(handle_battle, inputs=[BattleResult.evidence_b])
 
         (
             dataset,
@@ -637,4 +663,32 @@ with gr.Blocks() as demo:
         """
         gr.HTML(html_content)
 
-demo.launch(server_name="0.0.0.0", server_port="7860")
+        # need to run gradio web_server.py from ./src/ragnarok/api/ directory 
+        #sql-lite connection 
+        conn = sqlite3.connect('elo.db')
+
+        df_llm = pd.read_sql_query("SELECT * FROM llm", conn)
+        df_retrieve = pd.read_sql_query("SELECT * FROM retrieve", conn)
+        df_rag = pd.read_sql_query("SELECT * FROM rag", conn)
+
+        df_llm.rename(columns={'name': 'Model Name', 'answer_elo': 'Rating (answer)', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+        df_retrieve.rename(columns={'name': 'Retrieval Pipeline', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+        df_rag.rename(columns={'name': 'RAG Pipeline', 'answer_elo': 'Rating (answer)', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+
+        with gr.Tab("LLM Rankings"):
+            with gr.Column():
+                scoreboard = gr.DataFrame(df_llm)
+        
+        with gr.Tab("Retrieval Pipeline Rankings"):
+            with gr.Column():
+                scoreboard = gr.DataFrame(df_retrieve)
+
+        with gr.Tab("RAG Pipeline Rankings"):
+            with gr.Column():
+                scoreboard = gr.DataFrame(df_rag)
+        
+        gr.Markdown("### Current Scores")
+
+
+if __name__ == "__main__": 
+    demo.launch(server_name="0.0.0.0", server_port=7860)
