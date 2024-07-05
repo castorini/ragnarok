@@ -16,6 +16,10 @@ retriever_options = ["bm25"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
 llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 
+# need to run gradio web_server.py from ./src/ragnarok/api/ directory 
+#sql-lite connection 
+conn = sqlite3.connect('elo.db')
+
 class BattleResult(Enum):
     answer_a = "answer_a" 
     answer_tie = "answer_tie"
@@ -23,6 +27,44 @@ class BattleResult(Enum):
     evidence_a = "evidence_a"
     evidence_tie = "evidence_tie"
     evidence_b = "evidence_b"
+
+    @classmethod
+    def is_answer(self):
+        return self.name.startswith("answer_")
+    @classmethod
+    def is_evidence(self):
+        return self.name.startswith("evidence_")
+
+    @classmethod 
+    def get_score(self):
+    # return the score that A got (1 for win, 0 for loss, 0.5 for tie)
+        table = {
+            BattleResult.answer_a: 1,
+            BattleResult.answer_tie: 0.5,
+            BattleResult.answer_b: 0,
+            BattleResult.evidence_a: 1,
+            BattleResult.evidence_tie: 0.5,
+            BattleResult.evidence_b: 0.5,
+        }
+        return table[self]
+
+class BattleInfo:
+    def __init__(self, llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+        self.llm_a = llm_a
+        self.llm_b = llm_b
+        self.retriever_a = retriever_a
+        self.retriever_b = retriever_b
+        self.reranker_a = reranker_a
+        self.reranker_b = reranker_b
+
+class Leaderboards(Enum):
+    llm="llm"
+    retrieve="retrieve"
+    rag="rag"
+
+class EloType(Enum):
+    answer="answer_elo"
+    evidence="evidence_elo"
 
 
 def generate_text_with_citations(response):
@@ -396,11 +438,6 @@ def comparison_block():
 
     return [answer_a, answer_tie, answer_b, evidence_a, evidence_tie, evidence_b]
 
-def handle_battle(result: BattleResult):
-
-    return True 
-
-
 def parameters_block(side_by_side=True):
     with gr.Accordion(label="Parameters", open=False):
         with gr.Column():
@@ -483,12 +520,14 @@ with gr.Blocks() as demo:
             evidence_b,
         ) = comparison_block()
 
-        answer_a.click(handle_battle, inputs=[BattleResult.answer_a])
-        answer_tie.click(handle_battle, inputs=[BattleResult.answer_tie])
-        answer_b.click(handle_battle, inputs=[BattleResult.answer_b])
-        evidence_a.click(handle_battle, inputs=[BattleResult.evidence_a])
-        evidence_tie.click(handle_battle, inputs=[BattleResult.evidence_tie])
-        evidence_b.click(handle_battle, inputs=[BattleResult.evidence_b])
+        battle_info = BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b)
+
+        answer_a.click(handle_battle, inputs=[BattleResult.answer_a,battle_info])
+        answer_tie.click(handle_battle, inputs=[BattleResult.answer_tie,battle_info])
+        answer_b.click(handle_battle, inputs=[BattleResult.answer_b,battle_info])
+        evidence_a.click(handle_battle, inputs=[BattleResult.evidence_a,battle_info])
+        evidence_tie.click(handle_battle, inputs=[BattleResult.evidence_tie,battle_info])
+        evidence_b.click(handle_battle, inputs=[BattleResult.evidence_b,battle_info])
 
         (
             dataset,
@@ -538,6 +577,13 @@ with gr.Blocks() as demo:
                 label="System B",
             )
 
+        retriever_a = random.choice(retriever_options)
+        reranker_a = random.choice(reranker_options)
+        llm_a = random.choice(llm_options)
+        retriever_b = random.choice(retriever_options)
+        reranker_b = random.choice(reranker_options)
+        llm_b = random.choice(llm_options)
+
         input_text, button = input_block()
 
         pretty_output_a, pretty_output_b, json_output_a, json_output_b = output_block(
@@ -552,12 +598,13 @@ with gr.Blocks() as demo:
             evidence_b,
         ) = comparison_block()
 
-        answer_a.click(handle_battle, inputs=[BattleResult.answer_a])
-        answer_tie.click(handle_battle, inputs=[BattleResult.answer_tie])
-        answer_b.click(handle_battle, inputs=[BattleResult.answer_b])
-        evidence_a.click(handle_battle, inputs=[BattleResult.evidence_a])
-        evidence_tie.click(handle_battle, inputs=[BattleResult.evidence_tie])
-        evidence_b.click(handle_battle, inputs=[BattleResult.evidence_b])
+        battle_info = BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b)
+        answer_a.click(handle_battle, inputs=[BattleResult.answer_a,battle_info])
+        answer_tie.click(handle_battle, inputs=[BattleResult.answer_tie,battle_info])
+        answer_b.click(handle_battle, inputs=[BattleResult.answer_b,battle_info])
+        evidence_a.click(handle_battle, inputs=[BattleResult.evidence_a,battle_info])
+        evidence_tie.click(handle_battle, inputs=[BattleResult.evidence_tie,battle_info])
+        evidence_b.click(handle_battle, inputs=[BattleResult.evidence_b,battle_info])
 
         (
             dataset,
@@ -573,8 +620,14 @@ with gr.Blocks() as demo:
         ) = parameters_block(side_by_side=True)
 
         button.click(
-            on_submit_side_by_side_blinded,
+            on_submit_side_by_side,
             inputs=[
+                llm_a,
+                llm_b,
+                retriever_a,
+                retriever_b,
+                reranker_a,
+                reranker_b,
                 dataset,
                 host_retriever_a,
                 host_reranker_a,
@@ -584,6 +637,8 @@ with gr.Blocks() as demo:
                 top_k_rerank,
                 qid,
                 input_text,
+                num_passes_a,
+                num_passes_b,
             ],
             outputs=[pretty_output_a, pretty_output_b, json_output_a, json_output_b],
         )
@@ -662,10 +717,6 @@ with gr.Blocks() as demo:
         </div>
         """
         gr.HTML(html_content)
-
-        # need to run gradio web_server.py from ./src/ragnarok/api/ directory 
-        #sql-lite connection 
-        conn = sqlite3.connect('elo.db')
 
         df_llm = pd.read_sql_query("SELECT * FROM llm", conn)
         df_retrieve = pd.read_sql_query("SELECT * FROM retrieve", conn)
