@@ -3,69 +3,54 @@ import os
 import random
 import sqlite3
 import pandas as pd
-from enum import Enum
-
 import gradio as gr
 
 from ragnarok import retrieve_and_generate
 from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod
-from ragnarok.api.elo import *
+import ragnarok.api.elo as elo 
 
 # RAG pipeline options 
 retriever_options = ["bm25"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
 llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 
-# need to run gradio web_server.py from ./src/ragnarok/api/ directory 
-#sql-lite connection 
-conn = sqlite3.connect('elo.db')
+def retrieve_scores():
+    conn = sqlite3.connect('elo.db')
+    # Re-fetch data from databse
+    df_llm = pd.read_sql_query("SELECT * FROM llm", conn)
+    df_retrieve = pd.read_sql_query("SELECT * FROM retrieve", conn)
+    df_rag = pd.read_sql_query("SELECT * FROM rag", conn)
 
-class BattleResult(Enum):
-    answer_a = "answer_a" 
-    answer_tie = "answer_tie"
-    answer_b = "answer_b"
-    evidence_a = "evidence_a"
-    evidence_tie = "evidence_tie"
-    evidence_b = "evidence_b"
+    df_llm.rename(columns={'name': 'Model Name', 'answer_elo': 'Rating (answer)', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+    df_retrieve.rename(columns={'name': 'Retrieval Pipeline', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+    df_rag.rename(columns={'name': 'RAG Pipeline', 'answer_elo': 'Rating (answer)', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+    # print("updated table")
+    conn.close()
+    return df_llm, df_retrieve, df_rag
 
-    @classmethod
-    def is_answer(self):
-        return self.name.startswith("answer_")
-    @classmethod
-    def is_evidence(self):
-        return self.name.startswith("evidence_")
+def handle_battle_answer_a(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    elo.handle_battle(elo.BattleResult.answer_a, elo.BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
 
-    @classmethod 
-    def get_score(self):
-    # return the score that A got (1 for win, 0 for loss, 0.5 for tie)
-        table = {
-            BattleResult.answer_a: 1,
-            BattleResult.answer_tie: 0.5,
-            BattleResult.answer_b: 0,
-            BattleResult.evidence_a: 1,
-            BattleResult.evidence_tie: 0.5,
-            BattleResult.evidence_b: 0.5,
-        }
-        return table[self]
+def handle_battle_answer_tie(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    elo.handle_battle(elo.BattleResult.answer_tie, elo.BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
 
-class BattleInfo:
-    def __init__(self, llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
-        self.llm_a = llm_a
-        self.llm_b = llm_b
-        self.retriever_a = retriever_a
-        self.retriever_b = retriever_b
-        self.reranker_a = reranker_a
-        self.reranker_b = reranker_b
+def handle_battle_answer_b(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    elo.handle_battle(elo.BattleResult.answer_b, elo.BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
 
-class Leaderboards(Enum):
-    llm="llm"
-    retrieve="retrieve"
-    rag="rag"
+def handle_battle_evidence_a(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    elo.handle_battle(elo.BattleResult.evidence_a, elo.BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
 
-class EloType(Enum):
-    answer="answer_elo"
-    evidence="evidence_elo"
+def handle_battle_evidence_tie(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    elo.handle_battle(elo.BattleResult.evidence_tie, elo.BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
 
+def handle_battle_evidence_b(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    elo.handle_battle(elo.BattleResult.evidence_b, elo.BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
 
 def generate_text_with_citations(response):
     output = []
@@ -160,7 +145,6 @@ def query_model(
         return [output, result]
     except Exception as e:
         return ["ERROR: " + str(e), None]
-
 
 def on_submit(
     model_a,
@@ -399,6 +383,21 @@ def input_block_direct():
         button = gr.Button("Answer")
     return [input_text, button]
 
+def elo_table_block():
+    df_llm, df_retrieve, df_rag = retrieve_scores()
+    with gr.Tab("LLM Rankings"):
+        with gr.Column():
+            llm_scoreboard = gr.DataFrame(df_llm)
+        
+    with gr.Tab("Retrieval Pipeline Rankings"):
+        with gr.Column():
+            retrieve_scoreboard = gr.DataFrame(df_retrieve)
+
+    with gr.Tab("RAG Pipeline Rankings"):
+        with gr.Column():
+            rag_scoreboard = gr.DataFrame(df_rag)
+    
+    return [llm_scoreboard, retrieve_scoreboard, rag_scoreboard]
 
 def output_block(side_by_side=True):
     with gr.Tab("Output"):
@@ -520,14 +519,13 @@ with gr.Blocks() as demo:
             evidence_b,
         ) = comparison_block()
 
-        battle_info = BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b)
 
-        answer_a.click(handle_battle, inputs=[BattleResult.answer_a,battle_info])
-        answer_tie.click(handle_battle, inputs=[BattleResult.answer_tie,battle_info])
-        answer_b.click(handle_battle, inputs=[BattleResult.answer_b,battle_info])
-        evidence_a.click(handle_battle, inputs=[BattleResult.evidence_a,battle_info])
-        evidence_tie.click(handle_battle, inputs=[BattleResult.evidence_tie,battle_info])
-        evidence_b.click(handle_battle, inputs=[BattleResult.evidence_b,battle_info])
+        answer_a.click(handle_battle_answer_a, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
+        answer_tie.click(handle_battle_answer_tie, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
+        answer_b.click(handle_battle_answer_b, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b])
+        evidence_a.click(handle_battle_evidence_a, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
+        evidence_tie.click(handle_battle_evidence_tie, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
+        evidence_b.click(handle_battle_evidence_b, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
 
         (
             dataset,
@@ -577,34 +575,11 @@ with gr.Blocks() as demo:
                 label="System B",
             )
 
-        retriever_a = random.choice(retriever_options)
-        reranker_a = random.choice(reranker_options)
-        llm_a = random.choice(llm_options)
-        retriever_b = random.choice(retriever_options)
-        reranker_b = random.choice(reranker_options)
-        llm_b = random.choice(llm_options)
-
         input_text, button = input_block()
 
         pretty_output_a, pretty_output_b, json_output_a, json_output_b = output_block(
             side_by_side=True
         )
-        (
-            answer_a, 
-            answer_tie, 
-            answer_b, 
-            evidence_a, 
-            evidence_tie, 
-            evidence_b,
-        ) = comparison_block()
-
-        battle_info = BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b)
-        answer_a.click(handle_battle, inputs=[BattleResult.answer_a,battle_info])
-        answer_tie.click(handle_battle, inputs=[BattleResult.answer_tie,battle_info])
-        answer_b.click(handle_battle, inputs=[BattleResult.answer_b,battle_info])
-        evidence_a.click(handle_battle, inputs=[BattleResult.evidence_a,battle_info])
-        evidence_tie.click(handle_battle, inputs=[BattleResult.evidence_tie,battle_info])
-        evidence_b.click(handle_battle, inputs=[BattleResult.evidence_b,battle_info])
 
         (
             dataset,
@@ -620,14 +595,8 @@ with gr.Blocks() as demo:
         ) = parameters_block(side_by_side=True)
 
         button.click(
-            on_submit_side_by_side,
+            on_submit_side_by_side_blinded,
             inputs=[
-                llm_a,
-                llm_b,
-                retriever_a,
-                retriever_b,
-                reranker_a,
-                reranker_b,
                 dataset,
                 host_retriever_a,
                 host_reranker_a,
@@ -718,27 +687,10 @@ with gr.Blocks() as demo:
         """
         gr.HTML(html_content)
 
-        df_llm = pd.read_sql_query("SELECT * FROM llm", conn)
-        df_retrieve = pd.read_sql_query("SELECT * FROM retrieve", conn)
-        df_rag = pd.read_sql_query("SELECT * FROM rag", conn)
+        llm_scoreboard, retrieve_scoreboard, rag_scoreboard = elo_table_block()
 
-        df_llm.rename(columns={'name': 'Model Name', 'answer_elo': 'Rating (answer)', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
-        df_retrieve.rename(columns={'name': 'Retrieval Pipeline', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
-        df_rag.rename(columns={'name': 'RAG Pipeline', 'answer_elo': 'Rating (answer)', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
-
-        with gr.Tab("LLM Rankings"):
-            with gr.Column():
-                scoreboard = gr.DataFrame(df_llm)
-        
-        with gr.Tab("Retrieval Pipeline Rankings"):
-            with gr.Column():
-                scoreboard = gr.DataFrame(df_retrieve)
-
-        with gr.Tab("RAG Pipeline Rankings"):
-            with gr.Column():
-                scoreboard = gr.DataFrame(df_rag)
-        
-        gr.Markdown("### Current Scores")
+        refresh_btn = gr.Button("Refresh Scoreboards", size='sm')
+        refresh_btn.click(elo_table_block, inputs=[],outputs=[llm_scoreboard, retrieve_scoreboard, rag_scoreboard])
 
 
 if __name__ == "__main__": 
