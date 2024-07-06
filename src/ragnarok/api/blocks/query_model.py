@@ -1,6 +1,7 @@
 from ragnarok import retrieve_and_generate
 from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod
 
+
 def generate_text_with_citations(response):
     output = []
     citation_texts = response.rag_exec_summary.candidates
@@ -26,6 +27,7 @@ def generate_text_with_citations(response):
             text += f" {citation_html}"
         output.append(text)
     return "<br/><br/>".join(output)
+
 
 def query_model(
     retriever_path,

@@ -1,12 +1,16 @@
 import gradio as gr
 
-import ragnarok.api.elo as elo 
-import ragnarok.api.blocks.on_submit_blocks as on_submit_blocks
 import ragnarok.api.blocks.html_blocks as html_blocks
-import ragnarok.api.blocks.output_blocks as output_blocks
 import ragnarok.api.blocks.input_blocks as input_blocks
+import ragnarok.api.blocks.on_submit_blocks as on_submit_blocks
+import ragnarok.api.blocks.output_blocks as output_blocks
+import ragnarok.api.elo as elo
 
-(retriever_options, reranker_options, llm_options) = (input_blocks.retriever_options, input_blocks.reranker_options, input_blocks.llm_options)
+(retriever_options, reranker_options, llm_options) = (
+    input_blocks.retriever_options,
+    input_blocks.reranker_options,
+    input_blocks.llm_options,
+)
 
 with gr.Blocks() as demo:
     gr.HTML(html_blocks.tooltip_style)
@@ -14,29 +18,58 @@ with gr.Blocks() as demo:
 
     with gr.Tab("⚔️ ragnarok (side-by-side unblinded)"):
         with gr.Row():
-            retriever_a, reranker_a, llm_a = input_blocks.rag_pipeline_block(label_suffix="A")
-            retriever_b, reranker_b, llm_b = input_blocks.rag_pipeline_block(label_suffix="B")
+            retriever_a, reranker_a, llm_a = input_blocks.rag_pipeline_block(
+                label_suffix="A"
+            )
+            retriever_b, reranker_b, llm_b = input_blocks.rag_pipeline_block(
+                label_suffix="B"
+            )
 
         input_text, button = input_blocks.input_block()
-        pretty_output_a, pretty_output_b, json_output_a, json_output_b = output_blocks.output_block(
-            side_by_side=True
-        )
         (
-            answer_a, 
-            answer_tie, 
-            answer_b, 
-            evidence_a, 
-            evidence_tie, 
+            pretty_output_a,
+            pretty_output_b,
+            json_output_a,
+            json_output_b,
+        ) = output_blocks.output_block(side_by_side=True)
+        (
+            answer_a,
+            answer_tie,
+            answer_b,
+            evidence_a,
+            evidence_tie,
             evidence_b,
         ) = input_blocks.comparison_block()
 
-
-        answer_a.click(elo.handle_battle_answer_a, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
-        answer_tie.click(elo.handle_battle_answer_tie, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
-        answer_b.click(elo.handle_battle_answer_b, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b])
-        evidence_a.click(elo.handle_battle_evidence_a, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
-        evidence_tie.click(elo.handle_battle_evidence_tie, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
-        evidence_b.click(elo.handle_battle_evidence_b, inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b], outputs=[])
+        answer_a.click(
+            elo.handle_battle_answer_a,
+            inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b],
+            outputs=[],
+        )
+        answer_tie.click(
+            elo.handle_battle_answer_tie,
+            inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b],
+            outputs=[],
+        )
+        answer_b.click(
+            elo.handle_battle_answer_b,
+            inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b],
+        )
+        evidence_a.click(
+            elo.handle_battle_evidence_a,
+            inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b],
+            outputs=[],
+        )
+        evidence_tie.click(
+            elo.handle_battle_evidence_tie,
+            inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b],
+            outputs=[],
+        )
+        evidence_b.click(
+            elo.handle_battle_evidence_b,
+            inputs=[llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b],
+            outputs=[],
+        )
 
         (
             dataset,
@@ -88,9 +121,12 @@ with gr.Blocks() as demo:
 
         input_text, button = input_blocks.input_block()
 
-        pretty_output_a, pretty_output_b, json_output_a, json_output_b = output_blocks.output_block(
-            side_by_side=True
-        )
+        (
+            pretty_output_a,
+            pretty_output_b,
+            json_output_a,
+            json_output_b,
+        ) = output_blocks.output_block(side_by_side=True)
 
         (
             dataset,
@@ -161,9 +197,13 @@ with gr.Blocks() as demo:
 
         llm_scoreboard, retrieve_scoreboard, rag_scoreboard = elo.elo_table_block()
 
-        refresh_btn = gr.Button("Refresh Scoreboards", size='sm')
-        refresh_btn.click(elo.elo_table_block, inputs=[],outputs=[llm_scoreboard, retrieve_scoreboard, rag_scoreboard])
+        refresh_btn = gr.Button("Refresh Scoreboards", size="sm")
+        refresh_btn.click(
+            elo.elo_table_block,
+            inputs=[],
+            outputs=[llm_scoreboard, retrieve_scoreboard, rag_scoreboard],
+        )
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=7860)

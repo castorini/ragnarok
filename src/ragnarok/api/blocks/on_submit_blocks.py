@@ -1,10 +1,16 @@
 import concurrent.futures
 import os
 import random
-import ragnarok.api.blocks.query_model as qm
-import ragnarok.api.blocks.input_blocks as input_blocks
 
-(retriever_options, reranker_options, llm_options) = (input_blocks.retriever_options, input_blocks.reranker_options, input_blocks.llm_options)
+import ragnarok.api.blocks.input_blocks as input_blocks
+import ragnarok.api.blocks.query_model as qm
+
+(retriever_options, reranker_options, llm_options) = (
+    input_blocks.retriever_options,
+    input_blocks.reranker_options,
+    input_blocks.llm_options,
+)
+
 
 def on_submit(
     model_a,
@@ -153,10 +159,24 @@ def on_submit_side_by_side_blinded(
         True,
     )
 
+
 def on_submit_single(
-            model,
+    model,
+    retriever,
+    reranker,
+    dataset,
+    host_retriever,
+    host_reranker,
+    top_k_retrieve,
+    top_k_rerank,
+    qid,
+    query,
+):
+    def query_wrapper(retriever, reranker, model, host_retriever, host_reranker):
+        return qm.query_model(
             retriever,
             reranker,
+            model,
             dataset,
             host_retriever,
             host_reranker,
@@ -164,25 +184,10 @@ def on_submit_single(
             top_k_rerank,
             qid,
             query,
-        ):
-            def query_wrapper(
-                retriever, reranker, model, host_retriever, host_reranker
-            ):
-                return qm.query_model(
-                    retriever,
-                    reranker,
-                    model,
-                    dataset,
-                    host_retriever,
-                    host_reranker,
-                    top_k_retrieve,
-                    top_k_rerank,
-                    qid,
-                    query,
-                )
+        )
 
-            result, response = query_wrapper(
-                retriever, reranker, model, host_retriever, host_reranker
-            )
+    result, response = query_wrapper(
+        retriever, reranker, model, host_retriever, host_reranker
+    )
 
-            return [result, response]
+    return [result, response]

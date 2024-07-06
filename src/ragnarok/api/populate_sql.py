@@ -1,57 +1,68 @@
 import sqlite3
-import pandas as pd 
+
+import pandas as pd
 
 INIT_RATING = 1000
 
-conn = sqlite3.connect('elo.db')
+conn = sqlite3.connect("elo.db")
 cursor = conn.cursor()
 
 retriever_options = ["bm25"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
 llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 
-cursor.execute(''' 
+cursor.execute(
+    """ 
     CREATE TABLE IF NOT EXISTS llm (
         name TEXT PRIMARY KEY,
         answer_elo INTEGER DEFAULT 1000,
         evidence_elo INTEGER DEFAULT 1000
     )
-''')
+"""
+)
 
-cursor.execute(''' 
+cursor.execute(
+    """ 
     CREATE TABLE IF NOT EXISTS rag (
         name TEXT PRIMARY KEY,
         answer_elo INTEGER DEFAULT 1000,
         evidence_elo INTEGER DEFAULT 1000
     )
-''')
+"""
+)
 
-cursor.execute(''' 
+cursor.execute(
+    """ 
     CREATE TABLE IF NOT EXISTS retrieve (
         name TEXT PRIMARY KEY,
         evidence_elo INTEGER DEFAULT 1000
     )
-''')
+"""
+)
 
-conn.commit()  
+conn.commit()
 
-# LLM generation 
+
+# LLM generation
 def insert_llm(name: str):
-    cursor.execute('SELECT name FROM llm WHERE name = ?', (name,))
+    cursor.execute("SELECT name FROM llm WHERE name = ?", (name,))
     if cursor.fetchone() is None:
-        cursor.execute('INSERT INTO llm (name) VALUES (?)', (name,))
+        cursor.execute("INSERT INTO llm (name) VALUES (?)", (name,))
+
 
 # Retrieval pipeline: retrieval+rerank
 def insert_retrieve(name: str):
-    cursor.execute('SELECT name FROM retrieve WHERE name = ?', (name,))
+    cursor.execute("SELECT name FROM retrieve WHERE name = ?", (name,))
     if cursor.fetchone() is None:
-        cursor.execute('INSERT INTO retrieve (name) VALUES (?)', (name,))
+        cursor.execute("INSERT INTO retrieve (name) VALUES (?)", (name,))
+
 
 # RAG pipeline: retrieval+rerank+generation
 def insert_rag(name: str):
-    cursor.execute('SELECT name FROM rag WHERE name = ?', (name,))
+    cursor.execute("SELECT name FROM rag WHERE name = ?", (name,))
     if cursor.fetchone() is None:
-        cursor.execute('INSERT INTO rag (name) VALUES (?)', (name,))
+        cursor.execute("INSERT INTO rag (name) VALUES (?)", (name,))
+
 
 # Populate llm table
 for llm in llm_options:
@@ -75,5 +86,5 @@ df_retrieve = pd.read_sql_query("SELECT * FROM retrieve", conn)
 df_rag = pd.read_sql_query("SELECT * FROM rag", conn)
 
 
-conn.commit() 
-conn.close()  
+conn.commit()
+conn.close()

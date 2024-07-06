@@ -1,14 +1,13 @@
 import gradio as gr
 
-# RAG pipeline options 
+# RAG pipeline options
 retriever_options = ["bm25"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
 llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 
+
 def comparison_block():
-    
-    gr.Markdown(
-        "## Answer")
+    gr.Markdown("## Answer")
     with gr.Row():
         answer_a = gr.Button("👈 A is better")
         answer_tie = gr.Button("🤝 Tie")
@@ -20,6 +19,7 @@ def comparison_block():
         evidence_b = gr.Button("👉 B is better")
 
     return [answer_a, answer_tie, answer_b, evidence_a, evidence_tie, evidence_b]
+
 
 def parameters_block(side_by_side=True):
     with gr.Accordion(label="Parameters", open=False):
@@ -80,6 +80,7 @@ def parameters_block(side_by_side=True):
             num_passes,
             qid,
         ]
+
 
 def rag_pipeline_block(
     label_suffix="",

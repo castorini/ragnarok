@@ -1,5 +1,6 @@
 import gradio as gr
 
+
 def output_block(side_by_side=True):
     with gr.Tab("Output"):
         with gr.Row():
