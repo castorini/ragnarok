@@ -1,4 +1,6 @@
 import sqlite3
+import gradio as gr
+import pandas as pd
 from typing import Tuple, List
 from enum import Enum 
 
@@ -53,6 +55,22 @@ class Leaderboards(Enum):
 class EloType(Enum):
     answer="answer_elo"
     evidence="evidence_elo"
+
+def elo_table_block():
+    df_llm, df_retrieve, df_rag = retrieve_scores()
+    with gr.Tab("LLM Rankings"):
+        with gr.Column():
+            llm_scoreboard = gr.DataFrame(df_llm)
+        
+    with gr.Tab("Retrieval Pipeline Rankings"):
+        with gr.Column():
+            retrieve_scoreboard = gr.DataFrame(df_retrieve)
+
+    with gr.Tab("RAG Pipeline Rankings"):
+        with gr.Column():
+            rag_scoreboard = gr.DataFrame(df_rag)
+    
+    return [llm_scoreboard, retrieve_scoreboard, rag_scoreboard]
 
 # Implementation of the Elo rating system: https://en.wikipedia.org/wiki/Elo_rating_system
 def compute_elo(sa: int, ra: int=INIT_RATING, rb: int=INIT_RATING):
@@ -141,3 +159,41 @@ def handle_battle(result: BattleResult, info: BattleInfo):
         insert_score_pair(entry_names, (ra_new,rb_new), leaderboard.value, elo_type.value)
 
     return ()
+
+def retrieve_scores():
+    conn = sqlite3.connect('elo.db')
+    # Re-fetch data from databse
+    df_llm = pd.read_sql_query("SELECT * FROM llm", conn)
+    df_retrieve = pd.read_sql_query("SELECT * FROM retrieve", conn)
+    df_rag = pd.read_sql_query("SELECT * FROM rag", conn)
+
+    df_llm.rename(columns={'name': 'Model Name', 'answer_elo': 'Rating (answer)', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+    df_retrieve.rename(columns={'name': 'Retrieval Pipeline', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+    df_rag.rename(columns={'name': 'RAG Pipeline', 'answer_elo': 'Rating (answer)', 'evidence_elo': 'Rating (evidence)'}, inplace=True)
+    # print("updated table")
+    conn.close()
+    return df_llm, df_retrieve, df_rag
+
+def handle_battle_answer_a(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    handle_battle(BattleResult.answer_a, BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
+
+def handle_battle_answer_tie(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    handle_battle(BattleResult.answer_tie, BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
+
+def handle_battle_answer_b(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    handle_battle(BattleResult.answer_b, BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
+
+def handle_battle_evidence_a(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    handle_battle(BattleResult.evidence_a, BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
+
+def handle_battle_evidence_tie(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    handle_battle(BattleResult.evidence_tie, BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()
+
+def handle_battle_evidence_b(llm_a: str, llm_b: str, retriever_a: str, retriever_b: str, reranker_a: str, reranker_b: str):
+    handle_battle(BattleResult.evidence_b, BattleInfo(llm_a, llm_b, retriever_a, retriever_b, reranker_a, reranker_b))
+    retrieve_scores()

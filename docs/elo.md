@@ -1,4 +1,4 @@
-## MR: Elo Leaderboard feature
+## Elo Leaderboard feature
 
 Uses an implementation of the Elo rating system: https://en.wikipedia.org/wiki/Elo_rating_system
 
