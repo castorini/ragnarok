@@ -149,7 +149,6 @@ pip install -e .
 
 Note that running augmented generation requires an API key for OpenAI's GPT-4o or Cohere's Command R+. The following commands show how to run the augmented generation step with GPT-4o on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24, assuming you have set `CO_API_KEY` for Cohere's API key and `OPENAI_API_KEY` for OpenAI's API key:
 
-```bash
 ### Augmented Generation -- GPT-4o (ChatQA Inspired)
 
 The following commands show how to run the augmented generation step with GPT-4o (using a prompt inspired by ChatQA) on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24:
@@ -163,7 +162,7 @@ python -um ragnarok.scripts.run_ragnarok  --model_path=gpt-4o  --topk=100,20 --d
 ```
 
 
-### Augmented Generation -- Command R+
+### Augmented Generation - Command R+
 
 
 
