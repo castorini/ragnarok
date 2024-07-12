@@ -162,6 +162,65 @@ SET=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researchy-dev
 python -um ragnarok.scripts.run_ragnarok  --model_path=gpt-4o  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500 --use_azure_openai --run_id bm25_rank-zephyr-rho_gpt-4o
 ```
 
+An example line from the augmented generation step output is shown below:
+
+```bash
+{
+  "run_id": "bm25_rank-zephyr-rho_gpt-4o",
+  "topic_id": 23287,
+  "topic": "are landlords liable if someone breaks in a hurts tenant",
+  "references": [
+    "msmarco_v2.1_doc_45_546308869#11_963663453",
+    "msmarco_v2.1_doc_45_546308869#10_963661464"
+  ],
+  "response_length": 201,
+  "answer": [
+    {
+      "text": "Landlords can be held liable if someone breaks in and hurts a tenant, but this liability generally hinges on whether the landlord was negligent in maintaining the security of the property.",
+      "citations": []
+    },
+    {
+      "text": "Landlords have a legal responsibility to protect tenants from foreseeable criminal conduct, which includes ensuring that door and window locks are adequate and functioning properly.",
+      "citations": [
+        1
+      ]
+    },
+    {
+      "text": "If a landlord fails to address known security risks, such as an easy-to-enter parking garage, and a tenant is harmed as a result, the landlord may be held liable for the injuries.",
+      "citations": [
+        1
+      ]
+    },
+    {
+      "text": "Additionally, landlords should not conceal defects that could compromise tenant safety.",
+      "citations": []
+    },
+    {
+      "text": "For example, if a landlord hides weak flooring by placing a carpet over it and a tenant is injured as a result, the landlord could be liable for those injuries.",
+      "citations": [
+        0
+      ]
+    },
+    {
+      "text": "This principle extends to other safety-related repairs, such as fixing broken handrails or addressing other hazardous conditions on the property.",
+      "citations": [
+        0
+      ]
+    },
+    {
+      "text": "In summary, a landlord's liability in cases where someone breaks in and hurts a tenant depends on whether the landlord took reasonable steps to ensure the safety and security of the property.",
+      "citations": []
+    },
+    {
+      "text": "If the landlord's negligence in maintaining secure premises can be proven, they may be held responsible for the resulting injuries.",
+      "citations": [
+        1,
+        0
+      ]
+    }
+  ]
+}
+```
 
 ### Augmented Generation - Command R+
 
@@ -175,6 +234,84 @@ python -um ragnarok.scripts.run_ragnarok  --model_path=command-r-plus  --topk=10
 
 SET=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researchy-dev
 python -um ragnarok.scripts.run_ragnarok  --model_path=command-r-plus  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=cohere  --context_size=8192 --max_output_tokens=512 --run_id bm25_rank-zephyr-rho_command-r-plus
+```
+
+An example line from the augmented generation step output is shown below:
+
+```bash
+{
+  "run_id": "bm25_rank-zephyr-rho_command-r-plus",
+  "topic_id": 23287,
+  "topic": "are landlords liable if someone breaks in a hurts tenant",
+  "references": [
+    "msmarco_v2.1_doc_02_759557285#0_1325339642",
+    "msmarco_v2.1_doc_02_759557285#1_1325342568",
+    "msmarco_v2.1_doc_03_1385929624#12_2267291298",
+    "msmarco_v2.1_doc_39_1391265715#5_2894921263",
+    "msmarco_v2.1_doc_39_1391265715#6_2894923310",
+    "msmarco_v2.1_doc_48_841527758#3_1529122925",
+    "msmarco_v2.1_doc_48_841527758#12_1529136555",
+    "msmarco_v2.1_doc_48_841527758#11_1529134815"
+  ],
+  "response_length": 164,
+  "answer": [
+    {
+      "text": "Landlords are generally liable for a tenant's injuries if the injuries resulted from the landlord's negligence.",
+      "citations": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "text": "For example, if a tenant falls and breaks their ankle on a broken front door step, the landlord will be liable if the tenant can show that: - It was the landlord's responsibility to maintain the steps - An accident of this type was foreseeable - A repair would have been easy or inexpensive -",
+      "citations": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "text": "The probable result of a broken step is a serious injury -",
+      "citations": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "text": "The landlord failed to take reasonable measures to maintain the steps - The broken step caused the injury - The tenant was genuinely hurt",
+      "citations": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "text": "However, landlords are generally not liable for the actions of tenants or visitors.",
+      "citations": [
+        3,
+        4
+      ]
+    },
+    {
+      "text": "For example, if a tenant's dog bites someone, the landlord is not liable for the injury.",
+      "citations": [
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "text": "However, if the landlord knew the dog was dangerous and could have had the dog removed, or \"harbored\" or \"kept\" the tenant's dog, they may be held liable.",
+      "citations": [
+        5,
+        6,
+        7
+      ]
+    }
+  ]
+}
 ```
 
 We host these files for subsets of the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/results/RANK_ZEPHYR_RHO). 

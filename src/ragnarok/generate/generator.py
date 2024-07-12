@@ -11,7 +11,7 @@ from ragnarok.generate.llm import LLM
 class RAG:
     def __init__(self, agent: LLM, run_id: str = "ragnarok") -> None:
         self._agent = agent
-        self._run_id = "ragnarok"
+        self._run_id = run_id
 
     def answer_batch(
         self,
