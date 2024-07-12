@@ -43,6 +43,7 @@ You should see the following output:
 429 Q0 msmarco_v2.1_doc_35_1306810123#2_3040954932 4 17.912500 Anserini
 429 Q0 msmarco_v2.1_doc_35_1306810123#8_3040961879 5 17.606800 Anserini
 ```
+Ensure to update `Anserini` with the `run-id` your team wants associated with the run file prior to submission, if you do include such a run in your submissions.
 
 Similarly the first line of the reranker requests file (limited to two candidates) can be checked as follows:
 
@@ -99,7 +100,7 @@ You should see the following output:
 ```
 
 
-We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/main/branch/retrieve_results/tree/main/retrieve_results/BM25).
+We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/retrieve_results/BM25).
 
 ## Reranking - RankLLM - RankZephyr-Rho
 
@@ -128,7 +129,7 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_
 ```
 
 This should create both TREC run files and JSONL files after each pass and the final reranked JSONL files can serve as input to our augmented generation component. 
-We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/main/branch/retrieve_results/tree/main/retrieve_results/RANK_ZEPHYR_RHO).
+We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/retrieve_results/RANK_ZEPHYR_RHO).
 
 These files can be moved to `ragnarok`'s retrieve_results (in either BM25/RANK_ZEPHYR_RHO)
 
@@ -155,10 +156,10 @@ The following commands show how to run the augmented generation step with GPT-4o
 
 ```bash
 SET=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.raggy-dev
-python -um ragnarok.scripts.run_ragnarok  --model_path=gpt-4o  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500 --use_azure_openai
+python -um ragnarok.scripts.run_ragnarok  --model_path=gpt-4o  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500 --use_azure_openai --run_id bm25_rank-zephyr-rho_gpt-4o
 
 SET=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researchy-dev
-python -um ragnarok.scripts.run_ragnarok  --model_path=gpt-4o  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500 --use_azure_openai
+python -um ragnarok.scripts.run_ragnarok  --model_path=gpt-4o  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500 --use_azure_openai --run_id bm25_rank-zephyr-rho_gpt-4o
 ```
 
 
@@ -170,12 +171,12 @@ The following commands show how to run the augmented generation step with Comman
 
 ```bash
 SET=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.raggy-dev
-python -um ragnarok.scripts.run_ragnarok  --model_path=command-r-plus  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=cohere  --context_size=8192 --max_output_tokens=1500
+python -um ragnarok.scripts.run_ragnarok  --model_path=command-r-plus  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=cohere  --context_size=8192 --max_output_tokens=512 --run_id bm25_rank-zephyr-rho_command-r-plus
 
 SET=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researchy-dev
-python -um ragnarok.scripts.run_ragnarok  --model_path=command-r-plus  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=cohere  --context_size=8192 --max_output_tokens=1500
+python -um ragnarok.scripts.run_ragnarok  --model_path=command-r-plus  --topk=100,20 --dataset=${SET}  --retrieval_method=bm25,rank_zephyr_rho --prompt_mode=cohere  --context_size=8192 --max_output_tokens=512 --run_id bm25_rank-zephyr-rho_command-r-plus
 ```
 
-We host these files for subsets of the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/main/branch/retrieve_results/tree/main/retrieve_results/RANK_ZEPHYR_RHO). 
+We host these files for subsets of the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/results/RANK_ZEPHYR_RHO). 
 We shall provide larger subsets after some prompt refinements.
 We encourage participants to run the full pipelines on the entire dev sets with caution as the generation step can be expensive.

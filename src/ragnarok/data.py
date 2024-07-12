@@ -170,12 +170,16 @@ class DataWriter:
                 }
                 f.write(json.dumps(exec_summary) + "\n")
 
-    def _convert_result_to_dict(self, result: Result) -> Dict:
+    def _convert_result_to_dict(self, result: Result, run_id: str) -> Dict:
         result_dict = {
+            "run_id": run_id,
             "topic_id": result.query.qid,
             "topic": result.query.text,
             "references": result.references,
-            "response_length": sum(len(sentence.text) for sentence in result.answer),
+            "response_length": sum(
+                len(sentence.text.replace(",", " ").replace(";", " ").split())
+                for sentence in result.answer
+            ),
             "answer": [
                 {"text": sentence.text, "citations": sentence.citations}
                 for sentence in result.answer
@@ -183,13 +187,13 @@ class DataWriter:
         }
         return result_dict
 
-    def write_in_json_format(self, filename: str):
-        formatted_data = [self._convert_result_to_dict(d) for d in self._data]
+    def write_in_json_format(self, filename: str, run_id: str):
+        formatted_data = [self._convert_result_to_dict(d, run_id) for d in self._data]
         with open(filename, "a" if self._append else "w") as f:
             json.dump(formatted_data, f, indent=2)
 
-    def write_in_jsonl_format(self, filename: str):
+    def write_in_jsonl_format(self, filename: str, run_id: str):
         with open(filename, "a" if self._append else "w") as f:
             for d in self._data:
-                json.dump(self._convert_result_to_dict(d), f)
+                json.dump(self._convert_result_to_dict(d, run_id), f)
                 f.write("\n")

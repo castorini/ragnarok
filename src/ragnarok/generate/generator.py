@@ -9,8 +9,9 @@ from ragnarok.generate.llm import LLM
 
 
 class RAG:
-    def __init__(self, agent: LLM) -> None:
+    def __init__(self, agent: LLM, run_id: str = "ragnarok") -> None:
         self._agent = agent
+        self._run_id = "ragnarok"
 
     def answer_batch(
         self,
@@ -125,10 +126,10 @@ class RAG:
         )
         if output_format == OutputFormat.JSON:
             output_file = f"{results_dirname}/{retrieval_method_name}/{name}.json"
-            writer.write_in_json_format(output_file)
+            writer.write_in_json_format(output_file, run_id=self._run_id)
         else:
             output_file = f"{results_dirname}/{retrieval_method_name}/{name}.jsonl"
-            writer.write_in_jsonl_format(output_file)
+            writer.write_in_jsonl_format(output_file, run_id=self._run_id)
         Path(f"{rag_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )

@@ -50,6 +50,7 @@ def main(args):
     max_output_tokens = args.max_output_tokens
     device = "cuda" if torch.cuda.is_available() else "cpu"
     retrieval_mode = RetrievalMode.DATASET
+    run_id = args.run_id
 
     _ = retrieve_and_generate(
         model_path,
@@ -66,6 +67,7 @@ def main(args):
         shuffle_candidates,
         print_prompts_responses,
         use_azure_openai=use_azure_openai,
+        run_id=run_id,
     )
 
 
@@ -140,6 +142,13 @@ if __name__ == "__main__":
         required=False,
         default=1500,
         help="maximum number of tokens in the output",
+    )
+    parser.add_argument(
+        "--run_id",
+        type=str,
+        required=False,
+        default="ragnarok",
+        help="run id to be used in the output file",
     )
     args = parser.parse_args()
     main(args)
