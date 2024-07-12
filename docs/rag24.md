@@ -1,10 +1,10 @@
 # Ragnarök: End-to-end RAG Baselines for TREC-Researchy 24 and TREC-RAGgy 24
 
-This document describes the end-to-end retrieval-augmented generation (RAG) baselines for the TREC-Researchy 24 and TREC-RAGgy 24 tracks. All systems are grounded on the MS MARCO V2.1 segmented doc corpus that was curated for the TREC 2024 RAG Track. The baselines are based on [Anserini's BM25 first-stage retrieval](https://github.com/castorini/anserini) followed by [RankLLM's multi-step RankZephyr](https://github.com/castorini/rank_llm) reranking and finally, augmented-generation with one of OpenAI's GPT-4o or Cohere's Command R+. Note that the reranking step is optional and can be skipped if you only want to use the first-stage BM25 retrieval. Additionally, the generation step can be skipped if you only want to submit systems to the (R)etriaval subtask.
+This document describes the end-to-end retrieval-augmented generation (RAG) baselines for the TREC-Researchy 24 and TREC-RAGgy 24 development sets. All systems are grounded on the MS MARCO V2.1 segmented doc corpus curated for the TREC 2024 RAG Track. The baselines are based on [Anserini's BM25 first-stage retrieval](https://github.com/castorini/anserini) followed by [RankLLM's multi-step RankZephyr](https://github.com/castorini/rank_llm) reranking and finally, augmented-generation with one of OpenAI's GPT-4o or Cohere's Command R+. Note that the reranking step is optional and can be skipped if you only want to use the first-stage BM25 retrieval. The generation step can also be skipped if you only plan to submit systems to the (R)etriaval subtask.
 
 ## Retrieval - BM25
 
-The following commands show how to run Anserini on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 and evaluate effectiveness, on the segmented doc corpus:
+The following commands show how to run Anserini on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24, and evaluate effectiveness, on the segmented doc corpus:
 
 Anserini is packaged in a self-contained fatjar, which also provides the simplest way to get started. Assuming you've already got Java installed, fetch the fatjar:
 
@@ -103,7 +103,7 @@ We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [
 
 ## Reranking - RankLLM - RankZephyr-Rho
 
-We can use RankLLM to run RankZephyr-Rho on the reranker requests files generated in the previous step. The following commands show how to run RankLLM on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24:
+We can use RankLLM to run RankZephyr-Rho on the reranker request files generated in the previous step. The following commands show how to run RankLLM on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24:
 
 ```bash
 RANK_LLM=<path-to-rank-llm>
@@ -139,7 +139,7 @@ cp <path-to-ragnarok-data>/retrieve_results/BM25/* <path-to-ragnarok>/retrieve_r
 
 ## Augmented Generation 
 
-Clone the ragnarok repository and setup from source:
+Clone the ragnarök repository and setup from source:
 
 ```bash
 git clone git@github.com:castorini/ragnarok.git
@@ -149,7 +149,7 @@ pip install -e .
 
 Note that running augmented generation requires an API key for OpenAI's GPT-4o or Cohere's Command R+. The following commands show how to run the augmented generation step with GPT-4o on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24, assuming you have set `CO_API_KEY` for Cohere's API key and `OPENAI_API_KEY` for OpenAI's API key:
 
-### Augmented Generation -- GPT-4o (ChatQA Inspired)
+### Augmented Generation - GPT-4o (ChatQA-Inspired Prompt)
 
 The following commands show how to run the augmented generation step with GPT-4o (using a prompt inspired by ChatQA) on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24:
 
@@ -178,4 +178,4 @@ python -um ragnarok.scripts.run_ragnarok  --model_path=command-r-plus  --topk=10
 
 We host these files for subsets of the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/main/branch/retrieve_results/tree/main/retrieve_results/RANK_ZEPHYR_RHO). 
 We shall provide larger subsets after some prompt refinements.
-We encourage participants to run the full pipeline on the entire dev sets carefully as the generation step is expensive.
+We encourage participants to run the full pipelines on the entire dev sets with caution as the generation step can be expensive.
