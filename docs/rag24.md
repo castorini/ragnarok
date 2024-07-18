@@ -111,21 +111,16 @@ RANK_LLM=<path-to-rank-llm>
 cp runs/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag24.raggy-dev_top100.jsonl ${RANK_LLM}/retrieve_results/BM25/
 cp runs/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev_top100.jsonl ${RANK_LLM}/retrieve_results/BM25/
 cd ${RANK_LLM}
-```
-
-
-We recommend using the `vllm_new` branch for faster inference (adds `--batched` flag to the RankLLM script). This is still in flux and could be updated soon. The following commands show how to run RankLLM on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24:
-
-```bash
-git checkout vllm_new
 pip3 install -e .
 ```
 
+
+We show how to run RankLLM on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24.
 Let's run inference!
     
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.raggy-dev --retrieval_method=bm25 --prompt_mode=rank_GPT --context_size=4096 --variable_passages --num_passes=3 --batched
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev --retrieval_method=bm25 --prompt_mode=rank_GPT --context_size=4096 --variable_passages --num_passes=3 --batched
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.raggy-dev --retrieval_method=bm25 --prompt_mode=rank_GPT --context_size=4096 --variable_passages --num_passes=3 --vllm_batched
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev --retrieval_method=bm25 --prompt_mode=rank_GPT --context_size=4096 --variable_passages --num_passes=3 --vllm_batched
 ```
 
 This should create both TREC run files and JSONL files after each pass and the final reranked JSONL files can serve as input to our augmented generation component. 
