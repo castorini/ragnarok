@@ -142,6 +142,7 @@ class LLM(ABC):
         topk: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        vllm: bool = False,
     ) -> List[Result]:
         """
         Answer a list of requests using the target language model.
@@ -151,10 +152,12 @@ class LLM(ABC):
             topk (int): The topk ranks to consider for the generation process.
             shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
             logging (bool, optional): Flag to enable logging of operations. Defaults to False.
+            vllm (bool, optional): Flag to enable VLLM mode. Defaults to False.
 
         Returns:
             List[Result]: The list of results after answering the requests.
         """
+        initial_results = []
         results = []
         for request in requests:
             if shuffle_candidates:
@@ -163,20 +166,40 @@ class LLM(ABC):
                     request.candidates[:topk],
                     len(request.candidates[:topk]),
                 )
-            prompt, input_token_count = self.create_prompt(request, topk)
-            answer, rag_exec_summary = self.run_llm(prompt, logging)
-            rag_exec_summary.candidates = [
-                candidate.__dict__ for candidate in request.candidates[:topk]
+        if vllm:
+            prompt_input_token_count_list = self.create_prompt_batched(requests, topk)
+            prompts = [prompt for prompt, _ in prompt_input_token_count_list]
+            answer_rag_exec_info_list = self.run_llm_batched(prompts, logging)
+            answers = [answer for answer, _ in answer_rag_exec_info_list]
+            rag_exec_summary = [
+                rag_exec_info for _, rag_exec_info in answer_rag_exec_info_list
             ]
-            result = Result(
-                query=request.query,
-                references=[cand.docid for cand in request.candidates[:topk]],
-                answer=answer,
-                rag_exec_summary=rag_exec_summary,
-            )
+            for request, answer, rag_exec_info in zip(
+                requests, answers, rag_exec_summary
+            ):
+                result = Result(
+                    query=request.query,
+                    references=[cand.docid for cand in request.candidates[:topk]],
+                    answer=answer,
+                    rag_exec_summary=rag_exec_info,
+                )
+                initial_results.append(result)
+        else:
+            for request in requests:
+                prompt, input_token_count = self.create_prompt(request, topk)
+                answer, rag_exec_summary = self.run_llm(prompt, logging)
+                rag_exec_summary.candidates = [
+                    candidate.__dict__ for candidate in request.candidates[:topk]
+                ]
+                result = Result(
+                    query=request.query,
+                    references=[cand.docid for cand in request.candidates[:topk]],
+                    answer=answer,
+                    rag_exec_summary=rag_exec_summary,
+                )
+                initial_results.append(result)
+        for result in initial_results:
             cleaned_result = remove_unused_references(result)
-            if logging:
-                print(f"Cleaned Result: {cleaned_result}")
             results.append(cleaned_result)
         return results
 

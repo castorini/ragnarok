@@ -51,6 +51,7 @@ def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     retrieval_mode = RetrievalMode.DATASET
     run_id = args.run_id
+    vllm_batched = args.vllm_batched
 
     _ = retrieve_and_generate(
         model_path,
@@ -66,6 +67,7 @@ def main(args):
         num_few_shot_examples,
         shuffle_candidates,
         print_prompts_responses,
+        vllm_batched=vllm_batched,
         use_azure_openai=use_azure_openai,
         run_id=run_id,
     )
@@ -149,6 +151,11 @@ if __name__ == "__main__":
         required=False,
         default="ragnarok",
         help="run id to be used in the output file",
+    )
+    parser.add_argument(
+        "--vllm_batched",
+        action="store_true",
+        help="whether to use batched version of VLLM",
     )
     args = parser.parse_args()
     main(args)

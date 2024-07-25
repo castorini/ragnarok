@@ -1,5 +1,6 @@
 import os
-from typing import Tuple
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Tuple
 
 import torch
 from fastchat.model import load_model
@@ -60,6 +61,7 @@ class OSLLM(LLM):
             model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples
         )
         self._device = device
+        self._name = model
         if self._device == "cuda":
             assert torch.cuda.is_available()
         if prompt_mode not in [PromptMode.CHATQA]:
@@ -73,7 +75,8 @@ class OSLLM(LLM):
                 model,
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
-                tensor_parallel_size=2,
+                tensor_parallel_size=num_gpus,
+                max_model_len=111264,
             )
             self._tokenizer = self._llm.get_tokenizer()
         except:
@@ -85,40 +88,49 @@ class OSLLM(LLM):
             # TODO(ronak): Add support for few-shot examples
             pass
 
+    def run_llm_batched(
+        self, prompts: List[str], logging: bool = False, vllm: bool = True
+    ) -> List[Tuple[str, int]]:
+        if logging:
+            for i, prompt in enumerate(prompts):
+                print(f"Prompt {i}: {prompt}")
+        try:
+            inputs = self._tokenizer(prompts)
+            sampling_params = SamplingParams(
+                temperature=0.0,
+                max_tokens=self._output_token_estimate,
+                min_tokens=200,
+            )
+            outputs = self._llm.generate(prompts, sampling_params)
+            responses = [output.outputs[0].text for output in outputs]
+            if logging:
+                for response in responses:
+                    print(f"Response: {response}")
+            answer_rag_exec_info_list = []
+            for prompt, response in zip(prompts, responses):
+                answer, rag_exec_response = self._post_processor(response)
+                rag_exec_info = RAGExecInfo(
+                    prompt=prompt,
+                    response=rag_exec_response,
+                    input_token_count=self.get_num_tokens(prompt),
+                    output_token_count=sum([len(ans.text) for ans in answer]),
+                    candidates=[],
+                )
+                answer_rag_exec_info_list.append((answer, rag_exec_info))
+
+            return answer_rag_exec_info_list
+        except:
+            assert False, "Failed run_llm_batched"
+
     def run_llm(
         self, prompt: str, logging: bool = False, vllm: bool = True
     ) -> Tuple[str, int]:
         if logging:
             print(f"Prompt: {prompt}")
         try:
-            inputs = self._tokenizer([prompt])
-            sampling_params = SamplingParams(
-                temperature=0.0,
-                max_tokens=self._output_token_estimate,
-                min_tokens=100,
-            )
-            output = self._llm.generate([prompt], sampling_params)
-            text = output[0].outputs[0].text
-            # Anything after a User: / Context: / References: / Note: remove
-            text = (
-                text.split("User:")[0]
-                .split("Context:")[0]
-                .split("References:")[0]
-                .split("Note:")[0]
-            )
-            if logging:
-                print(f"Response: {text}")
-            answers, rag_exec_response = self._post_processor(text)
-            if logging:
-                print(f"Answer: {answers}")
-            rag_exec_info = RAGExecInfo(
-                prompt=prompt,
-                response=rag_exec_response,
-                input_token_count=self.get_num_tokens(prompt),
-                output_token_count=sum([len(ans.text) for ans in answers]),
-                candidates=[],
-            )
-            return answers, rag_exec_info
+            answer_rag_exec_info_list = self.run_llm_batched([prompt], logging, vllm)
+            answer, rag_exec_info = answer_rag_exec_info_list[0]
+            return answer, rag_exec_info
         except:
             inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
             gen_cfg = GenerationConfig.from_model_config(self._llm.config)
@@ -152,7 +164,7 @@ class OSLLM(LLM):
                 )
             if self._prompt_mode == PromptMode.CHATQA:
                 chat_qa_template = ChatQATemplate()
-                messages = chat_qa_template(query, context, "chatqa")
+                messages = chat_qa_template(query, context, self._name)
             else:
                 raise ValueError(
                     f"Unsupported prompt mode: {self._prompt_mode}, expected {PromptMode.CHATQA}."
@@ -167,6 +179,43 @@ class OSLLM(LLM):
                     // (topk * 4),
                 )
         return messages, self.get_num_tokens(messages)
+
+    def create_prompt_batched(
+        self,
+        requests: List[Request],
+        topk: int,
+        batch_size: int = 32,
+    ) -> List[Tuple[str, int]]:
+        """
+        Creates prompts in batches for a list of results, processing them in parallel using a thread pool executor.
+
+        Parameters:
+        - results (List[Result]): List of results for which prompts are to be generated.
+        - topk (int): Number of top candidates to include in each prompt.
+        - batch_size (int, optional): Number of prompts to generate in each batch. Defaults to 32.
+
+        Returns:
+        - List[Tuple[str, int]]: List of generated prompts and their token counts.
+        """
+
+        def chunks(lst, n):
+            """Yield successive n-sized chunks from lst."""
+            for i in range(0, len(lst), n):
+                yield lst[i : i + n]
+
+        all_completed_prompts = []
+
+        with ThreadPoolExecutor() as executor:
+            for batch in chunks(requests, batch_size):
+                completed_prompts = list(
+                    executor.map(
+                        lambda request: self.create_prompt(request, topk),
+                        batch,
+                    )
+                )
+                all_completed_prompts.extend(completed_prompts)
+
+        return all_completed_prompts
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))

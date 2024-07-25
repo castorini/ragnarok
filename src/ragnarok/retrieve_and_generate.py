@@ -37,6 +37,7 @@ def retrieve_and_generate(
     print_prompts_responses: bool = False,
     query: str = "",
     qid: int = 1,
+    vllm_batched: bool = False,
     use_azure_openai: bool = False,
     num_passes: int = 1,
     window_size: int = 20,
@@ -64,6 +65,7 @@ def retrieve_and_generate(
         print_prompts_responses (bool): Whether to print prompts and responses.
         query (str): The query to search for.
         qid (int): The query ID of the search query.
+        vllm_batched (bool): Whether to use batched VLLM.
         use_azure_openai (bool): Whether to use Azure OpenAI services.
         num_passes (int): The number of passes for iterative retrieval and generation.
         window_size (int): The size of the sliding window for context retrieval.
@@ -148,6 +150,7 @@ def retrieve_and_generate(
         topk=k[-1],
         shuffle_candidates=shuffle_candidates,
         logging=print_prompts_responses,
+        vllm=vllm_batched,
     )
     if isinstance(dataset, str):
         file_name = rag.write_answer_results(

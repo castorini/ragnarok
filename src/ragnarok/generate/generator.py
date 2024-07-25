@@ -19,6 +19,7 @@ class RAG:
         topk: int = 20,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        vllm: bool = False,
     ) -> List[Result]:
         """
         Generates a list of attributed answers using the Ragnarok agent.
@@ -28,19 +29,29 @@ class RAG:
             topk (int, optional): The end rank for processing. Defaults to 20.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before answering. Defaults to False.
             logging (bool, optional): Enables logging of the answering process. Defaults to False.
+            vllm (bool, optional): Enables VLLM mode. Defaults to False.
 
         Returns:
             List[Result]: A list containing the attributed answers.
         """
-        results = []
-        for request in tqdm(requests):
-            result = self._agent.answer_batch(
-                [request],
-                topk=min(topk, len(request.candidates)),
+        if vllm:
+            results = self._agent.answer_batch(
+                requests,
+                topk,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
+                vllm=vllm,
             )
-            results.append(result[0])
+        else:
+            results = []
+            for request in tqdm(requests):
+                result = self._agent.answer_batch(
+                    [request],
+                    topk=min(topk, len(request.candidates)),
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                )
+                results.append(result[0])
         return results
 
     def answer(

@@ -183,6 +183,9 @@ class GPTPostProcessor:
 
     def __call__(self, response) -> List[Dict[str, Any]]:
         text_output = response
+        # Remove all \nNote: and \nReferences: from the text
+        text_output = re.sub(r"\nNote:.*", "", text_output)
+        text_output = re.sub(r"\nReferences:.*", "", text_output)
         sentences = self.tokenizer.tokenize(text_output)
         answers = []
         citation_range = list(range(20))
