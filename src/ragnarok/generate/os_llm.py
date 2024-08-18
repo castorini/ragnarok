@@ -29,7 +29,7 @@ class OSLLM(LLM):
         num_few_shot_examples: int = 0,
         device: str = "cuda",
         num_gpus: int = 1,
-        dtype: str = "float16",
+        dtype: str = "bfloat16",
     ) -> None:
         """
         Creates instance of the OSLLM class, an extension of LLM designed for performing retrieval-augmented generation using
@@ -71,12 +71,14 @@ class OSLLM(LLM):
         # ToDo: Make repetition_penalty configurable
         try:
             print(model)
+            ignore_patterns = ["*consolidated*"] if "mistral" in model else []
             self._llm = VLLM(
                 model,
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
                 tensor_parallel_size=num_gpus,
                 max_model_len=111264,
+                ignore_patterns=ignore_patterns,
             )
             self._tokenizer = self._llm.get_tokenizer()
         except:
@@ -95,7 +97,6 @@ class OSLLM(LLM):
             for i, prompt in enumerate(prompts):
                 print(f"Prompt {i}: {prompt}")
         try:
-            inputs = self._tokenizer(prompts)
             sampling_params = SamplingParams(
                 temperature=0.0,
                 max_tokens=self._output_token_estimate,

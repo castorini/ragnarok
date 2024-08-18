@@ -1,10 +1,10 @@
 # Ragnarök: End-to-end RAG Baselines for TREC-Researchy 24 and TREC-RAGgy 24
 
-This document describes the end-to-end retrieval-augmented generation (RAG) baselines for the TREC-Researchy 24 and TREC-RAGgy 24 development sets. All systems are grounded on the MS MARCO V2.1 segmented doc corpus curated for the TREC 2024 RAG Track. The baselines are based on [Anserini's BM25 first-stage retrieval](https://github.com/castorini/anserini) followed by [RankLLM's multi-step RankZephyr](https://github.com/castorini/rank_llm) reranking and finally, augmented-generation with one of OpenAI's GPT-4o or Cohere's Command R+. Note that the reranking step is optional and can be skipped if you only want to use the first-stage BM25 retrieval. The generation step can also be skipped if you only plan to submit systems to the (R)etriaval subtask.
+This document describes the end-to-end retrieval-augmented generation (RAG) baselines for the TREC-Researchy 24 and TREC-RAGgy 24 development sets. All systems are grounded on the MS MARCO V2.1 segmented doc corpus curated for the TREC 2024 RAG Track. The baselines are based on [Anserini's BM25 first-stage retrieval](https://github.com/castorini/anserini) followed by [RankLLM's multi-step RankZephyr](https://github.com/castorini/rank_llm) reranking and finally, augmented-generation with one of OpenAI's GPT-4o, Cohere's Command R+ or Meta's LLaMA-3.1 (8B + 70B). Note that the reranking step is optional and can be skipped if you only want to use the first-stage BM25 retrieval. The generation step can also be skipped if you only plan to submit systems to the (R)etriaval subtask.
 
 ## Retrieval - BM25
 
-The following commands show how to run Anserini on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24, and evaluate effectiveness, on the segmented doc corpus:
+The following commands show how to run Anserini's BM25 on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24, and evaluate effectiveness, on the segmented doc corpus:
 
 Anserini is packaged in a self-contained fatjar, which also provides the simplest way to get started. Assuming you've already got Java installed, fetch the fatjar:
 
@@ -312,3 +312,17 @@ An example line from the augmented generation step output is shown below:
 We host these files for subsets of the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/results/RANK_ZEPHYR_RHO). 
 We shall provide larger subsets after some prompt refinements.
 We encourage participants to run the full pipelines on the entire dev sets with caution as the generation step can be expensive.
+
+### Augmented Generation - Meta LLaMA-3.1 (70B)
+
+The following commands show how to run the augmented generation step with Meta's LLaMA-3.1 (70B) on the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24:
+
+```bash
+SET=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.raggy-dev
+python -um ragnarok.scripts.run_ragnarok  --model_path=meta-llama/Meta-Llama-3.1-70B-Instruct  --topk=20 --dataset=${SET}  --retrieval_method=bm25 --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500 --run_id bm25_rank-zephyr-rho_command-r-plus_l3.1_70b --num_gpus 4 --vllm_batched; 
+
+SET=msmarco-v2.1-doc-segmented.bm25.rank_zephyr_rho.rag24.researchy-dev
+python -um ragnarok.scripts.run_ragnarok  --model_path=meta-llama/Meta-Llama-3.1-70B-Instruct  --topk=20 --dataset=${SET}  --retrieval_method=bm25 --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500 --run_id bm25_rank-zephyr-rho_command-r-plus_l3.1_70b --num_gpus 4 --vllm_batched; 
+```
+
+You can run the 8B model with a similar command by replacing the model path with `meta-llama/Meta-Llama-3.1-8B-Instruct`, num_gpus with 1 and run_id with `bm25_rank-zephyr-rho_command-r-plus_l3.1_8b`.
