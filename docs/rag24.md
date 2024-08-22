@@ -326,3 +326,15 @@ python -um ragnarok.scripts.run_ragnarok  --model_path=meta-llama/Meta-Llama-3.1
 ```
 
 You can run the 8B model with a similar command by replacing the model path with `meta-llama/Meta-Llama-3.1-8B-Instruct`, num_gpus with 1 and run_id with `bm25_rank-zephyr-rho_command-r-plus_l3.1_8b`.
+
+
+### Verifying AG/RAG Output
+
+We recommend running `src/ragnarok/scripts/check_trec_rag24_gen.py` to verify the output adheres to the expected format. This is our checking script for RAG/AG tracks. You can see if your systems conform to it. The script will maintain an errorlog and in the case of some cases also attempt to fix warnings (too long -> we remove sentences from the end, dupe citations -> we remove them, etc.). You’ll get a fixed file if the errors are not major that you can resubmit but please go through all the warnings and error messages to make sure you and the script are doing things *as expected*!
+```bash
+python3 src/ragnarok/scripts/check_trec_rag24_gen.py /store2/scratch/rpradeep/ragnarok_data/results/RANK_ZEPHYR/baseline_rag24.test_gpt-4o_top20.jsonl.fixed --topicfile /store2/scratch/rpradeep/anserini-tools/topics-and-qrels/topics.rag24.test.txt
+
+python3 src/ragnarok/scripts/check_trec_rag24_gen.py /store2/scratch/rpradeep/ragnarok_data/results/RANK_ZEPHYR/baseline_rag24.test_command-r-plus_top20.jsonl.fixed --topicfile /store2/scratch/rpradeep/anserini-tools/topics-and-qrels/topics.rag24.test.txt
+
+python3 src/ragnarok/scripts/check_trec_rag24_gen.py /store2/scratch/rpradeep/ragnarok_data/results/RANK_ZEPHYR/baseline_rag24.test_l31_70b_instruct_top20.jsonl.fixed --topicfile /store2/scratch/rpradeep/anserini-tools/topics-and-qrels/topics.rag24.test.txt
+```
