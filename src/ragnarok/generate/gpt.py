@@ -8,7 +8,7 @@ import tiktoken
 from ragnarok.data import RAGExecInfo, Request
 from ragnarok.generate.llm import LLM, PromptMode
 from ragnarok.generate.post_processor import GPTPostProcessor
-from ragnarok.generate.templates.chat_qa import ChatQATemplate
+from ragnarok.generate.templates.ragnarok_templates import RagnarokTemplates
 
 
 class SafeOpenai(LLM):
@@ -60,9 +60,15 @@ class SafeOpenai(LLM):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide OpenAI Keys.")
-        if prompt_mode not in [PromptMode.CHATQA]:
+        if prompt_mode not in [
+            PromptMode.CHATQA,
+            PromptMode.RAGNAROK_V2,
+            PromptMode.RAGNAROK_V3,
+            PromptMode.RAGNAROK_V4,
+            PromptMode.RAGNAROK_V4_NO_CITE,
+        ]:
             raise ValueError(
-                f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.CHATQA}."
+                f"unsupported prompt mode for GPT models: {prompt_mode}, expected one of {PromptMode.CHATQA}, {PromptMode.RAGNAROK_V2}, {PromptMode.RAGNAROK_V3}, {PromptMode.RAGNAROK_V4}, {PromptMode.RAGNAROK_V4_NO_CITE}."
             )
 
         self._keys = keys
@@ -174,12 +180,18 @@ class SafeOpenai(LLM):
                 context.append(
                     f"[{rank}] {self._replace_number(content)}",
                 )
-            if self._prompt_mode == PromptMode.CHATQA:
-                chat_qa_template = ChatQATemplate()
-                messages = chat_qa_template(query, context, "gpt")
+            if self._prompt_mode in [
+                PromptMode.CHATQA,
+                PromptMode.RAGNAROK_V2,
+                PromptMode.RAGNAROK_V3,
+                PromptMode.RAGNAROK_V4,
+                PromptMode.RAGNAROK_V4_NO_CITE,
+            ]:
+                ragnarok_template = RagnarokTemplates(self._prompt_mode)
+                messages = ragnarok_template(query, context, "gpt")
             else:
                 raise ValueError(
-                    f"Unsupported prompt mode: {self._prompt_mode}, expected {PromptMode.CHATQA}."
+                    f"Unsupported prompt mode: {self._prompt_mode}, expected one of CHATQA or RAGNAROK_V..."
                 )
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():

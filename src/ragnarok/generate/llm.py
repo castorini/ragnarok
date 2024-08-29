@@ -13,6 +13,10 @@ class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     COHERE = "cohere"
     CHATQA = "chatqa"
+    RAGNAROK_V2 = "ragnarok_v2"
+    RAGNAROK_V3 = "ragnarok_v3"
+    RAGNAROK_V4 = "ragnarok_v4"
+    RAGNAROK_V4_NO_CITE = "ragnarok_v4_no_cite"
 
     def __str__(self):
         return self.value
