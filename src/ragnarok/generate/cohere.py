@@ -37,7 +37,7 @@ class Cohere(LLM):
         Raises:
         - ValueError: If an unsupported prompt mode is provided or if no Cohere API key / invalid key is supplied.
         """
-        if model not in ["command-r-plus", "command-r"]:
+        if model not in ["command-r-plus-08-2024", "command-r-plus", "command-r"]:
             raise ValueError(
                 f"Unsupported model: {model}. The only models currently supported are 'command-r' and 'command-r-plus' in Cohere."
             )
