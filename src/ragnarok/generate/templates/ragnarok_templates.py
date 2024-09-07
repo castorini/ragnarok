@@ -64,6 +64,54 @@ class RagnarokTemplates:
             "Focus solely on answering the question. "
             "Avoid references or providing any meta-commentary about the answering process."
         )
+        self.instruction_ragnarok_v4_biogen = (
+            "Provide a concise, information-dense answer to the question in a single cohesive paragraph, avoiding lists and bullet points. "
+            "Your response must not exceed 150 words (excluding references) under any circumstances. "
+            "Prioritize the most relevant and impactful information within this strict limit. "
+            "Ensure your answer directly addresses the question and maintains coherence throughout. "
+            "Cite the supporting context PubMed documents inline using IEEE format in square brackets []. "
+            "Include 1-3 citations per sentence, ordered by decreasing importance. "
+            "Ensure each sentence has at least one citation. "
+            "Use multiple sources to provide a well-rounded answer when possible. "
+            "If sources contradict each other, acknowledge this and explain the discrepancy. "
+            "Express uncertainty when appropriate rather than making unfounded claims. "
+            "Prioritize factual accuracy and avoid speculation or potentially harmful advice. "
+            "Focus solely on answering the question with properly cited information. "
+            "Avoid mentioning references or providing any meta-commentary about the answering process."
+        )
+        self.instruction_ragnarok_v5_biogen = (
+            "Provide a concise, information-dense answer to the biomedical question in a single cohesive paragraph, avoiding lists and bullet points. "
+            "Your response must not exceed 150 words (excluding references) under any circumstances. "
+            "Prioritize the most relevant and impactful information within this strict limit. "
+            "Ensure each sentence is clear, interpretable, and directly relevant to the question. "
+            "Cite the supporting context PubMed documents inline using IEEE format in square brackets []. "
+            "Include 1-3 citations per sentence, ordered by decreasing importance. "
+            "Ensure each sentence has at least one citation. "
+            "Use multiple sources to provide a well-rounded answer when possible. "
+            "Focus on required and relevant information, avoiding unnecessary or borderline content. "
+            "If sources contradict each other, acknowledge this and explain the discrepancy. "
+            "Express uncertainty when appropriate rather than making unfounded claims. "
+            "Prioritize factual accuracy and avoid speculation or potentially harmful advice. "
+            "For patient-oriented questions, provide information suitable for clinician review. "
+            "Assume the reader is a healthcare professional, but avoid overly technical jargon. "
+            "Do not include trivial statements or generic recommendations to see a health professional, stick to the 150 word limit. "
+            "Ensure all information is supported by the provided PubMed abstracts. "
+            "Avoid mentioning references or providing any meta-commentary about the answering process."
+        )
+        self.instruction_ragnarok_v5_biogen_no_cite = (
+            "Provide a concise, information-dense answer to the biomedical question in a single cohesive paragraph, avoiding lists and bullet points. "
+            "Your response must not exceed 150 words under any circumstances. "
+            "Prioritize the most relevant and impactful information within this strict limit. "
+            "Ensure each sentence is clear, interpretable, and directly relevant to the question. "
+            "Provide a well-rounded answer when possible. "
+            "Focus on required and relevant information, avoiding unnecessary or borderline content. "
+            "Express uncertainty when appropriate rather than making unfounded claims. "
+            "Prioritize factual accuracy and avoid speculation or potentially harmful advice. "
+            "For patient-oriented questions, provide information suitable for clinician review. "
+            "Assume the reader is a healthcare professional, but avoid overly technical jargon. "
+            "Do not include trivial statements or generic recommendations to see a health professional, stick to the 150 word limit. "
+            "Avoid providing any meta-commentary about the answering process."
+        )
         self.user_input = "{query}"
         self.sep = "\n\n"
 
@@ -72,7 +120,10 @@ class RagnarokTemplates:
             self.sep = "\n"
         str_context = self.sep.join(context)
 
-        if self.prompt_mode == PromptMode.RAGNAROK_V4_NO_CITE:
+        if (
+            self.prompt_mode == PromptMode.RAGNAROK_V4_NO_CITE
+            or self.prompt_mode == PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE
+        ):
             user_input_context = (
                 f"Instruction: {self.get_instruction()}"
                 + self.sep
@@ -106,7 +157,11 @@ class RagnarokTemplates:
             messages = []
             system_message = (
                 self.system_message_gpt_no_cite
-                if self.prompt_mode == PromptMode.RAGNAROK_V4_NO_CITE
+                if self.prompt_mode
+                in [
+                    PromptMode.RAGNAROK_V4_NO_CITE,
+                    PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
+                ]
                 else self.system_message_gpt
             )
             messages.append(
@@ -128,7 +183,11 @@ class RagnarokTemplates:
             conv = get_conversation_template(model)
             system_message = (
                 self.system_message_gpt_no_cite
-                if self.prompt_mode == PromptMode.RAGNAROK_V4_NO_CITE
+                if self.prompt_mode
+                in [
+                    PromptMode.RAGNAROK_V4_NO_CITE,
+                    PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
+                ]
                 else self.system_message_gpt
             )
             conv.set_system_message(system_message)
@@ -147,5 +206,11 @@ class RagnarokTemplates:
             return self.instruction_ragnarok_v4
         elif self.prompt_mode == PromptMode.RAGNAROK_V4_NO_CITE:
             return self.instruction_ragnarok_v4_no_cite
+        elif self.prompt_mode == PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE:
+            return self.instruction_ragnarok_v5_biogen_no_cite
+        elif self.prompt_mode == PromptMode.RAGNAROK_V4_BIOGEN:
+            return self.instruction_ragnarok_v4_biogen
+        elif self.prompt_mode == PromptMode.RAGNAROK_V5_BIOGEN:
+            return self.instruction_ragnarok_v5_biogen
         else:
             return self.instruction_ragnarok

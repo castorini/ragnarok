@@ -69,7 +69,10 @@ class OSLLM(LLM):
             PromptMode.RAGNAROK_V2,
             PromptMode.RAGNAROK_V3,
             PromptMode.RAGNAROK_V4,
+            PromptMode.RAGNAROK_V4_BIOGEN,
+            PromptMode.RAGNAROK_V5_BIOGEN,
             PromptMode.RAGNAROK_V4_NO_CITE,
+            PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
         ]:
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.CHATQA} prompt."
@@ -174,7 +177,10 @@ class OSLLM(LLM):
                 PromptMode.RAGNAROK_V2,
                 PromptMode.RAGNAROK_V3,
                 PromptMode.RAGNAROK_V4,
+                PromptMode.RAGNAROK_V4_BIOGEN,
+                PromptMode.RAGNAROK_V5_BIOGEN,
                 PromptMode.RAGNAROK_V4_NO_CITE,
+                PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
             ]:
                 ragnarok_template = RagnarokTemplates(self._prompt_mode)
                 messages = ragnarok_template(query, context, self._name)

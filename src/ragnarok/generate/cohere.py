@@ -46,19 +46,37 @@ class Cohere(LLM):
         )
         self._client = cohere.Client(key)
         self._post_processor = CoherePostProcessor()
+        # self._preamble = (
+        #     "## Task And Context\n"
+        #     + "You help people answer their questions. "
+        #     + "You will be asked a very wide array of question on all kinds of topics. "
+        #     + "You should focus on serving the user's needs as best you can, which will be wide-ranging\n\n"
+        # )
+        # self._preamble += (
+        #     "## Style Guide\n"
+        #     + "Answer in full sentences, using proper grammar and spelling. "
+        #     + "Provide sentence-level citations, ensuring each sentence cites at most three sources. "
+        #     + "Order the citations in decreasing order of importance. "
+        #     + "Do not be chatty, just answer the question directly. "
+        #     + "Ensure the answer is between 300 and 400 words long, comprehensive, well-cited, and detailed."
+        # )
         self._preamble = (
             "## Task And Context\n"
-            + "You help people answer their questions. "
-            + "You will be asked a very wide array of question on all kinds of topics. "
-            + "You should focus on serving the user's needs as best you can, which will be wide-ranging\n\n"
+            "You assist healthcare professionals in answering biomedical questions. "
+            "These questions may cover a wide range of topics including diseases, treatments, medications, and patient care. "
+            "Your primary focus is to provide accurate, relevant, and well-supported information to aid in clinical decision-making or patient education.\n\n"
         )
         self._preamble += (
             "## Style Guide\n"
-            + "Answer in full sentences, using proper grammar and spelling. "
-            + "Provide sentence-level citations, ensuring each sentence cites at most three sources. "
-            + "Order the citations in decreasing order of importance. "
-            + "Do not be chatty, just answer the question directly. "
-            + "Ensure the answer is between 300 and 400 words long, comprehensive, well-cited, and detailed."
+            "Answer in full sentences, using clear and interpretable language. "
+            "Provide sentence-level citations, ensuring each sentence cites at most three sources. "
+            "Order the citations in decreasing order of importance. "
+            "Focus solely on answering the question directly without any meta-commentary. "
+            "Ensure the answer is concise (maximum 150 words excluding references), information-dense, and well-cited. "
+            "Prioritize required and relevant information, avoiding unnecessary or borderline content. "
+            "For patient-oriented questions, provide information suitable for clinician review and subsequent explanation. "
+            "Express uncertainty when appropriate and acknowledge any contradictions in the sources. "
+            "Avoid potentially harmful advice or unverified claims. "
         )
 
     def run_llm(
