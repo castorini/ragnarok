@@ -9,7 +9,8 @@ import ragnarok.api.elo as elo
 (retriever_options, reranker_options, llm_options) = (
     input_blocks.retriever_options,
     input_blocks.reranker_options,
-    input_blocks.llm_options,
+    input_blocks.llm_options
+    + ["meta-llama/Llama-3.1-8B-Instruct", "meta-llama/Llama-3.1-70B-Instruct"],
 )
 
 with gr.Blocks() as demo:
