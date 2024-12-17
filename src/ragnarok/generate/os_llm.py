@@ -1,9 +1,8 @@
-import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple
 
 import torch
-from fastchat.model import load_model
+from ftfy import fix_text
 
 try:
     from vllm import LLM as VLLM
@@ -78,22 +77,26 @@ class OSLLM(LLM):
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.CHATQA} prompt."
             )
         # ToDo: Make repetition_penalty configurable
+        ignore_patterns = ["*consolidated*"] if "mistral" in model else []
+
         try:
-            print(model)
-            ignore_patterns = ["*consolidated*"] if "mistral" in model else []
             self._llm = VLLM(
                 model,
-                download_dir=os.getenv("HF_HOME"),
+                enforce_eager=False,
+                tensor_parallel_size=num_gpus,
+                # max_model_len=108064,
+                ignore_patterns=ignore_patterns,
+            )
+        except:
+            self._llm = VLLM(
+                model,
                 enforce_eager=False,
                 tensor_parallel_size=num_gpus,
                 max_model_len=108064,
                 ignore_patterns=ignore_patterns,
             )
-            self._tokenizer = self._llm.get_tokenizer()
-        except:
-            self._llm, self._tokenizer = load_model(
-                model, device=device, num_gpus=num_gpus
-            )
+        self._tokenizer = self._llm.get_tokenizer()
+
         self._post_processor = GPTPostProcessor()
         if num_few_shot_examples > 0:
             # TODO(ronak): Add support for few-shot examples
@@ -184,6 +187,11 @@ class OSLLM(LLM):
             ]:
                 ragnarok_template = RagnarokTemplates(self._prompt_mode)
                 messages = ragnarok_template(query, context, self._name)
+                messages = self._tokenizer.apply_chat_template(
+                    messages, tokenize=False, add_generation_prompt=True
+                )
+                messages = fix_text(messages)
+                # print(messages)
             else:
                 raise ValueError(
                     f"unsupported prompt mode for GPT models: {self._prompt_mode}, expected one of {PromptMode.CHATQA}, {PromptMode.RAGNAROK_V2}, {PromptMode.RAGNAROK_V3}, {PromptMode.RAGNAROK_V4}, {PromptMode.RAGNAROK_V4_NO_CITE}."
@@ -195,7 +203,7 @@ class OSLLM(LLM):
                 max_length -= max(
                     1,
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // (topk * 4),
+                    // (topk * 2),
                 )
         return messages, self.get_num_tokens(messages)
 

@@ -16,7 +16,6 @@ def get_azure_openai_args() -> Dict[str, str]:
         "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),
         "api_base": os.getenv("AZURE_OPENAI_API_BASE"),
     }
-
     # Sanity check
     assert all(
         list(azure_args.values())

@@ -78,6 +78,8 @@ class SafeOpenai(LLM):
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
         self._post_processor = GPTPostProcessor()
+        print(proxy)
+        print(self._keys[self._cur_key_id])
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
         self.use_azure_ai = False
@@ -88,6 +90,7 @@ class SafeOpenai(LLM):
             openai.api_type = api_type
             openai.api_base = api_base
             self.use_azure_ai = True
+            print(f"Using Azure OpenAI API with {api_type} {api_version} at {api_base}")
 
     class CompletionMode(Enum):
         UNSPECIFIED = 0

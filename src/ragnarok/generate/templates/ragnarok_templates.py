@@ -116,8 +116,11 @@ class RagnarokTemplates:
         self.sep = "\n\n"
 
     def __call__(self, query: str, context: List[str], model: str) -> List[str]:
-        if not ("gpt" in model or "chatqa" in model.lower()):
+        if not (
+            "gpt" in model or "chatqa" in model.lower() or "mistral" in model.lower()
+        ):
             self.sep = "\n"
+        # print(f"Using separator: {self.sep}")
         str_context = self.sep.join(context)
 
         if (
@@ -131,7 +134,7 @@ class RagnarokTemplates:
                 + self.sep
                 + f"Instruction: {self.get_instruction()}"
             )
-        elif "gpt" in model:
+        elif "gpt" in model or "mistral" in model:
             user_input_context = (
                 f"Instruction: {self.get_instruction()}"
                 + self.sep
@@ -153,7 +156,7 @@ class RagnarokTemplates:
                 + f"Instruction: {self.get_instruction()}"
             )
 
-        if "gpt" in model:
+        if "gpt" in model or "mistral" in model:
             messages = []
             system_message = (
                 self.system_message_gpt_no_cite
@@ -176,6 +179,8 @@ class RagnarokTemplates:
                     "content": fix_text(user_input_context),
                 }
             )
+            if "mistral" in model:
+                return messages
             return messages
         elif "chatqa" in model.lower():
             prompt = f"{self.system_message_chatqa}{self.sep}{self.input_context.format(context=str_context)}{self.sep}User: {user_input_context}"
