@@ -142,15 +142,15 @@ def retrieve_and_generate(
         )
     elif "gemini" in generator_path.lower():
         print(f"Model: {generator_path}")
-        api_keys = get_gemini_api_key()
+        api_key = get_gemini_api_key()
         agent = Gemini(
             model=generator_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
-            keys=api_keys,
-            citation_range=citation_range
+            key=api_key,
+            citation_length=citation_range
         )
     else:
         raise ValueError(f"Unsupported model: {generator_path}")

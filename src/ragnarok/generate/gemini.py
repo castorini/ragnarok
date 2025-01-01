@@ -2,11 +2,8 @@ import time
 from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
 
-#import openai
 import os
 import google.generativeai as genai
-
-#import tiktoken
 
 from ragnarok.data import RAGExecInfo, Request
 from ragnarok.generate.llm import LLM, PromptMode
@@ -46,12 +43,12 @@ class Gemini(LLM):
 
         # Initialize values and check for errors in entered values
         super().__init__(
-            model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples, key, citation_length
+            model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples
         )
-        if isinstance(str(key), str):
-            key = key
-        if not key:
-            raise ValueError("Please provide Gemini api key to GEMINI_API_KEY env variable.")
+        self.key = str(key)
+        self._citation_length = citation_length
+        if not (key and isinstance(self.key, str)):
+            raise ValueError(f"Gemini api key not provided or in an invalid format. The key provided (if any) is {key}. Assign the appropriate key to the GEMINI_API_KEY env variable.")
         if prompt_mode not in [
             PromptMode.GEMINI,
             PromptMode.CHATQA
@@ -61,7 +58,7 @@ class Gemini(LLM):
             )
         
         # Configure model parameters
-        genai.configure(api_key=str(key))
+        genai.configure(api_key=self.key)
         generation_config = {
             "temperature": 1,
             "top_p": 0.95,
