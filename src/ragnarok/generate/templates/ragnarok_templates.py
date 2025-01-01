@@ -179,6 +179,8 @@ class RagnarokTemplates:
             return messages
         elif "chatqa" in model.lower():
             prompt = f"{self.system_message_chatqa}{self.sep}{self.input_context.format(context=str_context)}{self.sep}User: {user_input_context}"
+        elif "gemini" in model.lower():
+            prompt = f"{self.system_message_chatqa}{self.sep}{self.input_context.format(context=str_context)}{self.sep}User input context: {user_input_context}"
         else:
             conv = get_conversation_template(model)
             system_message = (

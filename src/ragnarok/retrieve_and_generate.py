@@ -3,10 +3,11 @@ from typing import Any, Dict, List, Union
 from ragnarok.data import Query, Request
 
 # from ragnarok.evaluation.nugget_eval import EvalFunction
-from ragnarok.generate.api_keys import get_azure_openai_args, get_openai_api_key
+from ragnarok.generate.api_keys import get_azure_openai_args, get_openai_api_key, get_gemini_api_key
 from ragnarok.generate.cohere import Cohere
 from ragnarok.generate.generator import RAG
 from ragnarok.generate.gpt import SafeOpenai
+from ragnarok.generate.gemini import Gemini
 from ragnarok.generate.llm import PromptMode
 from ragnarok.generate.os_llm import OSLLM
 from ragnarok.retrieve_and_rerank.restriever import Restriever
@@ -79,6 +80,33 @@ def retrieve_and_generate(
         dict: The generation results in JSON format specified by the TREC 2024 RAG Track.
     """
 
+    # Retrieve + Rerank
+    print("Calling reranker API...")
+    # Only DATASET mode is currently supported.
+    if retrieval_mode == RetrievalMode.DATASET:
+        if interactive:
+            # Calls the host_reranker API to obtain the results after first 2 stages (retrieve+rerank)
+            requests = [
+                Restriever.from_dataset_with_prebuilt_index(
+                    dataset_name=dataset,
+                    retrieval_method=retrieval_method,
+                    host_reranker=host_reranker,
+                    host_retriever=host_retriever,
+                    request=Request(query=Query(text=query, qid=qid)),
+                    k=k,
+                )
+            ]
+        else:
+            requests = Retriever.from_dataset_with_prebuilt_index(
+                dataset_name=dataset,
+                retrieval_method=retrieval_method,
+                k=k,
+                cache_input_format=CacheInputFormat.JSONL,
+            )
+            citation_range = len(requests)
+    else:
+        raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
+
     # Construct Generation Agent
     model_full_path = ""
     if "gpt" in generator_path:
@@ -112,35 +140,20 @@ def retrieve_and_generate(
             device=device,
             num_gpus=num_gpus,
         )
+    elif "gemini" in generator_path.lower():
+        print(f"Model: {generator_path}")
+        api_keys = get_gemini_api_key()
+        agent = Gemini(
+            model=generator_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            max_output_tokens=max_output_tokens,
+            num_few_shot_examples=num_few_shot_examples,
+            keys=api_keys,
+            citation_range=citation_range
+        )
     else:
         raise ValueError(f"Unsupported model: {generator_path}")
-
-    # Retrieve + Rerank
-    print("Calling reranker API...")
-    # Only DATASET mode is currently supported.
-    if retrieval_mode == RetrievalMode.DATASET:
-        if interactive:
-            # Calls the host_reranker API to obtain the results after first 2 stages (retrieve+rerank)
-            requests = [
-                Restriever.from_dataset_with_prebuilt_index(
-                    dataset_name=dataset,
-                    retrieval_method=retrieval_method,
-                    host_reranker=host_reranker,
-                    host_retriever=host_retriever,
-                    request=Request(query=Query(text=query, qid=qid)),
-                    k=k,
-                )
-            ]
-        else:
-            requests = Retriever.from_dataset_with_prebuilt_index(
-                dataset_name=dataset,
-                retrieval_method=retrieval_method,
-                k=k,
-                cache_input_format=CacheInputFormat.JSONL,
-            )
-            print()
-    else:
-        raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
 
     # Generation
     print("Generating...")

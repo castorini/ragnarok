@@ -20,6 +20,7 @@ class PromptMode(Enum):
     RAGNAROK_V5_BIOGEN = "ragnarok_v5_biogen"
     RAGNAROK_V5_BIOGEN_NO_CITE = "ragnarok_v5_biogen_no_cite"
     RAGNAROK_V4_NO_CITE = "ragnarok_v4_no_cite"
+    GEMINI = "gemini"
 
     def __str__(self):
         return self.value
@@ -193,7 +194,7 @@ class LLM(ABC):
                 initial_results.append(result)
         else:
             for request in requests:
-                prompt, input_token_count = self.create_prompt(request, topk)
+                prompt = self.create_prompt(request, topk)
                 answer, rag_exec_summary = self.run_llm(prompt, logging)
                 rag_exec_summary.candidates = [
                     candidate.__dict__ for candidate in request.candidates[:topk]
