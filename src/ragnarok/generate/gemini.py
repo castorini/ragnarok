@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import os
 import google.generativeai as genai
+import google.api_core.exceptions as exceptions
 
 from ragnarok.data import RAGExecInfo, Request
 from ragnarok.generate.llm import LLM, PromptMode
@@ -93,7 +94,12 @@ class Gemini(LLM):
             ]
         )
 
-        response = chat_session.send_message(prompt).text
+        try:
+            response = chat_session.send_message(prompt).text
+        except exceptions.ResourceExhausted:
+            print("rate limit error encountered, waiting 60 seconds...")
+            time.sleep(60)
+            response = chat_session.send_message(prompt).text
 
         answers, rag_exec_response = gemini_post_processor(response, self._citation_length)
 
@@ -110,6 +116,8 @@ class Gemini(LLM):
             print(f"Response: {response}")
             print(f"Answers: {answers}")
             print(f"RAG Exec Info: {rag_exec_info}")
+        
+        time.sleep(0.5)
         
         return answers, rag_exec_info
 
