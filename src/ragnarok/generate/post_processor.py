@@ -199,6 +199,53 @@ class GPTPostProcessor:
 
         return answers, rag_exec_response
 
+def gemini_find_citations(sentence: str, citation_range: List[int] = list(range(20))
+    ) -> tuple[str, List[int]]:
+    # Regex pattern to find citations
+    pattern = re.compile(r"\[\d+\](?:,? ?)")
+
+    # Find all citations
+    citations = pattern.findall(sentence)
+    if citations:
+        # Remove citations from text
+        sentence = pattern.sub("", sentence).strip()
+
+        # Extract indices from citations
+        indices = [
+            int(re.search(r"\d+", citation).group()) - 1 for citation in citations
+        ]
+        citations = [index for index in indices if index in citation_range]
+    else:
+        matches = re.findall(r"\[[^\]]*\]", sentence)
+        if not matches:
+            return sentence, []
+        citations = []
+        for match in matches:
+            citation = match[1:-1]
+            try:
+                if "," in citation:
+                    flag = False
+                    for cit in citation.split(","):
+                        cit = int(cit) - 1
+                        if cit in citation_range:
+                            flag = True
+                            citations.append(int(cit))
+                    if flag:
+                        sentence = sentence.replace(match, "")
+                else:
+                    citation = int(citation) - 1
+                    if citation in citation_range:
+                        citations.append(citation)
+                        sentence = sentence.replace(match, "")
+            except:
+                print(f"Not a valid citation: {match}")
+
+    sentence = re.sub(" +", " ", sentence)
+    if len(sentence) > 3:
+        if sentence[-2] == " ":
+            sentence = sentence[:-2] + sentence[-1]
+    return sentence, citations
+
 def gemini_post_processor(response: str, citation_length: int) -> List[Dict[str, Any]]:
     # Remove all \n then split text into sentences.
     text_output = response.replace("\n", "")
@@ -214,31 +261,8 @@ def gemini_post_processor(response: str, citation_length: int) -> List[Dict[str,
 
     answers = []
     for sentence in sentences:
-
-        sentence = sentence + "."
-        if sentence.startswith(" "):
-            sentence = sentence[1:]
-            
-        citation_list = []
-        p1 = sentence.find("[")
-        p2 = sentence.find("]")
-        current_citations = []
-
-        while p1 != -1: 
-                
-            current_citations.extend(sentence[p1+1:p2].replace(" ", "").split(","))
-            for citation in current_citations:
-                # avoid empty citations
-                if citation:
-                    # avoid repeated citations
-                    if (not int(citation) in citation_list):
-                        citation_list.append(int(citation))
-            sentence = sentence[:p1-1] + sentence[p2+1:]
-                
-            p1 = sentence.find("[")
-            p2 = sentence.find("]")
-
-        answers.append(CitedSentence(text=sentence, citations=citation_list))
+        sentence_parsed, citations = gemini_find_citations(sentence, citation_range)
+        answers.append(CitedSentence(text=sentence_parsed, citations=citations))
 
     return answers, rag_exec_response
         
