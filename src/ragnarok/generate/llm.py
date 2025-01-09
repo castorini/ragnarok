@@ -195,7 +195,7 @@ class LLM(ABC):
         else:
             for request in requests:
                 prompt = self.create_prompt(request, topk)
-                answer, rag_exec_summary = self.run_llm(prompt, logging)
+                answer, rag_exec_summary = self.run_llm(prompt, logging, topk)
                 rag_exec_summary.candidates = [
                     candidate.__dict__ for candidate in request.candidates[:topk]
                 ]

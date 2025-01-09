@@ -149,8 +149,7 @@ def retrieve_and_generate(
             prompt_mode=prompt_mode,
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
-            key=api_key,
-            citation_length=citation_range
+            key=api_key
         )
     else:
         raise ValueError(f"Unsupported model: {generator_path}")

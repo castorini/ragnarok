@@ -138,6 +138,7 @@ class SafeOpenai(LLM):
         self,
         prompt: Union[str, List[Dict[str, str]]],
         logging: bool = False,
+        topk: int = 20,
     ) -> Tuple[str, RAGExecInfo]:
         model_key = "model"
         if logging:
@@ -155,7 +156,7 @@ class SafeOpenai(LLM):
             encoding = tiktoken.get_encoding("cl100k_base")
         if logging:
             print(f"Response: {response}")
-        answers, rag_exec_response = self._post_processor(response)
+        answers, rag_exec_response = self._post_processor(response, topk)
         if logging:
             print(f"Answers: {answers}")
         rag_exec_info = RAGExecInfo(

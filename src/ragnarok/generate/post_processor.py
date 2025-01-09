@@ -181,14 +181,14 @@ class GPTPostProcessor:
                 sentence = sentence[:-2] + sentence[-1]
         return sentence, citations
 
-    def __call__(self, response) -> List[Dict[str, Any]]:
+    def __call__(self, response, topk) -> List[Dict[str, Any]]:
         text_output = response
         # Remove all \nNote: and \nReferences: from the text
         text_output = re.sub(r"\nNote:.*", "", text_output)
         text_output = re.sub(r"\nReferences:.*", "", text_output)
         sentences = self.tokenizer.tokenize(text_output)
         answers = []
-        citation_range = list(range(20))
+        citation_range = list(range(1, topk))
         for sentence in sentences:
             sentence_parsed, citations = self._find_sentence_citations(
                 sentence, citation_range
@@ -246,7 +246,7 @@ def gemini_find_citations(sentence: str, citation_range: List[int] = list(range(
             sentence = sentence[:-2] + sentence[-1]
     return sentence, citations
 
-def gemini_post_processor(response: str, citation_length: int) -> List[Dict[str, Any]]:
+def gemini_post_processor(response: str, topk: int) -> List[Dict[str, Any]]:
     # Remove all \n then split text into sentences.
     text_output = response.replace("\n", "")
     sentences = text_output.split(".")
@@ -255,7 +255,7 @@ def gemini_post_processor(response: str, citation_length: int) -> List[Dict[str,
     if not sentences[-1]:
         sentences.pop()
 
-    citation_range = list(range(1, citation_length))
+    citation_range = list(range(1, topk))
 
     rag_exec_response = {"text": response, "citations": citation_range}
 

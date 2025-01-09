@@ -83,6 +83,7 @@ class Cohere(LLM):
         self,
         prompt: Union[str, List[Dict[str, Any]]],
         logging: bool = False,
+        topk: int = 20,
     ) -> Tuple[Any, RAGExecInfo]:
         query, top_k_docs = prompt[0]["query"], prompt[0]["context"]
         if logging:
