@@ -64,6 +64,7 @@ Most LLMs supported by VLLM/FastChat should additionally be supported by Ragnar√
 | command-r         | `command-r`                          |
 | Llama-3 8B Instruct | `meta-llama/Meta-Llama-3-8B-Instruct` |
 | Llama3-ChatQA-1.5 | `nvidia/Llama3-ChatQA-1.5` |
+| Gemini | `gemini-2.0-flash-thinking-exp` |
 
 
 ## ‚ú® References
