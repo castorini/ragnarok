@@ -181,14 +181,14 @@ class GPTPostProcessor:
                 sentence = sentence[:-2] + sentence[-1]
         return sentence, citations
 
-    def __call__(self, response) -> List[Dict[str, Any]]:
+    def __call__(self, response, topk) -> List[Dict[str, Any]]:
         text_output = response
         # Remove all \nNote: and \nReferences: from the text
         text_output = re.sub(r"\nNote:.*", "", text_output)
         text_output = re.sub(r"\nReferences:.*", "", text_output)
         sentences = self.tokenizer.tokenize(text_output)
         answers = []
-        citation_range = list(range(20))
+        citation_range = list(range(1, topk))
         for sentence in sentences:
             sentence_parsed, citations = self._find_sentence_citations(
                 sentence, citation_range
@@ -198,3 +198,72 @@ class GPTPostProcessor:
         rag_exec_response = {"text": response, "citations": citation_range}
 
         return answers, rag_exec_response
+
+def gemini_find_citations(sentence: str, citation_range: List[int] = list(range(20))
+    ) -> tuple[str, List[int]]:
+    # Regex pattern to find citations
+    pattern = re.compile(r"\[\d+\](?:,? ?)")
+
+    # Find all citations
+    citations = pattern.findall(sentence)
+    if citations:
+        # Remove citations from text
+        sentence = pattern.sub("", sentence).strip()
+
+        # Extract indices from citations
+        indices = [
+            int(re.search(r"\d+", citation).group()) - 1 for citation in citations
+        ]
+        citations = [index for index in indices if index in citation_range]
+    else:
+        matches = re.findall(r"\[[^\]]*\]", sentence)
+        if not matches:
+            return sentence, []
+        citations = []
+        for match in matches:
+            citation = match[1:-1]
+            try:
+                if "," in citation:
+                    flag = False
+                    for cit in citation.split(","):
+                        cit = int(cit) - 1
+                        if cit in citation_range:
+                            flag = True
+                            citations.append(int(cit))
+                    if flag:
+                        sentence = sentence.replace(match, "")
+                else:
+                    citation = int(citation) - 1
+                    if citation in citation_range:
+                        citations.append(citation)
+                        sentence = sentence.replace(match, "")
+            except:
+                print(f"Not a valid citation: {match}")
+
+    sentence = re.sub(" +", " ", sentence)
+    if len(sentence) > 3:
+        if sentence[-2] == " ":
+            sentence = sentence[:-2] + sentence[-1]
+    return sentence, citations
+
+def gemini_post_processor(response: str, topk: int) -> List[Dict[str, Any]]:
+    # Remove all \n then split text into sentences.
+    text_output = response.replace("\n", "")
+    sentences = text_output.split(".")
+    
+    # Avoids last entry being empty, which can cause errors later.
+    if not sentences[-1]:
+        sentences.pop()
+
+    citation_range = list(range(1, topk))
+
+    rag_exec_response = {"text": response, "citations": citation_range}
+
+    answers = []
+    for sentence in sentences:
+        sentence_parsed, citations = gemini_find_citations(sentence, citation_range)
+        answers.append(CitedSentence(text=sentence_parsed, citations=citations))
+
+    return answers, rag_exec_response
+        
+    

@@ -133,7 +133,7 @@ class OSLLM(LLM):
             assert False, "Failed run_llm_batched"
 
     def run_llm(
-        self, prompt: str, logging: bool = False, vllm: bool = True
+        self, prompt: str, logging: bool = False, vllm: bool = True, topk: int = 20,
     ) -> Tuple[str, int]:
         if logging:
             print(f"Prompt: {prompt}")

@@ -131,7 +131,7 @@ class RagnarokTemplates:
                 + self.sep
                 + f"Instruction: {self.get_instruction()}"
             )
-        elif "gpt" in model:
+        elif "gpt" in model.lower() or "gemini" in model.lower():
             user_input_context = (
                 f"Instruction: {self.get_instruction()}"
                 + self.sep
@@ -153,7 +153,7 @@ class RagnarokTemplates:
                 + f"Instruction: {self.get_instruction()}"
             )
 
-        if "gpt" in model:
+        if "gpt" in model.lower() or "gemini" in model.lower():
             messages = []
             system_message = (
                 self.system_message_gpt_no_cite
@@ -179,6 +179,8 @@ class RagnarokTemplates:
             return messages
         elif "chatqa" in model.lower():
             prompt = f"{self.system_message_chatqa}{self.sep}{self.input_context.format(context=str_context)}{self.sep}User: {user_input_context}"
+        # elif "gemini" in model.lower():
+        #     prompt = f"{self.system_message_chatqa}{self.sep}{self.input_context.format(context=str_context)}{self.sep}User input context: {user_input_context}"
         else:
             conv = get_conversation_template(model)
             system_message = (
