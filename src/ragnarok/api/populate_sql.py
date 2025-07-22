@@ -7,7 +7,7 @@ INIT_RATING = 1000
 conn = sqlite3.connect("elo.db")
 cursor = conn.cursor()
 
-retriever_options = ["bm25"]
+retriever_options = ["bm25", "misc"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
 llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 

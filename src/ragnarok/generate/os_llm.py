@@ -86,7 +86,6 @@ class OSLLM(LLM):
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
                 tensor_parallel_size=num_gpus,
-                max_model_len=108064,
                 ignore_patterns=ignore_patterns,
             )
             self._tokenizer = self._llm.get_tokenizer()

@@ -51,6 +51,7 @@ def query_model(
     # RANK_GPT4O = "gpt-4o"
     # RANK_GPT4 = "gpt-4"
     # RANK_GPT35_TURBO = "gpt-3.5-turbo"
+    # MISC = "misc"
 
     try:
         retriever_path = RetrievalMethod.from_string(retriever_path.lower())

@@ -33,6 +33,7 @@ class RetrievalMethod(Enum):
     RANK_GPT4O = "gpt-4o"
     RANK_GPT4 = "gpt-4"
     RANK_GPT35_TURBO = "gpt-3.5-turbo"
+    MISC = "misc"
 
     def __str__(self):
         return self.value

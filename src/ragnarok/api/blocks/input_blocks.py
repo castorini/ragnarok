@@ -1,7 +1,7 @@
 import gradio as gr
 
 # RAG pipeline options
-retriever_options = ["bm25"]
+retriever_options = ["bm25", "misc"]
 reranker_options = ["rank_zephyr", "rank_vicuna", "gpt-4o", "unspecified"]
 llm_options = ["command-r", "command-r-plus", "gpt-4o", "gpt-35-turbo", "gpt-4"]
 
