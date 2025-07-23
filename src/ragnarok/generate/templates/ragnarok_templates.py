@@ -1,6 +1,5 @@
 from typing import List
 
-from fastchat.model import get_conversation_template
 from ftfy import fix_text
 
 from ragnarok.generate.llm import PromptMode
@@ -180,7 +179,6 @@ class RagnarokTemplates:
         elif "chatqa" in model.lower():
             prompt = f"{self.system_message_chatqa}{self.sep}{self.input_context.format(context=str_context)}{self.sep}User: {user_input_context}"
         else:
-            conv = get_conversation_template(model)
             system_message = (
                 self.system_message_gpt_no_cite
                 if self.prompt_mode
@@ -190,10 +188,23 @@ class RagnarokTemplates:
                 ]
                 else self.system_message_gpt
             )
-            conv.set_system_message(system_message)
-            conv.append_message(conv.roles[0], user_input_context)
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt()
+            # conv.set_system_message(system_message)
+            # conv.append_message(conv.roles[0], user_input_context)
+            # conv.append_message(conv.roles[1], None)
+            messages = []
+            messages.append(
+                {
+                    "role": "system",
+                    "content": system_message,
+                }
+            )
+            messages.append(
+                {
+                    "role": "user",
+                    "content": fix_text(user_input_context),
+                }
+            )
+            return messages
         prompt = fix_text(prompt)
         return prompt
 

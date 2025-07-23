@@ -112,6 +112,8 @@ class OSLLM(LLM):
             )
             outputs = self._llm.generate(prompts, sampling_params)
             responses = [output.outputs[0].text for output in outputs]
+            print("Cleaning responses")
+            responses = [self._clean_response(response) for response in responses]
             if logging:
                 for response in responses:
                     print(f"Response: {response}")
@@ -161,7 +163,7 @@ class OSLLM(LLM):
 
     def create_prompt(self, request: Request, topk: int) -> Tuple[str, int]:
         query = request.query.text
-        max_length = (self._context_size - 200) // topk
+        max_length = (self._context_size - 400) // topk
         while True:
             rank = 0
             context = []
@@ -183,11 +185,17 @@ class OSLLM(LLM):
             ]:
                 ragnarok_template = RagnarokTemplates(self._prompt_mode)
                 messages = ragnarok_template(query, context, self._name)
+                prompt = self._tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    enable_thinking=True,
+                )
             else:
                 raise ValueError(
                     f"unsupported prompt mode for GPT models: {self._prompt_mode}, expected one of {PromptMode.CHATQA}, {PromptMode.RAGNAROK_V2}, {PromptMode.RAGNAROK_V3}, {PromptMode.RAGNAROK_V4}, {PromptMode.RAGNAROK_V4_NO_CITE}."
                 )
-            num_tokens = self.get_num_tokens(messages)
+            num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
             else:
@@ -196,7 +204,7 @@ class OSLLM(LLM):
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
                     // (topk * 4),
                 )
-        return messages, self.get_num_tokens(messages)
+        return prompt, self.get_num_tokens(prompt)
 
     def create_prompt_batched(
         self,

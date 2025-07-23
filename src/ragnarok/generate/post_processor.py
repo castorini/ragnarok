@@ -134,7 +134,7 @@ class GPTPostProcessor:
         self.tokenizer = SpacyTokenizer(model="en_core_web_trf")
 
     def _find_sentence_citations(
-        self, sentence: str, citation_range: List[int] = list(range(20))
+        self, sentence: str, citation_range: List[int] = list(range(50))
     ) -> tuple[str, List[int]]:
         # Regex pattern to find citations
         pattern = re.compile(r"\[\d+\](?:,? ?)")
@@ -188,7 +188,7 @@ class GPTPostProcessor:
         text_output = re.sub(r"\nReferences:.*", "", text_output)
         sentences = self.tokenizer.tokenize(text_output)
         answers = []
-        citation_range = list(range(20))
+        citation_range = list(range(50))
         for sentence in sentences:
             sentence_parsed, citations = self._find_sentence_citations(
                 sentence, citation_range

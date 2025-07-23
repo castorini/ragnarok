@@ -102,7 +102,11 @@ def retrieve_and_generate(
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
         )
-    elif "llama" in generator_path.lower() or "mistral" in generator_path.lower():
+    elif (
+        "llama" in generator_path.lower()
+        or "mistral" in generator_path.lower()
+        or "qwen" in generator_path.lower()
+    ):
         agent = OSLLM(
             model=generator_path,
             context_size=context_size,

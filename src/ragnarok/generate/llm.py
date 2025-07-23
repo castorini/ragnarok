@@ -214,6 +214,8 @@ class LLM(ABC):
         return self._output_token_estimate
 
     def _clean_response(self, response: str) -> str:
+        if "</think>" in response:
+            response = response.split("</think>")[-1].strip()
         new_response = fix_text(response)
         return new_response
 
