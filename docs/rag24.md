@@ -100,7 +100,7 @@ You should see the following output:
 ```
 
 
-We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/retrieve_results/BM25).
+We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/rag24/retrieve_results/BM25).
 
 ## Reranking - RankLLM - RankZephyr-Rho
 
@@ -124,7 +124,7 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_
 ```
 
 This should create both TREC run files and JSONL files after each pass and the final reranked JSONL files can serve as input to our augmented generation component. 
-We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/retrieve_results/RANK_ZEPHYR_RHO).
+We host these files for the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/rag24/retrieve_results/RANK_ZEPHYR_RHO).
 
 These files can be moved to `ragnarok`'s retrieve_results (in either BM25/RANK_ZEPHYR_RHO)
 
@@ -309,7 +309,7 @@ An example line from the augmented generation step output is shown below:
 }
 ```
 
-We host these files for subsets of the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/results/RANK_ZEPHYR_RHO). 
+We host these files for subsets of the dev sets i.e., TREC-Researchy 24 and TREC-RAGgy 24 [here](https://github.com/castorini/ragnarok_data/tree/main/rag24/results/RANK_ZEPHYR_RHO). 
 We shall provide larger subsets after some prompt refinements.
 We encourage participants to run the full pipelines on the entire dev sets with caution as the generation step can be expensive.
 

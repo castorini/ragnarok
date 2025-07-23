@@ -1,6 +1,6 @@
-# Ragnarök: End-to-end RAG Baselines for TREC-RAG 25
+# Ragnarök: RAG Baselines for TREC-RAG 25
 
-This document describes the end-to-end retrieval-augmented generation (RAG) baselines for the TREC-RAG 25 test set. All systems are grounded on the MS MARCO V2.1 segmented doc corpus curated used in the TREC 2025 RAG Track. The baselines are based on [Anserini's BM25 first-stage retrieval](https://github.com/castorini/anserini) followed by [RankLLM's multi-step RankQwen](https://github.com/castorini/rank_llm) reranking and finally, augmented-generation with one of OpenAI's GPT-4o, Cohere's Command R+ or Meta's LLaMA-3.1 (8B + 70B). Note that the reranking step is optional and can be skipped if you only want to use the first-stage BM25 retrieval. The generation step can also be skipped if you only plan to submit systems to the (R)etriaval subtask.
+This document describes the end-to-end retrieval-augmented generation (RAG) baselines for the TREC-RAG 25 test set. All systems are grounded on the MS MARCO V2.1 segmented doc corpus curated used in the TREC 2025 RAG Track. The baselines are based on [Anserini's BM25 first-stage retrieval](https://github.com/castorini/anserini) followed by [RankLLM's multi-step RankQwen](https://github.com/castorini/rank_llm) reranking. Note that the reranking step is optional and can be skipped if you only want to use the first-stage BM25 retrieval. The generation step can also be skipped if you only plan to submit systems to the (R)etriaval subtask.
 
 ## Retrieval - BM25
 
@@ -94,3 +94,23 @@ You should see the following output:
 ```bash
 105 runs/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag25.test_top100.jsonl
 ```
+
+## Reranking - RankLLM - RankQwen
+
+We can use RankLLM to run RankQwen on the reranker request files generated in the previous step. The following commands show how to run RankLLM:
+
+```bash
+RANK_LLM=<path-to-rank-llm>
+cp runs/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag25.test_top100.jsonl ${RANK_LLM}/retrieve_results/BM25/
+cd ${RANK_LLM}
+pip3 install -e .
+```
+
+Let's run inference!
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=MODEL_PATH --top_k_candidates=100 --dataset=msmarco-v2.1-doc-segmented.bm25.rag25.test --retrieval_method=bm25 --prompt_mode=rank_GPT --context_size=4096 --variable_passages --num_passes=3 --vllm_batched
+```
+
+This should create both TREC run files and JSONL files after each pass and the final reranked JSONL files can serve as input to our augmented generation component. 
+We host these files for the baselines [here](https://github.com/castorini/ragnarok_data/tree/main/rag25/retrieve_results/RANK_QWEN).
