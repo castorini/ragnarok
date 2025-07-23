@@ -116,6 +116,135 @@ This should create both TREC run files and JSONL files after each pass and the f
 We host these files for the baselines [here](https://github.com/castorini/ragnarok_data/tree/main/rag25/retrieve_results/RANK_QWEN).
 
 
+### Augmented Generation - QWEN3
+
+
+The following commands show how to run the augmented generation step with Qwen3 using topk=20:
+
+```bash
+
+```
+
+An example line from the augmented generation step output is shown below:
+
+```bash
+{
+    "metadata": {
+        "team_id": "organizer",
+        "run_id": "fs_rank-qwen3-32b_ag-qwen3-32b",
+        "type": "automatic",
+        "narrative_id": "2",
+        "narrative": "I'm seeking to understand the causes of climate change and global warming, their effects on humanity, the environment, and the economy, and how human actions and natural processes contribute. Additionally, I'd like to learn about global governmental responses and the evidence supporting both the impacts and potential solutions."
+    },
+    "references": [
+        "msmarco_v2.1_doc_00_1062374885#2_1925315239",
+        "msmarco_v2.1_doc_36_614618375#3_1234312863",
+        "msmarco_v2.1_doc_36_614618375#1_1234308302",
+        "msmarco_v2.1_doc_16_3087352975#2_3408418830",
+        "msmarco_v2.1_doc_18_1187903882#1_1339847362",
+        "msmarco_v2.1_doc_18_1928457235#2_2169448575",
+        "msmarco_v2.1_doc_16_2002834204#1_2225541437",
+        "msmarco_v2.1_doc_06_731406620#1_1316694667",
+        "msmarco_v2.1_doc_51_1485727313#1_3030047249",
+        "msmarco_v2.1_doc_48_1098012319#4_1978258123",
+        "msmarco_v2.1_doc_39_186620492#14_371909158",
+        "msmarco_v2.1_doc_05_1593214968#2_3045864222"
+    ],
+    "answer": [
+        {
+            "text": "Human activities, particularly fossil fuel combustion, deforestation, and industrial processes, are the primary drivers of climate change and global warming, with greenhouse gas (GHG) emissions amplifying the natural greenhouse effect.",
+            "citations": [
+                0,
+                3,
+                4
+            ]
+        },
+        {
+            "text": "Burning fossil fuels accounts for over 90% of CO₂ and methane emissions, while land-use changes like deforestation further elevate atmospheric CO₂ levels.",
+            "citations": [
+                3,
+                4
+            ]
+        },
+        {
+            "text": "Scientific consensus, supported by the IPCC and 97% of peer-reviewed studies, confirms that human activities are the dominant cause of observed warming since 1950, with natural factors (e.g., solar activity, volcanic eruptions) having a negligible or cooling effect.",
+            "citations": [
+                5,
+                6
+            ]
+        },
+        {
+            "text": "Oxygen isotope analysis provides a \"smoking gun,\" fingerprinting fossil fuel-derived CO₂ as the source of increased atmospheric concentrations.",
+            "citations": [
+                1
+            ]
+        },
+        {
+            "text": "Climate change impacts include rising global temperatures (1.4°F increase since 1900), accelerated Arctic warming, sea level rise, extreme weather events (heatwaves, storms), and ecosystem disruptions (species extinction, coral reef die-offs).",
+            "citations": [
+                3,
+                4,
+                8
+            ]
+        },
+        {
+            "text": "Human health and economies face risks such as food insecurity, water scarcity, displacement, and economic losses, disproportionately affecting vulnerable populations.",
+            "citations": [
+                3,
+                10
+            ]
+        },
+        {
+            "text": "Economic costs are projected to escalate if warming exceeds 2–3°C, with negative impacts outweighing potential benefits.",
+            "citations": [
+                0,
+                2
+            ]
+        },
+        {
+            "text": "   Governmental responses include international agreements (e.g., Paris Agreement) and policies to reduce emissions, though implementation varies.",
+            "citations": []
+        },
+        {
+            "text": "Solutions emphasized in scientific literature include transitioning to renewable energy, carbon capture, and reforestation to mitigate emissions.",
+            "citations": [
+                5,
+                11
+            ]
+        },
+        {
+            "text": "Climate models show that without drastic emission reductions, warming will persist for centuries due to GHG longevity in the atmosphere.",
+            "citations": [
+                7
+            ]
+        },
+        {
+            "text": "Evidence for human causation includes physical climate understanding, historical temperature anomalies, and the inability of natural factors alone to explain observed warming.",
+            "citations": [
+                6
+            ]
+        },
+        {
+            "text": "While some natural feedbacks (e.g., ice-albedo effect) amplify warming, human activities remain the central driver.",
+            "citations": [
+                4
+            ]
+        },
+        {
+            "text": "Addressing climate change requires urgent, coordinated action to limit warming to 1.5°C by 2040, as exceeding this threshold risks irreversible ecological and socioeconomic consequences.",
+            "citations": [
+                9,
+                11
+            ]
+        }
+    ]
+}
+```
+
+We host these files [here](https://github.com/castorini/ragnarok_data/tree/main/rag25/results/RANK_QWEN). 
+We shall provide larger subsets after some prompt refinements.
+
+
 ### Verifying AG/RAG Output
 
 We recommend running `src/ragnarok/scripts/check_trec_rag25_gen.py` to verify the output adheres to the expected format. This is our checking script for RAG/AG tracks. You can see if your systems conform to it. The script will maintain an errorlog and in the case of some cases also attempt to fix warnings (too long -> we remove sentences from the end, dupe citations -> we remove them, etc.). You’ll get a fixed file if the errors are not major that you can resubmit but please go through all the warnings and error messages to make sure you and the script are doing things *as expected*!
