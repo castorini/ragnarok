@@ -1,6 +1,6 @@
 # Ragnarök: End-to-end RAG Baselines for TREC-RAG 25
 
-This document describes the end-to-end retrieval-augmented generation (RAG) baselines for the TREC-RAG 25 test set. All systems are grounded on the MS MARCO V2.1 segmented doc corpus curated used in the TREC 2025 RAG Track. The baselines are based on [Anserini's BM25 first-stage retrieval](https://github.com/castorini/anserini) followed by [RankLLM's multi-step RankQwen](https://github.com/castorini/rank_llm) reranking and finally, augmented-generation with one of Open Source Qwen 3 32B. Note that the reranking step is optional and can be skipped if you only want to use the first-stage BM25 retrieval. The generation step can also be skipped if you only plan to submit systems to the (R)etriaval subtask.
+This document describes the end-to-end retrieval-augmented generation (RAG) baselines for the TREC-RAG 25 test set. All systems are grounded on the MS MARCO V2.1 segmented doc corpus curated used in the TREC 2025 RAG Track. The baselines are based on [Anserini's BM25 first-stage retrieval](https://github.com/castorini/anserini) followed by [RankLLM's multi-step RankQwen](https://github.com/castorini/rank_llm) reranking and finally, augmented-generation with Open Source Qwen 3 32B. Note that the reranking step is optional and can be skipped if you only want to use the first-stage BM25 retrieval. The generation step can also be skipped if you only plan to submit systems to the (R)etriaval subtask.
 
 ## Retrieval - BM25
 
