@@ -278,3 +278,16 @@ An example line from the official augmented generation step output is shown belo
 
 We host these files [here](https://github.com/castorini/ragnarok_data/tree/main/rag25/results/MISC). 
 We shall provide larger subsets after some prompt refinements.
+
+### Converting to AG/RAG Output Format
+To ensure compatibility with the expected TREC RAG 2025 format, it is recommended to use the `src/ragnarok/scripts/convert_to_trec25_format.py` script to convert generation results produced by Ragnarök.
+```bash
+python src/ragnarok/scripts/convert_to_trec25_format.py --input_file <path/to/result_file> --output_file <path/to/output_file> --prompt_file <path/to/exec_summary_file>
+```
+
+### Verifying AG/RAG Output
+
+We recommend running `src/ragnarok/scripts/check_trec_rag25_gen.py` to verify the output adheres to the expected format. This is our checking script for RAG/AG tracks. You can see if your systems conform to it. The script will maintain an errorlog and in the case of some cases also attempt to fix warnings (too long -> we remove sentences from the end, dupe citations -> we remove them, etc.). You’ll get a fixed file if the errors are not major that you can resubmit but please go through all the warnings and error messages to make sure you and the script are doing things *as expected*!
+```bash
+python3 src/ragnarok/scripts/check_trec_rag25_gen.py --input ragnarok_data/rag25/results/MISC/baseline_rag25.test_Qwen3-32B_16384_20_ragnarok_v4_rankqwen3_32b.rag25.jsonl --format 1 --topics trec_rag_2025_queries.jsonl
+```
