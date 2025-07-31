@@ -95,7 +95,7 @@ You should see the following output:
 105 runs/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag25.test_top100.jsonl
 ```
 
-For the final AG baselines, we employ a hybrid retrieval approach combining [Splade-v3](https://github.com/castorini/anserini/blob/master/docs/regressions/regressions-msmarco-v2.1-doc-segmented.splade-v3.cached.md) for sparse retrieval and [Arctic embed-l](https://github.com/castorini/pyserini/blob/master/docs/experiments-msmarco-v2.1-arctic.md) for dense retrieval.
+For the final AG baselines, we employ a hybrid retrieval approach combining [Splade-v3](https://github.com/castorini/anserini/blob/master/docs/regressions/regressions-msmarco-v2.1-doc-segmented.splade-v3.cached.md) for sparse retrieval and [Arctic embed-l](https://github.com/castorini/pyserini/blob/master/docs/experiments-msmarco-v2.1-arctic.md) for dense retrieval. We will soon add exact command details here.
 
 ## Reranking - RankLLM - RankQwen3-32B
 
