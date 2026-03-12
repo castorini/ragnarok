@@ -17,7 +17,7 @@ Ragnarök is a battleground for the best retrieval-augmented generation (RAG) mo
 Create a new conda environment and install the dependencies:
 
 ```bash
-conda create -n ragnarok python=3.10 -y
+conda create -n ragnarok python=3.11 -y
 conda activate ragnarok
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 # For CUDA 11.8
 pip install -r requirements.txt

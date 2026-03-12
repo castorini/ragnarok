@@ -7,8 +7,8 @@
 ## Language and Runtime
 - Primary language: Python.
 - Packaging uses `pyproject.toml` + `setuptools` (`src` layout).
-- Required Python version is `>=3.10` (`pyproject.toml`).
-- README examples assume a Python 3.10 conda environment.
+- Required Python version is `>=3.11` (`pyproject.toml`).
+- README examples assume a Python 3.11 conda environment.
 
 ## Repository Structure
 - `src/ragnarok/`: core package code.
@@ -32,8 +32,8 @@
 - Install hooks once per clone: `pre-commit install`.
 - Run all checks before PR: `pre-commit run --all-files`.
 - Configured tools in `.pre-commit-config.yaml`:
-  - `black` (Python 3.10)
-  - `isort --profile=black` (Python 3.10)
+  - `black` (Python 3.11)
+  - `isort --profile=black` (Python 3.11)
   - `flake8` (currently configured to ignore `E501` and select `F401`).
 
 ## Testing

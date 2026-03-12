@@ -17,7 +17,7 @@ classifiers = [
 ]
 keywords = ["Retrieval-Augmented Generation", "RAG", "OpenAI", "Cohere", "TREC", "LLM"]
 dynamic = ["dependencies"]
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
