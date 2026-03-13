@@ -189,15 +189,17 @@ mode.
 
 If you use Ragnarök, please cite the following:
 
-[[2406.16828] Ragnarök: A Reusable RAG Framework and Baselines for TREC 2024 Retrieval-Augmented Generation Track](https://arxiv.org/abs/2406.16828)
+Ragnarök: A Reusable RAG Framework and Baselines for TREC 2024 Retrieval-Augmented Generation Track. Proceedings of the 47th European Conference on Information Retrieval (ECIR 2025), Part I.
 
 <!-- {% raw %} -->
 ```
-@ARTICLE{pradeep2024ragnarok,
-  title   = {{Ragnarök}: A Reusable RAG Framework and Baselines for TREC 2024 Retrieval-Augmented Generation Track},
-  author  = {Ronak Pradeep and Nandan Thakur and Sahel Sharifymoghaddam and Eric Zhang and Ryan Nguyen and Daniel Campos and Nick Craswell and Jimmy Lin},
-  year    = {2024},
-  journal = {arXiv:2406.16828},
+@INPROCEEDINGS{pradeep2025ragnarok,
+  author    = {Ronak Pradeep and Nandan Thakur and Sahel Sharifymoghaddam and Eric Zhang and Ryan Nguyen and Daniel Campos and Nick Craswell and Jimmy Lin},
+  title     = {{Ragnarök}: A Reusable {RAG} Framework and Baselines for {TREC} 2024 {Retrieval-Augmented} {Generation} {Track}},
+  booktitle = {Proceedings of the 47th European Conference on Information Retrieval (ECIR 2025), Part I},
+  pages     = {132--148},
+  year      = {2025},
+  address_  = {Lucca, Italy}
 }
 ```
 
