@@ -1,3 +1,4 @@
+import asyncio
 import time
 from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
@@ -104,6 +105,12 @@ class SafeOpenai(LLM):
                 f"{', '.join(self.SUPPORTED_REASONING_EFFORTS)}."
             )
         self._reasoning_effort = reasoning_effort
+        self._api_type = api_type
+        self._api_base = api_base
+        self._api_version = api_version
+        self._async_client = None
+        self._async_client_key_id = None
+        self._async_key_lock = asyncio.Lock()
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
         self.use_azure_ai = False
@@ -114,6 +121,47 @@ class SafeOpenai(LLM):
             openai.api_type = api_type
             openai.api_base = api_base
             self.use_azure_ai = True
+
+    def _create_async_client(self, key_id: int) -> Any:
+        api_key = self._keys[key_id]
+        if self.use_azure_ai:
+            client_cls = getattr(openai, "AsyncAzureOpenAI", None)
+            if client_cls is None:
+                from openai import AsyncAzureOpenAI
+
+                client_cls = AsyncAzureOpenAI
+            return client_cls(
+                api_key=api_key,
+                api_version=self._api_version,
+                azure_endpoint=self._api_base,
+            )
+        client_cls = getattr(openai, "AsyncOpenAI", None)
+        if client_cls is None:
+            from openai import AsyncOpenAI
+
+            client_cls = AsyncOpenAI
+        client_kwargs: Dict[str, Any] = {"api_key": api_key}
+        if self._api_base:
+            client_kwargs["base_url"] = self._api_base
+        return client_cls(**client_kwargs)
+
+    async def _get_async_client(self) -> Any:
+        async with self._async_key_lock:
+            if (
+                self._async_client is None
+                or self._async_client_key_id != self._cur_key_id
+            ):
+                self._async_client = self._create_async_client(self._cur_key_id)
+                self._async_client_key_id = self._cur_key_id
+            return self._async_client
+
+    async def _rotate_async_key(self) -> Any:
+        async with self._async_key_lock:
+            self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
+            openai.api_key = self._keys[self._cur_key_id]
+            self._async_client = self._create_async_client(self._cur_key_id)
+            self._async_client_key_id = self._cur_key_id
+            return self._async_client
 
     class CompletionMode(Enum):
         UNSPECIFIED = 0
@@ -169,6 +217,84 @@ class SafeOpenai(LLM):
         if self._reasoning_effort is not None:
             completion_params["reasoning_effort"] = self._reasoning_effort
         response = self._call_completion(**completion_params)
+        message = response.choices[0].message
+        response_text = message.content or ""
+        reasoning = self._extract_reasoning_from_message(message)
+        tagged_reasoning, cleaned_response = self._extract_reasoning_from_text(
+            response_text
+        )
+        if reasoning is None:
+            reasoning = tagged_reasoning
+        try:
+            encoding = tiktoken.get_encoding(self._model)
+        except:
+            encoding = tiktoken.get_encoding("cl100k_base")
+        if logging:
+            print(f"Response: {cleaned_response}")
+        answers, rag_exec_response = self._post_processor(cleaned_response)
+        if logging:
+            print(f"Answers: {answers}")
+        rag_exec_info = RAGExecInfo(
+            prompt=prompt,
+            response=rag_exec_response,
+            input_token_count=self.get_num_tokens(prompt),
+            output_token_count=sum([len(ans.text) for ans in answers]),
+            reasoning=reasoning,
+            candidates=[],
+        )
+        if logging:
+            print(f"RAG Exec Info: {rag_exec_info}")
+        return answers, rag_exec_info
+
+    async def _call_completion_async(
+        self,
+        *args,
+        completion_mode: CompletionMode,
+        reduce_length=False,
+        **kwargs,
+    ) -> Any:
+        while True:
+            try:
+                client = await self._get_async_client()
+                if completion_mode == self.CompletionMode.CHAT:
+                    completion = await client.chat.completions.create(
+                        *args, **kwargs, timeout=30
+                    )
+                elif completion_mode == self.CompletionMode.TEXT:
+                    completion = await client.completions.create(*args, **kwargs)
+                else:
+                    raise ValueError(
+                        "Unsupported completion mode: %V" % completion_mode
+                    )
+                break
+            except Exception as e:
+                print(str(e))
+                if "This model's maximum context length is" in str(e):
+                    print("reduce_length")
+                    return "ERROR::reduce_length"
+                if "The response was filtered" in str(e):
+                    print("The response was filtered")
+                    return "ERROR::The response was filtered"
+                await self._rotate_async_key()
+                await asyncio.sleep(0.1)
+        return completion
+
+    async def async_run_llm(
+        self,
+        prompt: Union[str, List[Dict[str, str]]],
+        logging: bool = False,
+    ) -> Tuple[str, RAGExecInfo]:
+        if logging:
+            print(f"Prompt: {prompt}")
+        completion_params: Dict[str, Any] = {
+            "messages": prompt,
+            "temperature": 0.1,
+            "completion_mode": SafeOpenai.CompletionMode.CHAT,
+            "model": self._model,
+        }
+        if self._reasoning_effort is not None:
+            completion_params["reasoning_effort"] = self._reasoning_effort
+        response = await self._call_completion_async(**completion_params)
         message = response.choices[0].message
         response_text = message.content or ""
         reasoning = self._extract_reasoning_from_message(message)

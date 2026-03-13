@@ -1,3 +1,4 @@
+import asyncio
 import random
 import re
 from abc import ABC, abstractmethod
@@ -211,6 +212,72 @@ class LLM(ABC):
             cleaned_result = remove_unused_references(result)
             results.append(cleaned_result)
         return results
+
+    async def async_run_llm(
+        self, prompt: Union[str, List[Dict[str, Any]]], logging: bool = False
+    ) -> Tuple[Any, int]:
+        return await asyncio.to_thread(self.run_llm, prompt, logging)
+
+    async def async_answer(
+        self,
+        request: Request,
+        topk: int,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+    ) -> Result:
+        return (
+            await self.async_answer_batch(
+                [request],
+                topk,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+            )
+        )[0]
+
+    async def async_answer_batch(
+        self,
+        requests: List[Request],
+        topk: int,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        vllm: bool = False,
+        max_concurrency: int = 8,
+    ) -> List[Result]:
+        if vllm:
+            return await asyncio.to_thread(
+                self.answer_batch,
+                requests,
+                topk,
+                shuffle_candidates,
+                logging,
+                vllm,
+            )
+
+        if shuffle_candidates:
+            for request in requests:
+                request.candidates[:topk] = random.sample(
+                    request.candidates[:topk],
+                    len(request.candidates[:topk]),
+                )
+
+        semaphore = asyncio.Semaphore(max(1, max_concurrency))
+
+        async def answer_one(request: Request) -> Result:
+            async with semaphore:
+                prompt, _input_token_count = self.create_prompt(request, topk)
+                answer, rag_exec_summary = await self.async_run_llm(prompt, logging)
+                rag_exec_summary.candidates = [
+                    candidate.__dict__ for candidate in request.candidates[:topk]
+                ]
+                result = Result(
+                    query=request.query,
+                    references=[cand.docid for cand in request.candidates[:topk]],
+                    answer=answer,
+                    rag_exec_summary=rag_exec_summary,
+                )
+                return remove_unused_references(result)
+
+        return await asyncio.gather(*(answer_one(request) for request in requests))
 
     def num_output_tokens(self) -> int:
         return self._output_token_estimate

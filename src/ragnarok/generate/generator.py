@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import List
@@ -92,6 +93,65 @@ class RAG:
             topk=effective_topk,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
+        )
+        return results[0]
+
+    async def async_answer_batch(
+        self,
+        requests: List[Request],
+        topk: int = 20,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        vllm: bool = False,
+        max_concurrency: int = 8,
+    ) -> List[Result]:
+        if vllm:
+            return await self._agent.async_answer_batch(
+                requests,
+                topk,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+                vllm=vllm,
+                max_concurrency=max_concurrency,
+            )
+
+        semaphore = asyncio.Semaphore(max(1, max_concurrency))
+
+        async def answer_one(request: Request) -> Result:
+            async with semaphore:
+                return await self._agent.async_answer(
+                    request,
+                    topk=min(topk, len(request.candidates)),
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                )
+
+        return await asyncio.gather(*(answer_one(request) for request in requests))
+
+    async def async_answer(
+        self,
+        request: Request,
+        topk: int | None = None,
+        rank_start: int = 0,
+        rank_end: int | None = 20,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        max_concurrency: int = 8,
+    ) -> Result:
+        if rank_start != 0:
+            raise ValueError(
+                "RAG.async_answer() does not support rank_start != 0. Use topk or "
+                "rank_end to control how many candidates are included."
+            )
+        effective_topk = topk if topk is not None else rank_end
+        if effective_topk is None:
+            effective_topk = 20
+        results = await self.async_answer_batch(
+            requests=[request],
+            topk=effective_topk,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            max_concurrency=max_concurrency,
         )
         return results[0]
 

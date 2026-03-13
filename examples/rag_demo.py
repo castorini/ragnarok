@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Runnable inline-hit RAG demo for Ragnarok."""
+"""Async-first inline-hit RAG demo for Ragnarok."""
 
 import argparse
+import asyncio
 from textwrap import fill
 
 from ragnarok.data import Candidate, Query, Request, Result
@@ -182,9 +183,9 @@ def print_result(
         print(fill(result.rag_exec_summary.reasoning, width=width))
 
 
-def main() -> None:
+async def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run the default inline-hit RAG demo for Ragnarok."
+        description="Run the default async inline-hit RAG demo for Ragnarok."
     )
     parser.add_argument(
         "--model",
@@ -215,6 +216,12 @@ def main() -> None:
         type=int,
         default=512,
         help="Maximum number of generated output tokens.",
+    )
+    parser.add_argument(
+        "--max_concurrency",
+        type=int,
+        default=8,
+        help="Maximum number of concurrent requests for async-capable backends.",
     )
     parser.add_argument(
         "--num_gpus",
@@ -262,16 +269,18 @@ def main() -> None:
 
     request = create_sample_request()
     agent = build_agent(args)
-    rag = RAG(agent=agent)
+    rag = RAG(agent=agent, run_id="demo-run")
 
     print(
-        f"Running Ragnarok RAG demo with model={args.model} "
-        f"prompt_mode={args.prompt_mode} topk={args.topk}"
+        f"Running Ragnarok async RAG demo with model={args.model} "
+        f"prompt_mode={args.prompt_mode} topk={args.topk} "
+        f"max_concurrency={args.max_concurrency}"
     )
-    result = rag.answer(
+    result = await rag.async_answer(
         request,
         topk=min(args.topk, len(request.candidates)),
         logging=args.print_prompt or args.print_raw,
+        max_concurrency=args.max_concurrency,
     )
     print()
     print_result(
@@ -285,4 +294,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

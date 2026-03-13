@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import sys
@@ -16,13 +17,44 @@ class DummyLLM(LLM):
         raise NotImplementedError
 
     def create_prompt(self, request, topk):
-        raise NotImplementedError
+        return "prompt", 1
 
     def get_num_tokens(self, prompt):
         return 0
 
     def cost_per_1k_token(self, input_token):
         return 0
+
+
+class AsyncRecordingLLM(DummyLLM):
+    def __init__(self) -> None:
+        super().__init__(
+            model="dummy",
+            context_size=1024,
+            prompt_mode=PromptMode.CHATQA,
+        )
+
+    def run_llm(self, prompt, logging=False):
+        return [], 0
+
+    async def async_run_llm(self, prompt, logging=False):
+        delay = (
+            0.03 if prompt == "prompt-q1" else 0.01 if prompt == "prompt-q2" else 0.02
+        )
+        await asyncio.sleep(delay)
+        qid = prompt.removeprefix("prompt-")
+        return (
+            [type("Sentence", (), {"text": f"Answer for {qid}.", "citations": [0]})()],
+            RAGExecInfo(
+                prompt=prompt,
+                response="response",
+                input_token_count=12,
+                output_token_count=4,
+            ),
+        )
+
+    def create_prompt(self, request, topk):
+        return f"prompt-{request.query.qid}", 1
 
 
 class TestReasoningSupport(unittest.TestCase):
@@ -51,6 +83,69 @@ class TestReasoningSupport(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             rag.answer(request=MagicMock(), rank_start=1)
+
+    def test_rag_async_answer_rejects_nonzero_rank_start(self):
+        rag = RAG(agent=MagicMock())
+
+        with self.assertRaises(ValueError):
+            asyncio.run(rag.async_answer(request=MagicMock(), rank_start=1))
+
+    def test_async_answer_batch_preserves_request_order(self):
+        llm = AsyncRecordingLLM()
+        requests = [
+            type(
+                "RequestLike",
+                (),
+                {
+                    "query": Query(text="q1", qid="q1"),
+                    "candidates": [
+                        type(
+                            "CandidateLike",
+                            (),
+                            {"docid": "d1", "doc": {"segment": "p1"}},
+                        )()
+                    ],
+                },
+            )(),
+            type(
+                "RequestLike",
+                (),
+                {
+                    "query": Query(text="q2", qid="q2"),
+                    "candidates": [
+                        type(
+                            "CandidateLike",
+                            (),
+                            {"docid": "d2", "doc": {"segment": "p2"}},
+                        )()
+                    ],
+                },
+            )(),
+            type(
+                "RequestLike",
+                (),
+                {
+                    "query": Query(text="q3", qid="q3"),
+                    "candidates": [
+                        type(
+                            "CandidateLike",
+                            (),
+                            {"docid": "d3", "doc": {"segment": "p3"}},
+                        )()
+                    ],
+                },
+            )(),
+        ]
+
+        results = asyncio.run(
+            llm.async_answer_batch(requests, topk=1, max_concurrency=3)
+        )
+
+        self.assertEqual([result.query.qid for result in results], ["q1", "q2", "q3"])
+        self.assertEqual(
+            [result.answer[0].text for result in results],
+            ["Answer for q1.", "Answer for q2.", "Answer for q3."],
+        )
 
     def test_gpt_post_processor_falls_back_without_spacy_or_stanza(self):
         blocked = {"spacy", "stanza"}
