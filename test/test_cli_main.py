@@ -1,0 +1,497 @@
+import json
+from contextlib import redirect_stdout
+from io import StringIO
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
+
+from ragnarok.cli.main import main
+from ragnarok.data import Query, RAGExecInfo, Request, Result
+from ragnarok.generate.llm import PromptMode
+
+
+def write_jsonl(path: Path, records: list[dict]) -> None:
+    path.write_text(
+        "".join(json.dumps(record) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+
+def read_jsonl(path: Path) -> list[dict]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+class FakeAgent:
+    def __init__(self):
+        self._model = "gpt-4o"
+        self._context_size = 8192
+        self._prompt_mode = PromptMode.CHATQA
+        self._num_few_shot_examples = 0
+
+    def answer_batch(
+        self, requests, topk, shuffle_candidates=False, logging=False, vllm=False
+    ):
+        results = []
+        for request in requests:
+            results.append(
+                Result(
+                    query=request.query,
+                    references=[candidate.docid for candidate in request.candidates[:topk]],
+                    answer=[
+                        type(
+                            "Sentence",
+                            (),
+                            {
+                                "text": f"Answer for {request.query.text}.",
+                                "citations": [0],
+                            },
+                        )()
+                    ],
+                    rag_exec_summary=RAGExecInfo(
+                        prompt="prompt",
+                        response="response",
+                        input_token_count=12,
+                        output_token_count=4,
+                    ),
+                )
+            )
+        return results
+
+
+class TestRagnarokCLI(unittest.TestCase):
+    def test_generate_direct_via_input_json(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout), patch(
+            "ragnarok.cli.operations.create_generation_agent", return_value=FakeAgent()
+        ):
+                exit_code = main(
+                    [
+                        "generate",
+                        "--model-path",
+                        "gpt-4o",
+                        "--input-json",
+                        json.dumps({"query": "what is python", "candidates": ["Python is useful."]}),
+                        "--prompt-mode",
+                        "chatqa",
+                        "--output",
+                        "json",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(output["command"], "generate")
+        self.assertEqual(output["status"], "success")
+        self.assertEqual(output["artifacts"][0]["data"][0]["topic"], "what is python")
+
+    def test_generate_direct_via_stdin(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout), patch(
+            "sys.stdin.read",
+            return_value=json.dumps({"query": "q", "candidates": ["passage"]}),
+        ), patch(
+            "ragnarok.cli.operations.create_generation_agent", return_value=FakeAgent()
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model-path",
+                    "gpt-4o",
+                    "--stdin",
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(output["artifacts"][0]["data"][0]["topic"], "q")
+
+    def test_generate_batch_request_file_writes_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "requests.jsonl"
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                input_path,
+                [
+                    {
+                        "query": {"qid": "q1", "text": "what is python"},
+                        "candidates": [
+                            {
+                                "docid": "d1",
+                                "score": 1.0,
+                                "doc": {"segment": "Python is used for web development."},
+                            }
+                        ],
+                    }
+                ],
+            )
+
+            with patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ):
+                exit_code = main(
+                    [
+                        "generate",
+                        "--model-path",
+                        "gpt-4o",
+                        "--input-file",
+                        str(input_path),
+                        "--output-file",
+                        str(output_path),
+                        "--prompt-mode",
+                        "chatqa",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            records = read_jsonl(output_path)
+            self.assertEqual(records[0]["topic_id"], "q1")
+            self.assertEqual(records[0]["answer"][0]["text"], "Answer for what is python.")
+
+    def test_generate_dataset_mode_calls_existing_orchestration(self):
+        captured = {}
+
+        def fake_run_dataset_generation(args, logger):
+            captured["dataset"] = args.dataset
+            captured["retrieval_method"] = [str(method) for method in args.retrieval_method]
+            captured["topk"] = args.topk
+            return [], {"ok": True}
+
+        with patch(
+            "ragnarok.cli.main.run_dataset_generation",
+            side_effect=fake_run_dataset_generation,
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model-path",
+                    "gpt-4o",
+                    "--dataset",
+                    "rag24.raggy-dev",
+                    "--retrieval-method",
+                    "bm25,rank_zephyr_rho",
+                    "--topk",
+                    "100,5",
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(captured["dataset"], "rag24.raggy-dev")
+        self.assertEqual(captured["retrieval_method"], ["bm25", "rank_zephyr_rho"])
+        self.assertEqual(captured["topk"], [100, 5])
+
+    def test_generate_dry_run_returns_zero(self):
+        exit_code = main(
+            [
+                "generate",
+                "--model-path",
+                "gpt-4o",
+                "--dataset",
+                "rag24.raggy-dev",
+                "--prompt-mode",
+                "chatqa",
+                "--dry-run",
+                "--output",
+                "json",
+            ]
+        )
+
+        self.assertEqual(exit_code, 0)
+
+    def test_write_policy_conflict_returns_json_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "requests.jsonl"
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                input_path,
+                [
+                    {
+                        "query": {"qid": "q1", "text": "what is python"},
+                        "candidates": [],
+                    }
+                ],
+            )
+            output_path.write_text("existing\n", encoding="utf-8")
+
+            exit_code = main(
+                [
+                    "generate",
+                    "--model-path",
+                    "gpt-4o",
+                    "--input-file",
+                    str(input_path),
+                    "--output-file",
+                    str(output_path),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 5)
+
+    def test_write_policy_overwrite_and_resume(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "requests.jsonl"
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                input_path,
+                [
+                    {
+                        "query": {"qid": "q1", "text": "what is python"},
+                        "candidates": [],
+                    }
+                ],
+            )
+            output_path.write_text("existing\n", encoding="utf-8")
+
+            with patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ):
+                overwrite_exit = main(
+                    [
+                        "generate",
+                        "--model-path",
+                        "gpt-4o",
+                        "--input-file",
+                        str(input_path),
+                        "--output-file",
+                        str(output_path),
+                        "--prompt-mode",
+                        "chatqa",
+                        "--overwrite",
+                    ]
+                )
+            self.assertEqual(overwrite_exit, 0)
+
+            with patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ):
+                resume_exit = main(
+                    [
+                        "generate",
+                        "--model-path",
+                        "gpt-4o",
+                        "--input-file",
+                        str(input_path),
+                        "--output-file",
+                        str(output_path),
+                        "--prompt-mode",
+                        "chatqa",
+                        "--resume",
+                    ]
+                )
+            self.assertEqual(resume_exit, 0)
+
+    def test_missing_command_returns_descriptive_error(self):
+        with patch("sys.stderr.write") as stderr_write:
+            exit_code = main([])
+        self.assertEqual(exit_code, 2)
+        self.assertTrue(any("No command provided." in call.args[0] for call in stderr_write.call_args_list))
+
+    def test_describe_schema_and_doctor_json_envelopes(self):
+        for argv, expected_command in [
+            (["describe", "generate", "--output", "json"], "describe"),
+            (["schema", "generate-direct-input", "--output", "json"], "schema"),
+            (["doctor", "--output", "json"], "doctor"),
+        ]:
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(argv)
+            self.assertEqual(exit_code, 0)
+            output = json.loads(stdout.getvalue())
+            self.assertEqual(output["command"], expected_command)
+
+    def test_missing_input_file_returns_json_error(self):
+        exit_code = main(
+            [
+                "generate",
+                "--model-path",
+                "gpt-4o",
+                "--input-file",
+                "/tmp/does-not-exist.jsonl",
+                "--prompt-mode",
+                "chatqa",
+                "--output",
+                "json",
+            ]
+        )
+        self.assertEqual(exit_code, 4)
+
+    def test_validate_generate_accepts_and_rejects_inputs(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            valid_exit = main(
+                [
+                    "validate",
+                    "generate",
+                    "--input-json",
+                    json.dumps({"query": "q", "candidates": ["p"]}),
+                    "--output",
+                    "json",
+                ]
+            )
+        self.assertEqual(valid_exit, 0)
+
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            invalid_exit = main(
+                [
+                    "validate",
+                    "generate",
+                    "--input-json",
+                    json.dumps({"query": "q"}),
+                    "--output",
+                    "json",
+                ]
+            )
+        self.assertEqual(invalid_exit, 6)
+
+    def test_validate_rag24_and_rag25_fixture_cases(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            rag24_topics = temp_path / "topics.tsv"
+            rag24_run = temp_path / "run.jsonl"
+            rag25_topics = temp_path / "topics.jsonl"
+            rag25_run = temp_path / "run25.jsonl"
+
+            rag24_topics.write_text("2024-1\tWhat is Python?\n", encoding="utf-8")
+            write_jsonl(
+                rag24_run,
+                [
+                    {
+                        "run_id": "run",
+                        "topic_id": "2024-1",
+                        "topic": "What is Python?",
+                        "references": ["msmarco_v2.1_doc_1_1#1_1"],
+                        "response_length": 2,
+                        "answer": [{"text": "A language.", "citations": [0]}],
+                    }
+                ],
+            )
+            write_jsonl(
+                rag25_topics,
+                [{"id": "1", "title": "What is Python?"}],
+            )
+            write_jsonl(
+                rag25_run,
+                [
+                    {
+                        "metadata": {
+                            "team_id": "team",
+                            "run_id": "run",
+                            "narrative_id": "1",
+                        },
+                        "references": ["msmarco_v2.1_doc_1_1#1_1"],
+                        "answer": [{"text": "A language.", "citations": [0]}],
+                    }
+                ],
+            )
+
+            self.assertEqual(
+                main(
+                    [
+                        "validate",
+                        "rag24-output",
+                        "--topicfile",
+                        str(rag24_topics),
+                        "--runfile",
+                        str(rag24_run),
+                        "--output",
+                        "json",
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                main(
+                    [
+                        "validate",
+                        "rag25-output",
+                        "--input",
+                        str(rag25_run),
+                        "--topics",
+                        str(rag25_topics),
+                        "--output",
+                        "json",
+                    ]
+                ),
+                0,
+            )
+
+    def test_convert_trec25_format_preserves_prompt_enrichment(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            input_path = temp_path / "old.jsonl"
+            output_path = temp_path / "new.jsonl"
+            prompt_path = temp_path / "prompts.jsonl"
+            write_jsonl(
+                input_path,
+                [
+                    {
+                        "run_id": "run",
+                        "topic_id": "1",
+                        "topic": "What is Python?",
+                        "references": ["msmarco_v2.1_doc_1_1#1_1"],
+                        "answer": [{"text": "A language.", "citations": [0]}],
+                    }
+                ],
+            )
+            write_jsonl(
+                prompt_path,
+                [
+                    {
+                        "query": {"qid": "1"},
+                        "rag_exec_summary": {"prompt": "Tell me about Python."},
+                    }
+                ],
+            )
+
+            exit_code = main(
+                [
+                    "convert",
+                    "trec25-format",
+                    "--input-file",
+                    str(input_path),
+                    "--output-file",
+                    str(output_path),
+                    "--prompt-file",
+                    str(prompt_path),
+                    "--output",
+                    "json",
+                ]
+            )
+            self.assertEqual(exit_code, 0)
+            converted = read_jsonl(output_path)
+            self.assertEqual(converted[0]["metadata"]["prompt"], "Tell me about Python.")
+
+    def test_legacy_run_ragnarok_wrapper_delegates_to_cli(self):
+        from ragnarok.scripts.run_ragnarok import cli_compatible_main
+
+        with patch("ragnarok.cli.main.main", return_value=0) as cli_main:
+            exit_code = cli_compatible_main(["--model_path", "gpt-4o"])
+        self.assertEqual(exit_code, 0)
+        cli_main.assert_called_once()
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -84,6 +84,13 @@ def main(args):
     )
 
 
+def cli_compatible_main(argv=None):
+    from ragnarok.cli.main import main as cli_main
+
+    argv = sys.argv[1:] if argv is None else argv
+    return cli_main(["generate", *argv])
+
+
 """ sample run:
 python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere_command_r_plus  --topk=20 --dataset=researchy-questions  --retrieval_method=bm25,rank_zephyr --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500
 """
@@ -180,4 +187,4 @@ if __name__ == "__main__":
         help="OpenAI-compatible reasoning effort level to request for supported models",
     )
     args = parser.parse_args()
-    main(args)
+    sys.exit(cli_compatible_main())

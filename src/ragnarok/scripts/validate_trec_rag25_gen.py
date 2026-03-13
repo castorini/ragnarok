@@ -219,6 +219,97 @@ def validate_entry(entry, format_type, valid_topic_ids):
     return errors, warnings
 
 
+def validate_rag25_file(
+    input_path: str,
+    topics_path: str,
+    format_type: int = 1,
+    fix_length: bool = True,
+    fix_citations: bool = True,
+    verbose: bool = False,
+):
+    valid_topic_ids = load_topic_ids(topics_path)
+    input_stream = (
+        sys.stdin if input_path == "-" else open(input_path, encoding="utf-8")
+    )
+
+    entries_to_write = []
+    any_fixes_made = False
+    total_errors = 0
+    total_warnings = 0
+    fixed_output_path = None
+    try:
+        for i, line in enumerate(input_stream, 1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                original_entry = json.loads(json.dumps(entry))
+            except json.JSONDecodeError as e:
+                print(f"[Line {i}] JSON decode error: {e}")
+                total_errors += 1
+                continue
+
+            fix_warnings = []
+            entry_was_fixed = False
+            if fix_citations:
+                entry, citation_warnings = fix_citations_fn(
+                    entry, i, format_type, verbose=verbose
+                )
+                fix_warnings.extend(citation_warnings)
+                if citation_warnings:
+                    entry_was_fixed = True
+
+            if fix_length:
+                original_length = compute_response_length(original_entry)
+                entry, current_length = fix_rag_answer(entry, i, verbose=verbose)
+                if current_length != original_length:
+                    entry_was_fixed = True
+            else:
+                current_length = compute_response_length(entry)
+
+            if entry_was_fixed:
+                any_fixes_made = True
+
+            errors, warnings = validate_entry(entry, format_type, valid_topic_ids)
+            if errors:
+                for error in errors:
+                    print(f"[Line {i}] Error: {error}")
+                total_errors += 1
+
+            all_warnings = fix_warnings + warnings
+            if all_warnings:
+                total_warnings += 1
+            for warning in all_warnings:
+                print(f"[Line {i}] WARNING: {warning}")
+
+            if fix_length or fix_citations:
+                entries_to_write.append(entry)
+
+        if any_fixes_made and (fix_length or fix_citations):
+            fixed_output_path = (
+                f"{input_path}.fixed" if input_path != "-" else "stdin.fixed"
+            )
+            with open(fixed_output_path, "w", encoding="utf-8") as output_stream:
+                for entry in entries_to_write:
+                    output_stream.write(json.dumps(entry) + "\n")
+    finally:
+        if input_stream is not sys.stdin:
+            input_stream.close()
+
+    return {
+        "valid": total_errors == 0,
+        "error_count": total_errors,
+        "warning_count": total_warnings,
+        "fixed_output_path": fixed_output_path,
+        "fixes_applied": any_fixes_made,
+        "format_type": format_type,
+    }
+
+
+fix_citations_fn = fix_citations
+
+
 def main():
     p = ArgumentParser(
         description="Validate and optionally fix TREC RAG 2025 AG output format."
@@ -251,93 +342,22 @@ def main():
     p.add_argument("--verbose", action="store_true", help="Print details when trimming")
     args = p.parse_args()
 
-    valid_topic_ids = load_topic_ids(args.topics)
-    input_stream = (
-        sys.stdin if args.input == "-" else open(args.input, encoding="utf-8")
+    summary = validate_rag25_file(
+        input_path=args.input,
+        topics_path=args.topics,
+        format_type=args.format,
+        fix_length=args.fix_length,
+        fix_citations=args.fix_citations,
+        verbose=args.verbose,
     )
-
-    # Store all entries and track if any fixes were made
-    entries_to_write = []
-    any_fixes_made = False
-
-    total_errors = 0
-    total_warnings = 0
-    for i, line in enumerate(input_stream, 1):
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            entry = json.loads(line)
-            original_entry = json.loads(json.dumps(entry))  # Deep copy for comparison
-        except json.JSONDecodeError as e:
-            print(f"[Line {i}] ❌ JSON decode error: {e}")
-            total_errors += 1
-            continue
-
-        # Apply fixes
-        fix_warnings = []
-        entry_was_fixed = False
-
-        if args.fix_citations:
-            entry, citation_warnings = fix_citations(
-                entry, i, args.format, verbose=args.verbose
-            )
-            fix_warnings.extend(citation_warnings)
-            if citation_warnings:
-                entry_was_fixed = True
-
-        if args.fix_length:
-            original_length = compute_response_length(original_entry)
-            entry, current_length = fix_rag_answer(entry, i, verbose=args.verbose)
-            if current_length != original_length:
-                entry_was_fixed = True
-        else:
-            current_length = compute_response_length(entry)
-
-        if entry_was_fixed:
-            any_fixes_made = True
-
-        errors, warnings = validate_entry(entry, args.format, valid_topic_ids)
-
-        if errors:
-            print(f"[Line {i}] ❌ ERRORS:")
-            for e in errors:
-                print(f"Error: {e}")
-            total_errors += 1
-        else:
-            if args.verbose:
-                print(f"[Line {i}] ✅ OK (Length: {current_length} tokens)")
-
-        # Print all warnings (including fix warnings)
-        all_warnings = fix_warnings + warnings
-        if len(all_warnings) > 0:
-            total_warnings += 1
-        for w in all_warnings:
-            if not w.startswith("answer[") and not w.startswith(
-                "references"
-            ):  # Don't duplicate fix warnings
-                print(f"[Line {i}] WARNING: {w}")
-
-        # Store entry for potential output
-        if args.fix_length or args.fix_citations:
-            entries_to_write.append(entry)
-
-    # Write output file only if fixes were made
-    if any_fixes_made and (args.fix_length or args.fix_citations):
-        output_filename = f"{args.input}.fixed" if args.input != "-" else "stdin.fixed"
-        print(f"\nFixes were applied. Writing output to: {output_filename}")
-        with open(output_filename, "w", encoding="utf-8") as output_stream:
-            for entry in entries_to_write:
-                output_stream.write(json.dumps(entry) + "\n")
-    elif (
-        (args.fix_length or args.fix_citations) and not any_fixes_made and args.verbose
-    ):
-        print("\nNo fixes were needed. Output file not created.")
-
-    if total_errors:
-        print(f"\nValidation completed: {total_errors} line(s) with errors.")
+    if summary["fixed_output_path"] is not None:
+        print(
+            f"\nFixes were applied. Writing output to: {summary['fixed_output_path']}"
+        )
+    if summary["error_count"]:
+        print(f"\nValidation completed: {summary['error_count']} line(s) with errors.")
         sys.exit(1)
-    elif total_warnings:
+    if summary["warning_count"]:
         print("\nValidation completed: all lines passed (with possible warnings).")
     else:
         print("\nValidation completed: all lines passed.")

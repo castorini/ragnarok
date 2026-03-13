@@ -70,7 +70,9 @@ class TestReasoningSupport(unittest.TestCase):
                 "Sentence one [1]. Sentence two [2]."
             )
 
-        self.assertEqual([answer.text for answer in answers], ["Sentence one.", "Sentence two."])
+        self.assertEqual(
+            [answer.text for answer in answers], ["Sentence one.", "Sentence two."]
+        )
         self.assertEqual([answer.citations for answer in answers], [[0], [1]])
         self.assertEqual(
             rag_exec_response["text"], "Sentence one [1]. Sentence two [2]."

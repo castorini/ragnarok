@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Union
 
 from dacite import from_dict
@@ -57,6 +58,30 @@ class OutputFormat(Enum):
 
     def __str__(self):
         return self.value
+
+
+def result_to_dict(result: Result, run_id: str) -> Dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "topic_id": result.query.qid,
+        "topic": result.query.text,
+        "references": result.references,
+        "response_length": sum(
+            len(sentence.text.replace(",", " ").replace(";", " ").split())
+            for sentence in result.answer
+        ),
+        "answer": [
+            {"text": sentence.text, "citations": sentence.citations}
+            for sentence in result.answer
+        ],
+    }
+
+
+def write_results_jsonl(results: List[Result], filename: str, run_id: str) -> None:
+    with Path(filename).open("w", encoding="utf-8") as file_obj:
+        for result in results:
+            json.dump(result_to_dict(result, run_id), file_obj)
+            file_obj.write("\n")
 
 
 def read_requests_from_file(file_path: str) -> List[Request]:
@@ -174,21 +199,7 @@ class DataWriter:
                 f.write(json.dumps(exec_summary) + "\n")
 
     def _convert_result_to_dict(self, result: Result, run_id: str) -> Dict:
-        result_dict = {
-            "run_id": run_id,
-            "topic_id": result.query.qid,
-            "topic": result.query.text,
-            "references": result.references,
-            "response_length": sum(
-                len(sentence.text.replace(",", " ").replace(";", " ").split())
-                for sentence in result.answer
-            ),
-            "answer": [
-                {"text": sentence.text, "citations": sentence.citations}
-                for sentence in result.answer
-            ],
-        }
-        return result_dict
+        return result_to_dict(result, run_id)
 
     def write_in_json_format(self, filename: str, run_id: str):
         formatted_data = [self._convert_result_to_dict(d, run_id) for d in self._data]

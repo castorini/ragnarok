@@ -2,27 +2,41 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from dacite import from_dict
-from rank_llm.data import Request
-from rank_llm.retrieve.indices_dict import INDICES
-from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
-valid_inputs = [
-    ("dl19", RetrievalMethod.BM25),
-    ("dl19", RetrievalMethod.BM25_RM3),
-    ("dl20", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),
-    ("dl20", RetrievalMethod.D_BERT_KD_TASB),
-    ("dl20", RetrievalMethod.OPEN_AI_ADA2),
-]
+try:
+    from rank_llm.data import Request
+    from rank_llm.retrieve.indices_dict import INDICES
+    from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
-failure_inputs = [
-    ("dl23", RetrievalMethod.BM25),  # dataset error
-    ("dl23", RetrievalMethod.BM25_RM3),  # dataset error
-    ("dl18", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),  # dataset error
-    ("dl19", RetrievalMethod.UNSPECIFIED),  # retrieval method error
-    ("dl16", RetrievalMethod.UNSPECIFIED),  # dataset and retrieval method error
-    ("dl21", RetrievalMethod.D_BERT_KD_TASB),
-    ("covid", RetrievalMethod.OPEN_AI_ADA2),
-]
+    RANK_LLM_AVAILABLE = True
+except ModuleNotFoundError:
+    Request = None
+    INDICES = None
+    PyseriniRetriever = None
+    RetrievalMethod = None
+    RANK_LLM_AVAILABLE = False
+
+if RANK_LLM_AVAILABLE:
+    valid_inputs = [
+        ("dl19", RetrievalMethod.BM25),
+        ("dl19", RetrievalMethod.BM25_RM3),
+        ("dl20", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),
+        ("dl20", RetrievalMethod.D_BERT_KD_TASB),
+        ("dl20", RetrievalMethod.OPEN_AI_ADA2),
+    ]
+
+    failure_inputs = [
+        ("dl23", RetrievalMethod.BM25),  # dataset error
+        ("dl23", RetrievalMethod.BM25_RM3),  # dataset error
+        ("dl18", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),  # dataset error
+        ("dl19", RetrievalMethod.UNSPECIFIED),  # retrieval method error
+        ("dl16", RetrievalMethod.UNSPECIFIED),  # dataset and retrieval method error
+        ("dl21", RetrievalMethod.D_BERT_KD_TASB),
+        ("covid", RetrievalMethod.OPEN_AI_ADA2),
+    ]
+else:
+    valid_inputs = []
+    failure_inputs = []
 
 
 # Mocking Hits object
@@ -34,6 +48,10 @@ class MockHit:
         self.qid = qid
 
 
+@unittest.skipUnless(
+    RANK_LLM_AVAILABLE,
+    "rank_llm retrieval test dependencies are not installed in the default ragnarok test environment",
+)
 class TestPyseriniRetriever(unittest.TestCase):
     def test_valid_inputs(self):
         for dataset, retrieval_method in valid_inputs:

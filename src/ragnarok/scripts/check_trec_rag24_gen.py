@@ -220,6 +220,29 @@ def check_rag_gen_run(args, log):
             )
 
 
+def run_check_rag24_output(topicfile: str, runfile: str) -> dict:
+    class Args:
+        def __init__(self, topicfile: str, runfile: str):
+            self.topicfile = topicfile
+            self.runfile = runfile
+
+    args = Args(topicfile=topicfile, runfile=runfile)
+    with Errlog(args.runfile) as log:
+        try:
+            check_rag_gen_run(args, log)
+        except Exception as exc:
+            log.error(-1, exc)
+            traceback.print_exc()
+            return {"valid": False, "error_count": log.error_count, "runfile": runfile}
+        return {
+            "valid": log.error_count == 0,
+            "error_count": log.error_count,
+            "errlog_path": runfile + ".errlog",
+            "fixed_run_path": runfile + ".fixed",
+            "runfile": runfile,
+        }
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -235,15 +258,5 @@ if __name__ == "__main__":
 
     args = ap.parse_args()
 
-    with Errlog(args.runfile) as log:
-        try:
-            result = check_rag_gen_run(args, log)
-        except Exception as e:
-            log.error(-1, e)
-            traceback.print_exc()
-            sys.exit(255)
-
-        if log.error_count > 0:
-            sys.exit(255)
-        else:
-            sys.exit(0)
+    summary = run_check_rag24_output(args.topicfile, args.runfile)
+    sys.exit(0 if summary["valid"] else 255)

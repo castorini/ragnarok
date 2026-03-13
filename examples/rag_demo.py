@@ -79,9 +79,7 @@ def parse_prompt_mode(value: str) -> PromptMode:
     try:
         return PromptMode(value)
     except ValueError as exc:
-        raise argparse.ArgumentTypeError(
-            f"Unsupported prompt mode: {value}"
-        ) from exc
+        raise argparse.ArgumentTypeError(f"Unsupported prompt mode: {value}") from exc
 
 
 def detect_device() -> str:

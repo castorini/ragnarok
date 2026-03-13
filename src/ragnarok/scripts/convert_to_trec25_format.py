@@ -189,6 +189,11 @@ def convert_jsonl_file(
     if error_count > 0:
         print(f"Errors encountered: {error_count} records")
     print(f"Output written to: {output_file}")
+    return {
+        "converted_count": converted_count,
+        "error_count": error_count,
+        "output_file": output_file,
+    }
 
 
 def parse_arguments():

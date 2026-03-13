@@ -72,6 +72,9 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/castorini/ragnarok"
 
+[project.scripts]
+ragnarok = "ragnarok.cli.main:main"
+
 [tool.bumpver]
 current_version = "0.0.1"
 version_pattern = "MAJOR.MINOR.PATCH"
@@ -94,6 +97,7 @@ include = [
     "ragnarok",
     "ragnarok.analyze",
     "ragnarok.api",
+    "ragnarok.cli",
     "ragnarok.demo",
     "ragnarok.evaluate",
     "ragnarok.generate",
