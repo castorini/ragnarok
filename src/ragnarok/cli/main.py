@@ -825,15 +825,32 @@ def _format_text_response(response: CommandResponse) -> str:
             return ""
         rendered_records: list[str] = []
         for record in data:
-            answer_lines = [
-                answer.get("text", "")
-                for answer in record.get("answer", [])
-                if answer.get("text")
+            lines: list[str] = []
+            for answer in record.get("answer", []):
+                text = answer.get("text", "")
+                if not text:
+                    continue
+                citations = answer.get("citations", [])
+                citation_suffix = ""
+                if citations:
+                    human_citations = ",".join(
+                        str(int(citation) + 1) for citation in citations
+                    )
+                    citation_suffix = f" [{human_citations}]"
+                lines.append(f"{text}{citation_suffix}")
+            reasoning_traces = [
+                trace.strip()
+                for trace in record.get("reasoning_traces", [])
+                if isinstance(trace, str) and trace.strip()
             ]
-            if answer_lines:
-                rendered_records.append("\n".join(answer_lines))
-            else:
-                rendered_records.append("")
+            if reasoning_traces:
+                if lines:
+                    lines.append("")
+                lines.extend(
+                    f"Reasoning Trace {index}: {trace}"
+                    for index, trace in enumerate(reasoning_traces, start=1)
+                )
+            rendered_records.append("\n".join(lines).rstrip())
         return "\n\n".join(rendered_records).rstrip()
     if response.command == "describe" or response.command == "schema":
         return json.dumps(envelope["artifacts"][0]["data"], indent=2)

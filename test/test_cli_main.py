@@ -31,7 +31,8 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 class FakeAgent:
-    def __init__(self):
+    def __init__(self, reasoning=None):
+        self._reasoning = reasoning
         self._model = "gpt-4o"
         self._context_size = 8192
         self._prompt_mode = PromptMode.CHATQA
@@ -61,6 +62,7 @@ class FakeAgent:
                         response="response",
                         input_token_count=12,
                         output_token_count=4,
+                        reasoning=self._reasoning,
                     ),
                 )
             )
@@ -222,6 +224,70 @@ class TestRagnarokCLI(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertIn("Answer for what is python.", stdout.getvalue())
+        self.assertIn("[1]", stdout.getvalue())
+
+    def test_generate_direct_json_output_includes_reasoning_traces(self):
+        stdout = StringIO()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(reasoning="Used the only candidate as support."),
+            ),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model-path",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--include-reasoning",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(
+            output["artifacts"][0]["data"][0]["reasoning_traces"],
+            ["Used the only candidate as support."],
+        )
+
+    def test_generate_direct_text_output_prints_reasoning_traces(self):
+        stdout = StringIO()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(reasoning="Used the only candidate as support."),
+            ),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model-path",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--include-reasoning",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn(
+            "Reasoning Trace 1: Used the only candidate as support.",
+            stdout.getvalue(),
+        )
 
     def test_generate_batch_request_file_writes_output(self):
         with tempfile.TemporaryDirectory() as temp_dir:

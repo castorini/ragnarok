@@ -61,7 +61,7 @@ class OutputFormat(Enum):
 
 
 def result_to_dict(result: Result, run_id: str) -> Dict[str, Any]:
-    return {
+    record = {
         "run_id": run_id,
         "topic_id": result.query.qid,
         "topic": result.query.text,
@@ -75,6 +75,12 @@ def result_to_dict(result: Result, run_id: str) -> Dict[str, Any]:
             for sentence in result.answer
         ],
     }
+    reasoning = None
+    if result.rag_exec_summary is not None:
+        reasoning = result.rag_exec_summary.reasoning
+    if reasoning:
+        record["reasoning_traces"] = [reasoning]
+    return record
 
 
 def write_results_jsonl(results: List[Result], filename: str, run_id: str) -> None:
