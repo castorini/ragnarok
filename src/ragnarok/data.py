@@ -33,6 +33,7 @@ class RAGExecInfo:
     response: Any
     input_token_count: int
     output_token_count: int
+    reasoning: str | None = None
     candidates: List[Candidate] = field(default_factory=list)
 
 
@@ -161,12 +162,14 @@ class DataWriter:
         self._append = append
 
     def write_rag_exec_summary(self, filename: str):
-        exec_summary = []
         with open(filename, "a" if self._append else "w") as f:
             for d in self._data:
+                rag_exec_summary = d.rag_exec_summary.__dict__.copy()
+                if rag_exec_summary.get("reasoning") is None:
+                    rag_exec_summary.pop("reasoning", None)
                 exec_summary = {
                     "query": d.query.__dict__,
-                    "rag_exec_summary": d.rag_exec_summary.__dict__,
+                    "rag_exec_summary": rag_exec_summary,
                 }
                 f.write(json.dumps(exec_summary) + "\n")
 

@@ -85,6 +85,12 @@ python src/ragnarok/scripts/run_ragnarok.py  --model_path=gpt-4o  --topk=100,5 \
     --context_size=8192 --max_output_tokens=1024  --use_azure_openai
 ```
 
+If you want Ragnarok to persist model reasoning in the execution-summary sidecar
+written under `rag_execution_summary/`, add `--include_reasoning`. This is
+currently intended for OpenAI-compatible responses that expose reasoning fields
+and open-weight models that emit `<think>...</think>` blocks. The public TREC
+result file under `results/` is unchanged.
+
 ## Contributing 
 
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).

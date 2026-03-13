@@ -27,6 +27,7 @@ class OSLLM(LLM):
         prompt_mode: PromptMode = PromptMode.CHATQA,
         max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
+        store_reasoning: bool = False,
         device: str = "cuda",
         num_gpus: int = 1,
         dtype: str = "bfloat16",
@@ -58,7 +59,12 @@ class OSLLM(LLM):
         - GPU acceleration is supported and recommended for faster computations.
         """
         super().__init__(
-            model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples
+            model,
+            context_size,
+            prompt_mode,
+            max_output_tokens,
+            num_few_shot_examples,
+            store_reasoning=store_reasoning,
         )
         self._device = device
         self._name = model
@@ -111,20 +117,28 @@ class OSLLM(LLM):
                 min_tokens=200,
             )
             outputs = self._llm.generate(prompts, sampling_params)
-            responses = [output.outputs[0].text for output in outputs]
+            raw_responses = [output.outputs[0].text for output in outputs]
             print("Cleaning responses")
-            responses = [self._clean_response(response) for response in responses]
+            reasoning_and_responses = [
+                self._extract_reasoning_from_text(response)
+                for response in raw_responses
+            ]
+            reasonings = [reasoning for reasoning, _ in reasoning_and_responses]
+            responses = [
+                cleaned_response for _, cleaned_response in reasoning_and_responses
+            ]
             if logging:
                 for response in responses:
                     print(f"Response: {response}")
             answer_rag_exec_info_list = []
-            for prompt, response in zip(prompts, responses):
+            for prompt, response, reasoning in zip(prompts, responses, reasonings):
                 answer, rag_exec_response = self._post_processor(response)
                 rag_exec_info = RAGExecInfo(
                     prompt=prompt,
                     response=rag_exec_response,
                     input_token_count=self.get_num_tokens(prompt),
                     output_token_count=sum([len(ans.text) for ans in answer]),
+                    reasoning=reasoning,
                     candidates=[],
                 )
                 answer_rag_exec_info_list.append((answer, rag_exec_info))

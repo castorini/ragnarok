@@ -2,7 +2,7 @@ import random
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ftfy import fix_text
 
@@ -33,12 +33,14 @@ class LLM(ABC):
         prompt_mode: PromptMode,
         max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
+        store_reasoning: bool = False,
     ) -> None:
         self._model = model
         self._context_size = context_size
         self._prompt_mode = prompt_mode
         self._num_few_shot_examples = num_few_shot_examples
         self._output_token_estimate = max_output_tokens
+        self._store_reasoning = store_reasoning
 
     def max_tokens(self) -> int:
         """
@@ -213,11 +215,39 @@ class LLM(ABC):
     def num_output_tokens(self) -> int:
         return self._output_token_estimate
 
+    def _extract_reasoning_from_message(self, message: Any) -> Optional[str]:
+        if not self._store_reasoning or message is None:
+            return None
+        if hasattr(message, "reasoning") and message.reasoning:
+            return str(message.reasoning).strip()
+        if hasattr(message, "reasoning_content") and message.reasoning_content:
+            return str(message.reasoning_content).strip()
+        if isinstance(message, dict):
+            if message.get("reasoning"):
+                return str(message["reasoning"]).strip()
+            if message.get("reasoning_content"):
+                return str(message["reasoning_content"]).strip()
+        return None
+
+    def _extract_reasoning_from_text(self, response: str) -> Tuple[Optional[str], str]:
+        if response is None:
+            return None, ""
+        reasoning_blocks = [
+            block.strip()
+            for block in re.findall(r"<think>(.*?)</think>", response, flags=re.DOTALL)
+            if block.strip()
+        ]
+        cleaned_response = re.sub(
+            r"<think>.*?</think>", "", response, flags=re.DOTALL
+        ).strip()
+        reasoning = None
+        if self._store_reasoning and reasoning_blocks:
+            reasoning = "\n\n".join(reasoning_blocks)
+        return reasoning, fix_text(cleaned_response)
+
     def _clean_response(self, response: str) -> str:
-        if "</think>" in response:
-            response = response.split("</think>")[-1].strip()
-        new_response = fix_text(response)
-        return new_response
+        _, cleaned_response = self._extract_reasoning_from_text(response)
+        return cleaned_response
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)

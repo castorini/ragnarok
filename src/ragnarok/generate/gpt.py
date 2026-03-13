@@ -19,6 +19,7 @@ class SafeOpenai(LLM):
         prompt_mode: PromptMode = PromptMode.CHATQA,
         max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
+        store_reasoning: bool = False,
         keys=None,
         key_start_id=None,
         proxy=None,
@@ -54,7 +55,12 @@ class SafeOpenai(LLM):
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
         super().__init__(
-            model, context_size, prompt_mode, max_output_tokens, num_few_shot_examples
+            model,
+            context_size,
+            prompt_mode,
+            max_output_tokens,
+            num_few_shot_examples,
+            store_reasoning=store_reasoning,
         )
         if isinstance(keys, str):
             keys = [keys]
@@ -98,10 +104,9 @@ class SafeOpenai(LLM):
         self,
         *args,
         completion_mode: CompletionMode,
-        return_text=False,
         reduce_length=False,
         **kwargs,
-    ) -> Union[str, Dict[str, Any]]:
+    ) -> Any:
         while True:
             try:
                 if completion_mode == self.CompletionMode.CHAT:
@@ -126,12 +131,6 @@ class SafeOpenai(LLM):
                 self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
                 openai.api_key = self._keys[self._cur_key_id]
                 time.sleep(0.1)
-        if return_text:
-            completion = (
-                completion.choices[0].message.content
-                if completion_mode == self.CompletionMode.CHAT
-                else completion.choices[0].text
-            )
         return completion
 
     def run_llm(
@@ -146,16 +145,23 @@ class SafeOpenai(LLM):
             messages=prompt,
             temperature=0.1,
             completion_mode=SafeOpenai.CompletionMode.CHAT,
-            return_text=True,
             **{model_key: self._model},
         )
+        message = response.choices[0].message
+        response_text = message.content or ""
+        reasoning = self._extract_reasoning_from_message(message)
+        tagged_reasoning, cleaned_response = self._extract_reasoning_from_text(
+            response_text
+        )
+        if reasoning is None:
+            reasoning = tagged_reasoning
         try:
             encoding = tiktoken.get_encoding(self._model)
         except:
             encoding = tiktoken.get_encoding("cl100k_base")
         if logging:
-            print(f"Response: {response}")
-        answers, rag_exec_response = self._post_processor(response)
+            print(f"Response: {cleaned_response}")
+        answers, rag_exec_response = self._post_processor(cleaned_response)
         if logging:
             print(f"Answers: {answers}")
         rag_exec_info = RAGExecInfo(
@@ -163,6 +169,7 @@ class SafeOpenai(LLM):
             response=rag_exec_response,
             input_token_count=self.get_num_tokens(prompt),
             output_token_count=sum([len(ans.text) for ans in answers]),
+            reasoning=reasoning,
             candidates=[],
         )
         if logging:

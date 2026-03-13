@@ -59,6 +59,7 @@ def main(args):
     retrieval_mode = RetrievalMode.DATASET
     run_id = args.run_id
     vllm_batched = args.vllm_batched
+    include_reasoning = args.include_reasoning
 
     _ = retrieve_and_generate(
         model_path,
@@ -75,6 +76,7 @@ def main(args):
         shuffle_candidates,
         print_prompts_responses,
         vllm_batched=vllm_batched,
+        include_reasoning=include_reasoning,
         use_azure_openai=use_azure_openai,
         run_id=run_id,
     )
@@ -163,6 +165,11 @@ if __name__ == "__main__":
         "--vllm_batched",
         action="store_true",
         help="whether to use batched version of VLLM",
+    )
+    parser.add_argument(
+        "--include_reasoning",
+        action="store_true",
+        help="store reasoning content in the rag execution summary sidecar when the backend exposes it",
     )
     args = parser.parse_args()
     main(args)
