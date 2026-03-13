@@ -4,12 +4,13 @@ import os
 import sys
 import tempfile
 import unittest
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from ragnarok.data import DataWriter, Query, RAGExecInfo, Result
 from ragnarok.generate.generator import RAG
 from ragnarok.generate.llm import LLM, PromptMode
+from ragnarok.generate.templates.ragnarok_templates import RagnarokTemplates
 
 
 class DummyLLM(LLM):
@@ -58,6 +59,60 @@ class AsyncRecordingLLM(DummyLLM):
 
 
 class TestReasoningSupport(unittest.TestCase):
+    def test_create_generation_agent_routes_unknown_model_to_openai_compatible(self):
+        fake_safe_openai = MagicMock(return_value="agent")
+        fake_gpt_module = ModuleType("ragnarok.generate.gpt")
+        fake_gpt_module.SafeOpenai = fake_safe_openai
+
+        args = SimpleNamespace(
+            model_path="openrouter/hunter-alpha",
+            context_size=8192,
+            prompt_mode=PromptMode.CHATQA,
+            max_output_tokens=512,
+            num_few_shot_examples=0,
+            include_reasoning=True,
+            reasoning_effort="high",
+            use_azure_openai=False,
+            num_gpus=1,
+        )
+
+        with (
+            patch.dict(
+                os.environ,
+                {"OPENROUTER_API_KEY": "router-key", "OPENAI_API_KEY": ""},
+                clear=False,
+            ),
+            patch.dict(
+                sys.modules,
+                {"ragnarok.generate.gpt": fake_gpt_module},
+            ),
+        ):
+            from ragnarok.cli.operations import create_generation_agent
+
+            agent = create_generation_agent(args)
+
+        self.assertEqual(agent, "agent")
+        fake_safe_openai.assert_called_once()
+        self.assertEqual(fake_safe_openai.call_args.kwargs["model"], args.model_path)
+        self.assertEqual(
+            fake_safe_openai.call_args.kwargs["api_base"],
+            "https://openrouter.ai/api/v1",
+        )
+        self.assertEqual(fake_safe_openai.call_args.kwargs["keys"], "router-key")
+
+    def test_ragnarok_templates_use_chat_messages_for_openrouter_models(self):
+        template = RagnarokTemplates(prompt_mode=PromptMode.CHATQA)
+
+        prompt = template(
+            query="What defines Pink Floyds artistic identity?",
+            context=["[1] Pink Floyd explored alienation and social critique."],
+            model="openrouter/hunter-alpha",
+        )
+
+        self.assertIsInstance(prompt, list)
+        self.assertEqual(prompt[0]["role"], "system")
+        self.assertEqual(prompt[1]["role"], "user")
+
     def test_rag_answer_accepts_topk_keyword(self):
         rag = RAG(agent=MagicMock())
         expected = Result(query=Query(text="q", qid="1"))

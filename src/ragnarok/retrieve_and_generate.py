@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Union
 from ragnarok.data import Query, Request
 
 # from ragnarok.evaluation.nugget_eval import EvalFunction
-from ragnarok.generate.api_keys import get_azure_openai_args, get_openai_api_key
+from ragnarok.generate.api_keys import get_openai_compatible_args
 from ragnarok.generate.generator import RAG
 from ragnarok.generate.llm import PromptMode
 from ragnarok.retrieve_and_rerank.restriever import Restriever
@@ -90,26 +90,8 @@ def retrieve_and_generate(
 
     # Construct Generation Agent
     model_full_path = ""
-    if "gpt" in generator_path:
-        print("Using Azure OpenAI API" if use_azure_openai else "Using OpenAI API")
-        print(f"Model: {generator_path}")
-        try:
-            from ragnarok.generate.gpt import SafeOpenai
-        except ImportError as exc:
-            raise _missing_extra("cloud", "openai,tiktoken") from exc
-        openai_keys = get_openai_api_key()
-        agent = SafeOpenai(
-            model=generator_path,
-            context_size=context_size,
-            prompt_mode=prompt_mode,
-            max_output_tokens=max_output_tokens,
-            num_few_shot_examples=num_few_shot_examples,
-            store_reasoning=include_reasoning,
-            reasoning_effort=reasoning_effort,
-            keys=openai_keys,
-            **(get_azure_openai_args() if use_azure_openai else {}),
-        )
-    elif "command-r" in generator_path:
+    lowered_generator_path = generator_path.lower()
+    if "command-r" in generator_path:
         try:
             from ragnarok.generate.cohere import Cohere
         except ImportError as exc:
@@ -121,11 +103,7 @@ def retrieve_and_generate(
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
         )
-    elif (
-        "llama" in generator_path.lower()
-        or "mistral" in generator_path.lower()
-        or "qwen" in generator_path.lower()
-    ):
+    elif any(name in lowered_generator_path for name in ("llama", "mistral", "qwen")):
         try:
             from ragnarok.generate.os_llm import OSLLM
         except ImportError as exc:
@@ -143,7 +121,23 @@ def retrieve_and_generate(
             num_gpus=num_gpus,
         )
     else:
-        raise ValueError(f"Unsupported model: {generator_path}")
+        print("Using Azure OpenAI API" if use_azure_openai else "Using OpenAI API")
+        print(f"Model: {generator_path}")
+        try:
+            from ragnarok.generate.gpt import SafeOpenai
+        except ImportError as exc:
+            raise _missing_extra("cloud", "openai,tiktoken") from exc
+        openai_keys = get_openai_api_key()
+        agent = SafeOpenai(
+            model=generator_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            max_output_tokens=max_output_tokens,
+            num_few_shot_examples=num_few_shot_examples,
+            store_reasoning=include_reasoning,
+            reasoning_effort=reasoning_effort,
+            **get_openai_compatible_args(generator_path, use_azure_openai),
+        )
 
     # Retrieve + Rerank
     print("Calling reranker API...")

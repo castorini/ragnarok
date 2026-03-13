@@ -1,12 +1,42 @@
 import os
-from typing import Dict
+from typing import Any, Dict
 
 from dotenv import load_dotenv
 
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
-def get_openai_api_key() -> str:
+
+def get_openai_api_key() -> str | None:
     load_dotenv()
-    return os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI_API_KEY")
+    return (
+        os.getenv("OPENAI_API_KEY")
+        or os.getenv("OPEN_AI_API_KEY")
+        or os.getenv("OPENROUTER_API_KEY")
+    )
+
+
+def uses_openrouter(model_name: str) -> bool:
+    load_dotenv()
+    openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI_API_KEY")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    return model_name.startswith("openrouter/") or (
+        bool(openrouter_key) and not bool(openai_key)
+    )
+
+
+def get_openai_compatible_args(
+    model_name: str, use_azure_openai: bool = False
+) -> Dict[str, Any]:
+    load_dotenv()
+    if use_azure_openai:
+        args = get_azure_openai_args()
+        args["keys"] = get_openai_api_key()
+        return args
+
+    args: Dict[str, Any] = {"keys": get_openai_api_key()}
+    if uses_openrouter(model_name):
+        args["api_base"] = OPENROUTER_BASE_URL
+    return args
 
 
 def get_azure_openai_args() -> Dict[str, str]:

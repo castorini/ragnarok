@@ -114,8 +114,16 @@ class RagnarokTemplates:
         self.user_input = "{query}"
         self.sep = "\n\n"
 
+    @staticmethod
+    def _uses_chat_message_format(model: str) -> bool:
+        lowered_model = model.lower()
+        return not any(
+            name in lowered_model
+            for name in ("command-r", "chatqa", "llama", "mistral", "qwen")
+        )
+
     def __call__(self, query: str, context: List[str], model: str) -> List[str]:
-        if not ("gpt" in model or "chatqa" in model.lower()):
+        if not (self._uses_chat_message_format(model) or "chatqa" in model.lower()):
             self.sep = "\n"
         str_context = self.sep.join(context)
 
@@ -130,7 +138,7 @@ class RagnarokTemplates:
                 + self.sep
                 + f"Instruction: {self.get_instruction()}"
             )
-        elif "gpt" in model:
+        elif self._uses_chat_message_format(model):
             user_input_context = (
                 f"Instruction: {self.get_instruction()}"
                 + self.sep
@@ -152,7 +160,7 @@ class RagnarokTemplates:
                 + f"Instruction: {self.get_instruction()}"
             )
 
-        if "gpt" in model:
+        if self._uses_chat_message_format(model):
             messages = []
             system_message = (
                 self.system_message_gpt_no_cite

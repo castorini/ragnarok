@@ -6,7 +6,7 @@ import asyncio
 from textwrap import fill
 
 from ragnarok.data import Candidate, Query, Request, Result
-from ragnarok.generate.api_keys import get_azure_openai_args, get_openai_api_key
+from ragnarok.generate.api_keys import get_openai_compatible_args
 from ragnarok.generate.generator import RAG
 from ragnarok.generate.llm import LLM, PromptMode
 
@@ -94,27 +94,6 @@ def detect_device() -> str:
 
 def build_agent(args: argparse.Namespace) -> LLM:
     prompt_mode = args.prompt_mode
-
-    if "gpt" in args.model:
-        from ragnarok.generate.gpt import SafeOpenai
-
-        openai_keys = get_openai_api_key()
-        if not openai_keys:
-            raise ValueError(
-                "No OpenAI API key found. Set OPENAI_API_KEY before running "
-                "the demo."
-            )
-        return SafeOpenai(
-            model=args.model,
-            context_size=args.context_size,
-            prompt_mode=prompt_mode,
-            max_output_tokens=args.max_output_tokens,
-            store_reasoning=args.include_reasoning,
-            reasoning_effort=args.reasoning_effort,
-            keys=openai_keys,
-            **(get_azure_openai_args() if args.use_azure_openai else {}),
-        )
-
     if "command-r" in args.model:
         from ragnarok.generate.cohere import Cohere
 
@@ -138,9 +117,24 @@ def build_agent(args: argparse.Namespace) -> LLM:
             num_gpus=args.num_gpus,
         )
 
-    raise ValueError(
-        "Unsupported model. Use an OpenAI-compatible GPT model, a Cohere "
-        "command-r model, or an open-weight Llama/Mistral/Qwen model."
+    from ragnarok.generate.gpt import SafeOpenai
+
+    openai_compatible_args = get_openai_compatible_args(
+        args.model, args.use_azure_openai
+    )
+    if not openai_compatible_args.get("keys"):
+        raise ValueError(
+            "No OpenAI-compatible API key found. Set OPENAI_API_KEY or "
+            "OPENROUTER_API_KEY before running the demo."
+        )
+    return SafeOpenai(
+        model=args.model,
+        context_size=args.context_size,
+        prompt_mode=prompt_mode,
+        max_output_tokens=args.max_output_tokens,
+        store_reasoning=args.include_reasoning,
+        reasoning_effort=args.reasoning_effort,
+        **openai_compatible_args,
     )
 
 

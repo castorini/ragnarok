@@ -43,36 +43,23 @@ def create_generation_agent(args: Any) -> Any:
         if isinstance(args.prompt_mode, PromptMode)
         else PromptMode(args.prompt_mode)
     )
-    if "gpt" in args.model_path:
-        from ragnarok.generate.api_keys import get_azure_openai_args, get_openai_api_key
-        from ragnarok.generate.gpt import SafeOpenai
-
-        return SafeOpenai(
-            model=args.model_path,
-            context_size=args.context_size,
-            prompt_mode=prompt_mode,
-            max_output_tokens=args.max_output_tokens,
-            num_few_shot_examples=args.num_few_shot_examples,
-            store_reasoning=args.include_reasoning,
-            reasoning_effort=args.reasoning_effort,
-            keys=get_openai_api_key(),
-            **(get_azure_openai_args() if args.use_azure_openai else {}),
-        )
-    if "command-r" in args.model_path:
+    model_name = args.model_path
+    lowered_model_name = model_name.lower()
+    if "command-r" in model_name:
         from ragnarok.generate.cohere import Cohere
 
         return Cohere(
-            model=args.model_path,
+            model=model_name,
             context_size=args.context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=args.max_output_tokens,
             num_few_shot_examples=args.num_few_shot_examples,
         )
-    if any(name in args.model_path.lower() for name in ("llama", "mistral", "qwen")):
+    if any(name in lowered_model_name for name in ("llama", "mistral", "qwen")):
         from ragnarok.generate.os_llm import OSLLM
 
         return OSLLM(
-            model=args.model_path,
+            model=model_name,
             context_size=args.context_size,
             prompt_mode=prompt_mode,
             max_output_tokens=args.max_output_tokens,
@@ -81,7 +68,23 @@ def create_generation_agent(args: Any) -> Any:
             device=detect_device(),
             num_gpus=args.num_gpus,
         )
-    raise ValueError(f"Unsupported model: {args.model_path}")
+
+    # Default to the OpenAI-compatible client for unknown model identifiers.
+    # This keeps the backend selection flexible for providers such as OpenRouter.
+    if True:
+        from ragnarok.generate.api_keys import get_openai_compatible_args
+        from ragnarok.generate.gpt import SafeOpenai
+
+        return SafeOpenai(
+            model=model_name,
+            context_size=args.context_size,
+            prompt_mode=prompt_mode,
+            max_output_tokens=args.max_output_tokens,
+            num_few_shot_examples=args.num_few_shot_examples,
+            store_reasoning=args.include_reasoning,
+            reasoning_effort=args.reasoning_effort,
+            **get_openai_compatible_args(model_name, args.use_azure_openai),
+        )
 
 
 def load_request_records(path: str) -> list[dict[str, Any]]:
@@ -175,8 +178,9 @@ def run_dataset_generation(
 
 
 def convert_generate_records_to_requests(records: list[dict[str, Any]]) -> list[Any]:
-    from ragnarok.data import Request
     from dacite import from_dict
+
+    from ragnarok.data import Request
 
     requests: list[Request] = []
     for record in records:
