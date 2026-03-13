@@ -461,6 +461,110 @@ class TestRagnarokCLI(unittest.TestCase):
             )
         )
 
+    def test_view_generate_output_returns_json_summary(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                output_path,
+                [
+                    {
+                        "run_id": "demo-run",
+                        "topic_id": "q1",
+                        "topic": "What is Python used for? " * 12,
+                        "references": ["d1", "d2", "d3"],
+                        "response_length": 42,
+                        "answer": [
+                            {
+                                "text": "Python is used for web development. " * 8,
+                                "citations": [0, 1],
+                            }
+                        ],
+                    }
+                ],
+            )
+
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(
+                    ["view", str(output_path), "--records", "1", "--output", "json"]
+                )
+
+            self.assertEqual(exit_code, 0)
+            output = json.loads(stdout.getvalue())
+            self.assertEqual(output["command"], "view")
+            self.assertEqual(
+                output["artifacts"][0]["data"]["artifact_type"],
+                "generate-output-record",
+            )
+            self.assertEqual(output["artifacts"][0]["data"]["summary"]["run_ids"], ["demo-run"])
+            self.assertEqual(len(output["artifacts"][0]["data"]["sampled_records"]), 1)
+            self.assertTrue(
+                output["artifacts"][0]["data"]["sampled_records"][0]["topic"].endswith(
+                    "..."
+                )
+            )
+
+    def test_view_generate_output_text_respects_record_limit(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                output_path,
+                [
+                    {
+                        "run_id": "demo-run",
+                        "topic_id": "q1",
+                        "topic": "topic one",
+                        "references": ["d1"],
+                        "response_length": 10,
+                        "answer": [{"text": "answer one", "citations": [0]}],
+                    },
+                    {
+                        "run_id": "demo-run",
+                        "topic_id": "q2",
+                        "topic": "topic two",
+                        "references": ["d2"],
+                        "response_length": 12,
+                        "answer": [{"text": "answer two", "citations": [0]}],
+                    },
+                ],
+            )
+
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(["view", str(output_path), "--records", "1", "--color", "never"])
+
+            self.assertEqual(exit_code, 0)
+            text = stdout.getvalue()
+            self.assertIn("Ragnarok View", text)
+            self.assertIn("topic_id=q1", text)
+            self.assertNotIn("topic_id=q2", text)
+
+    def test_view_empty_file_returns_json_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "empty.jsonl"
+            path.write_text("", encoding="utf-8")
+
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(["view", str(path), "--output", "json"])
+
+            self.assertEqual(exit_code, 5)
+            output = json.loads(stdout.getvalue())
+            self.assertEqual(output["errors"][0]["code"], "invalid_view_input")
+
+    def test_view_malformed_file_returns_json_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "broken.jsonl"
+            path.write_text("{not-json}\n", encoding="utf-8")
+
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                exit_code = main(["view", str(path), "--output", "json"])
+
+            self.assertEqual(exit_code, 5)
+            output = json.loads(stdout.getvalue())
+            self.assertEqual(output["errors"][0]["code"], "invalid_view_input")
+
     def test_describe_schema_and_doctor_json_envelopes(self):
         for argv, expected_command in [
             (["describe", "generate", "--output", "json"], "describe"),

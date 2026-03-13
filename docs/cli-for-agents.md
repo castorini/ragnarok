@@ -12,6 +12,7 @@ activated, use `uv run ragnarok ...`.
 - `ragnarok validate`: Validate generate payloads or TREC output artifacts.
 - `ragnarok convert trec25-format`: Convert older Ragnarok JSONL into the newer
   TREC 2025 format.
+- `ragnarok view`: Render an existing Ragnarok output artifact for humans.
 - `ragnarok describe`: Inspect command metadata and examples.
 - `ragnarok schema`: Print JSON schemas for inputs, outputs, and the shared CLI
   envelope.
@@ -103,6 +104,13 @@ ragnarok generate \
   --retrieval-method bm25,rank_zephyr_rho \
   --topk 100,5 \
   --prompt-mode chatqa
+```
+
+View an existing generation artifact:
+
+```bash
+ragnarok view results.jsonl
+ragnarok view results.jsonl --records 1
 ```
 
 ## Introspection And Validation
