@@ -85,48 +85,6 @@ activated environment, run `ragnarok ...`; otherwise use `uv run ragnarok ...`.
 - `ragnarok schema`: print supported JSON schemas
 - `ragnarok doctor`: report environment and dependency readiness
 
-### Legacy Script Mapping
-
-Old:
-```bash
-python src/ragnarok/scripts/run_ragnarok.py --model_path=gpt-4o --dataset=rag24.raggy-dev --retrieval_method=bm25 --topk=20 --prompt_mode=chatqa
-```
-
-New:
-```bash
-ragnarok generate --model-path gpt-4o --dataset rag24.raggy-dev --retrieval-method bm25 --topk 20 --prompt-mode chatqa
-```
-
-Old:
-```bash
-python src/ragnarok/scripts/check_trec_rag24_gen.py --topicfile topics.tsv run.jsonl
-```
-
-New:
-```bash
-ragnarok validate rag24-output --topicfile topics.tsv --runfile run.jsonl
-```
-
-Old:
-```bash
-python src/ragnarok/scripts/validate_trec_rag25_gen.py --input run.jsonl --topics topics.jsonl
-```
-
-New:
-```bash
-ragnarok validate rag25-output --input run.jsonl --topics topics.jsonl
-```
-
-Old:
-```bash
-python src/ragnarok/scripts/convert_to_trec25_format.py --input_file old.jsonl --output_file new.jsonl --prompt_file prompts.jsonl
-```
-
-New:
-```bash
-ragnarok convert trec25-format --input-file old.jsonl --output-file new.jsonl --prompt-file prompts.jsonl
-```
-
 ### Direct And Introspection Examples
 
 ```bash
