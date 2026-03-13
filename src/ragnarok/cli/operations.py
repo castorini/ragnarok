@@ -106,6 +106,30 @@ def run_request_generation(
     return serialized, {"generated_records": len(serialized)}
 
 
+async def async_run_request_generation(
+    requests: list[Request], args: Any, logger: logging.Logger
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    agent = create_generation_agent(args)
+    rag = RAG(agent=agent, run_id=args.run_id)
+    logger.info(
+        "Generating %d request(s) with async execution (max_concurrency=%d)",
+        len(requests),
+        getattr(args, "max_concurrency", 8),
+    )
+    results = await rag.async_answer_batch(
+        requests,
+        topk=args.topk[-1],
+        shuffle_candidates=args.shuffle_candidates,
+        logging=args.print_prompts_responses,
+        vllm=args.vllm_batched,
+        max_concurrency=getattr(args, "max_concurrency", 8),
+    )
+    serialized = [result_to_dict(result, args.run_id) for result in results]
+    if args.output_file is not None:
+        write_results_jsonl(results, args.output_file, args.run_id)
+    return serialized, {"generated_records": len(serialized)}
+
+
 def run_dataset_generation(
     args: Any, logger: logging.Logger
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -131,11 +155,15 @@ def run_dataset_generation(
             use_azure_openai=args.use_azure_openai,
             run_id=args.run_id,
         )
-    artifact_data = [result_to_dict(result, args.run_id)] if hasattr(result, "query") else []
+    artifact_data = (
+        [result_to_dict(result, args.run_id)] if hasattr(result, "query") else []
+    )
     return artifact_data, {"stdout": output_capture.getvalue()}
 
 
-def convert_generate_records_to_requests(records: list[dict[str, Any]]) -> list[Request]:
+def convert_generate_records_to_requests(
+    records: list[dict[str, Any]]
+) -> list[Request]:
     requests: list[Request] = []
     from dacite import from_dict
 

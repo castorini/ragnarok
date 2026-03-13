@@ -82,6 +82,18 @@ ragnarok generate \
   --prompt-mode chatqa
 ```
 
+Async request-file generation:
+
+```bash
+ragnarok generate \
+  --model-path gpt-4o \
+  --input-file requests.jsonl \
+  --output-file results.jsonl \
+  --prompt-mode chatqa \
+  --execution-mode async \
+  --max-concurrency 8
+```
+
 Dataset-backed retrieval and generation:
 
 ```bash
@@ -105,6 +117,9 @@ ragnarok doctor --output json
 ## Notes
 
 - JSON output uses the shared Castorini CLI envelope shape.
+- `generate --execution-mode async` is currently supported for direct JSON and
+  request-file generation. Dataset-backed retrieval plus generation remains
+  synchronous for now and returns a validation error if async mode is requested.
 - `generate --dry-run` and `generate --validate-only` resolve inputs without
   running a model.
 - Write policies mirror the other packaged CLIs: default fail if the output file

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -18,6 +19,7 @@ from .introspection import (
 from .logging_utils import setup_logging
 from .normalize import normalize_direct_generate_input
 from .operations import (
+    async_run_request_generation,
     convert_generate_records_to_requests,
     load_request_records,
     parse_retrieval_methods,
@@ -246,6 +248,10 @@ def build_parser() -> CLIArgumentParser:
     generate_parser.add_argument("--max-output-tokens", type=int, default=1500)
     generate_parser.add_argument("--run-id", type=str, default="ragnarok")
     generate_parser.add_argument("--vllm-batched", action="store_true")
+    generate_parser.add_argument(
+        "--execution-mode", choices=["sync", "async"], default="sync"
+    )
+    generate_parser.add_argument("--max-concurrency", type=int, default=8)
     generate_parser.add_argument("--include-reasoning", action="store_true")
     generate_parser.add_argument(
         "--reasoning-effort",
@@ -324,10 +330,20 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
             "prompt_mode": str(args.prompt_mode),
             "retrieval_method": [str(method) for method in args.retrieval_method or []],
             "run_id": args.run_id,
+            "execution_mode": args.execution_mode,
+            "max_concurrency": args.max_concurrency,
         },
     )
 
     if args.dataset is not None:
+        if args.execution_mode == "async":
+            raise CLIError(
+                "--execution-mode async is not yet supported with --dataset",
+                exit_code=EXIT_CODES["invalid_arguments"],
+                status="validation_error",
+                error_code="unsupported_execution_mode",
+                command="generate",
+            )
         response.validation = {"valid": True, "mode": "dataset"}
         if args.dry_run or args.validate_only:
             response.mode = "validate" if args.validate_only else "dry-run"
@@ -340,7 +356,9 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
         return response
 
     if args.input_file is not None:
-        _ensure_file_exists(args.input_file, command="generate", field_name="input_file")
+        _ensure_file_exists(
+            args.input_file, command="generate", field_name="input_file"
+        )
         validation = validate_generate_batch_file(args.input_file)
         response.validation = validation
         if not validation["valid"]:
@@ -354,9 +372,16 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
         if args.dry_run or args.validate_only:
             response.mode = "validate" if args.validate_only else "dry-run"
             return response
-        requests = convert_generate_records_to_requests(load_request_records(args.input_file))
+        requests = convert_generate_records_to_requests(
+            load_request_records(args.input_file)
+        )
         logger = setup_logging(args.log_level)
-        records, metrics = run_request_generation(requests, args, logger)
+        if args.execution_mode == "async":
+            records, metrics = asyncio.run(
+                async_run_request_generation(requests, args, logger)
+            )
+        else:
+            records, metrics = run_request_generation(requests, args, logger)
         if args.output == "json":
             response.artifacts.append({"kind": "data", "data": records})
         else:
@@ -380,7 +405,12 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
         )
         return response
     logger = setup_logging(args.log_level)
-    records, metrics = run_request_generation([request], args, logger)
+    if args.execution_mode == "async":
+        records, metrics = asyncio.run(
+            async_run_request_generation([request], args, logger)
+        )
+    else:
+        records, metrics = run_request_generation([request], args, logger)
     response.metrics = metrics
     response.artifacts.append({"kind": "data", "data": records})
     return response
@@ -390,7 +420,9 @@ def _run_validate_command(args: argparse.Namespace) -> CommandResponse:
     response = CommandResponse(command="validate", mode="validate")
     if args.target == "generate":
         if args.input_file is not None:
-            _ensure_file_exists(args.input_file, command="validate", field_name="input_file")
+            _ensure_file_exists(
+                args.input_file, command="validate", field_name="input_file"
+            )
             response.validation = validate_generate_batch_file(args.input_file)
         else:
             payload = _read_direct_payload(args)
@@ -431,7 +463,9 @@ def _run_validate_command(args: argparse.Namespace) -> CommandResponse:
 def _run_convert_command(args: argparse.Namespace) -> CommandResponse:
     _ensure_file_exists(args.input_file, command="convert", field_name="input_file")
     if args.prompt_file is not None:
-        _ensure_file_exists(args.prompt_file, command="convert", field_name="prompt_file")
+        _ensure_file_exists(
+            args.prompt_file, command="convert", field_name="prompt_file"
+        )
     summary, stdout = run_convert_trec25(args)
     return CommandResponse(
         command="convert",
@@ -476,7 +510,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 artifacts=[{"kind": "data", "data": SCHEMAS[args.target]}],
             )
         else:
-            response = CommandResponse(command="doctor", mode="inspect", metrics=doctor_report())
+            response = CommandResponse(
+                command="doctor", mode="inspect", metrics=doctor_report()
+            )
 
         _write_manifest(getattr(args, "manifest_path", None), response)
         if getattr(args, "output", "text") == "json":

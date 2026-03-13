@@ -1,16 +1,17 @@
+import asyncio
 import json
-from contextlib import redirect_stdout
-from io import StringIO
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
 from ragnarok.cli.main import main
-from ragnarok.data import Query, RAGExecInfo, Request, Result
+from ragnarok.data import RAGExecInfo, Result
 from ragnarok.generate.llm import PromptMode
 
 
@@ -36,15 +37,15 @@ class FakeAgent:
         self._prompt_mode = PromptMode.CHATQA
         self._num_few_shot_examples = 0
 
-    def answer_batch(
-        self, requests, topk, shuffle_candidates=False, logging=False, vllm=False
-    ):
+    def _build_results(self, requests, topk):
         results = []
         for request in requests:
             results.append(
                 Result(
                     query=request.query,
-                    references=[candidate.docid for candidate in request.candidates[:topk]],
+                    references=[
+                        candidate.docid for candidate in request.candidates[:topk]
+                    ],
                     answer=[
                         type(
                             "Sentence",
@@ -65,6 +66,29 @@ class FakeAgent:
             )
         return results
 
+    def answer_batch(
+        self, requests, topk, shuffle_candidates=False, logging=False, vllm=False
+    ):
+        return self._build_results(requests, topk)
+
+    async def async_answer(
+        self, request, topk, shuffle_candidates=False, logging=False
+    ):
+        await asyncio.sleep(0)
+        return self._build_results([request], topk)[0]
+
+    async def async_answer_batch(
+        self,
+        requests,
+        topk,
+        shuffle_candidates=False,
+        logging=False,
+        vllm=False,
+        max_concurrency=8,
+    ):
+        await asyncio.sleep(0)
+        return self._build_results(requests, topk)
+
 
 class TestRagnarokCLI(unittest.TestCase):
     def test_generate_direct_via_input_json(self):
@@ -72,19 +96,21 @@ class TestRagnarokCLI(unittest.TestCase):
         with redirect_stdout(stdout), patch(
             "ragnarok.cli.operations.create_generation_agent", return_value=FakeAgent()
         ):
-                exit_code = main(
-                    [
-                        "generate",
-                        "--model-path",
-                        "gpt-4o",
-                        "--input-json",
-                        json.dumps({"query": "what is python", "candidates": ["Python is useful."]}),
-                        "--prompt-mode",
-                        "chatqa",
-                        "--output",
-                        "json",
-                    ]
-                )
+            exit_code = main(
+                [
+                    "generate",
+                    "--model-path",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
 
         self.assertEqual(exit_code, 0)
         output = json.loads(stdout.getvalue())
@@ -117,6 +143,46 @@ class TestRagnarokCLI(unittest.TestCase):
         output = json.loads(stdout.getvalue())
         self.assertEqual(output["artifacts"][0]["data"][0]["topic"], "q")
 
+    def test_generate_direct_async_via_input_json(self):
+        class AsyncOnlyAgent(FakeAgent):
+            def answer_batch(
+                self,
+                requests,
+                topk,
+                shuffle_candidates=False,
+                logging=False,
+                vllm=False,
+            ):
+                raise AssertionError("sync answer_batch should not run in async mode")
+
+        stdout = StringIO()
+        with redirect_stdout(stdout), patch(
+            "ragnarok.cli.operations.create_generation_agent",
+            return_value=AsyncOnlyAgent(),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model-path",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--execution-mode",
+                    "async",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(output["resolved"]["execution_mode"], "async")
+        self.assertEqual(output["artifacts"][0]["data"][0]["topic"], "what is python")
+
     def test_generate_batch_request_file_writes_output(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             input_path = Path(temp_dir) / "requests.jsonl"
@@ -130,7 +196,9 @@ class TestRagnarokCLI(unittest.TestCase):
                             {
                                 "docid": "d1",
                                 "score": 1.0,
-                                "doc": {"segment": "Python is used for web development."},
+                                "doc": {
+                                    "segment": "Python is used for web development."
+                                },
                             }
                         ],
                     }
@@ -158,14 +226,75 @@ class TestRagnarokCLI(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             records = read_jsonl(output_path)
             self.assertEqual(records[0]["topic_id"], "q1")
-            self.assertEqual(records[0]["answer"][0]["text"], "Answer for what is python.")
+            self.assertEqual(
+                records[0]["answer"][0]["text"], "Answer for what is python."
+            )
+
+    def test_generate_batch_request_file_async_writes_output(self):
+        class AsyncOnlyAgent(FakeAgent):
+            def answer_batch(
+                self,
+                requests,
+                topk,
+                shuffle_candidates=False,
+                logging=False,
+                vllm=False,
+            ):
+                raise AssertionError("sync answer_batch should not run in async mode")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "requests.jsonl"
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                input_path,
+                [
+                    {
+                        "query": {"qid": "q1", "text": "what is python"},
+                        "candidates": [
+                            {
+                                "docid": "d1",
+                                "score": 1.0,
+                                "doc": {
+                                    "segment": "Python is used for web development."
+                                },
+                            }
+                        ],
+                    }
+                ],
+            )
+
+            with patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=AsyncOnlyAgent(),
+            ):
+                exit_code = main(
+                    [
+                        "generate",
+                        "--model-path",
+                        "gpt-4o",
+                        "--input-file",
+                        str(input_path),
+                        "--output-file",
+                        str(output_path),
+                        "--prompt-mode",
+                        "chatqa",
+                        "--execution-mode",
+                        "async",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            records = read_jsonl(output_path)
+            self.assertEqual(records[0]["topic_id"], "q1")
 
     def test_generate_dataset_mode_calls_existing_orchestration(self):
         captured = {}
 
         def fake_run_dataset_generation(args, logger):
             captured["dataset"] = args.dataset
-            captured["retrieval_method"] = [str(method) for method in args.retrieval_method]
+            captured["retrieval_method"] = [
+                str(method) for method in args.retrieval_method
+            ]
             captured["topk"] = args.topk
             return [], {"ok": True}
 
@@ -195,6 +324,25 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertEqual(captured["dataset"], "rag24.raggy-dev")
         self.assertEqual(captured["retrieval_method"], ["bm25", "rank_zephyr_rho"])
         self.assertEqual(captured["topk"], [100, 5])
+
+    def test_generate_dataset_mode_rejects_async_execution(self):
+        exit_code = main(
+            [
+                "generate",
+                "--model-path",
+                "gpt-4o",
+                "--dataset",
+                "rag24.raggy-dev",
+                "--prompt-mode",
+                "chatqa",
+                "--execution-mode",
+                "async",
+                "--output",
+                "json",
+            ]
+        )
+
+        self.assertEqual(exit_code, 2)
 
     def test_generate_dry_run_returns_zero(self):
         exit_code = main(
@@ -306,7 +454,12 @@ class TestRagnarokCLI(unittest.TestCase):
         with patch("sys.stderr.write") as stderr_write:
             exit_code = main([])
         self.assertEqual(exit_code, 2)
-        self.assertTrue(any("No command provided." in call.args[0] for call in stderr_write.call_args_list))
+        self.assertTrue(
+            any(
+                "No command provided." in call.args[0]
+                for call in stderr_write.call_args_list
+            )
+        )
 
     def test_describe_schema_and_doctor_json_envelopes(self):
         for argv, expected_command in [
@@ -482,7 +635,9 @@ class TestRagnarokCLI(unittest.TestCase):
             )
             self.assertEqual(exit_code, 0)
             converted = read_jsonl(output_path)
-            self.assertEqual(converted[0]["metadata"]["prompt"], "Tell me about Python.")
+            self.assertEqual(
+                converted[0]["metadata"]["prompt"], "Tell me about Python."
+            )
 
     def test_legacy_run_ragnarok_wrapper_delegates_to_cli(self):
         from ragnarok.scripts.run_ragnarok import cli_compatible_main

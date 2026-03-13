@@ -95,6 +95,20 @@ ragnarok generate \
   --output json
 ```
 
+To opt into async generation for direct JSON or request-file generation, add
+`--execution-mode async`. You can also tune request fan-out with
+`--max-concurrency`, for example:
+
+```bash
+ragnarok generate \
+  --model-path gpt-4o \
+  --input-file requests.jsonl \
+  --output-file results.jsonl \
+  --prompt-mode chatqa \
+  --execution-mode async \
+  --max-concurrency 8
+```
+
 ```bash
 ragnarok describe generate --output json
 ragnarok schema generate-direct-input --output json
@@ -131,16 +145,22 @@ setting only on the OpenAI-compatible generation path.
 
 ### Quick Demo
 
-For a small inline-hit RAG smoke test without preparing a dataset-backed
-retrieval run, use:
+For the default async inline-hit RAG smoke test without preparing a
+dataset-backed retrieval run, use:
 
 ```bash
 uv run python examples/rag_demo.py --model gpt-4o
 ```
 
 Pass `--use_azure_openai` for Azure OpenAI, `--include_reasoning` to capture
-reasoning where supported, and `--print_prompt` when you want to inspect the
-rendered prompt.
+reasoning where supported, `--max_concurrency` to control async request fan-out,
+and `--print_prompt` when you want to inspect the rendered prompt.
+
+If you want the synchronous compatibility demo instead, run:
+
+```bash
+uv run python examples/sync_rag_demo.py --model gpt-4o
+```
 
 ## Contributing 
 
