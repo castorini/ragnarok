@@ -384,6 +384,189 @@ class TestReasoningSupport(unittest.TestCase):
 
         self.assertEqual(recorded_kwargs["reasoning_effort"], "medium")
 
+    def test_extract_reasoning_from_model_extra(self):
+        llm = DummyLLM(
+            model="dummy",
+            context_size=1024,
+            prompt_mode=PromptMode.CHATQA,
+            store_reasoning=True,
+        )
+
+        reasoning = llm._extract_reasoning_from_message(
+            SimpleNamespace(model_extra={"reasoning": "Provider reasoning"})
+        )
+
+        self.assertEqual(reasoning, "Provider reasoning")
+
+    def test_safe_openai_uses_openrouter_extra_body_sync(self):
+        recorded_kwargs = {}
+
+        class FakeResponse:
+            class Choice:
+                class Message:
+                    content = "Final answer."
+                    model_extra = {"reasoning": "chain"}
+
+                message = Message()
+
+            choices = [Choice()]
+
+        def fake_create(**kwargs):
+            recorded_kwargs.update(kwargs)
+            return FakeResponse()
+
+        fake_openai = ModuleType("openai")
+        fake_openai.proxy = None
+        fake_openai.api_key = None
+        fake_openai.api_version = None
+        fake_openai.api_type = None
+        fake_openai.api_base = None
+        fake_openai.chat = type(
+            "ChatNamespace",
+            (),
+            {
+                "completions": type(
+                    "CompletionsNamespace", (), {"create": staticmethod(fake_create)}
+                )()
+            },
+        )()
+        fake_openai.Completion = type(
+            "CompletionNamespace", (), {"create": staticmethod(fake_create)}
+        )
+
+        fake_tiktoken = ModuleType("tiktoken")
+        fake_tiktoken.get_encoding = staticmethod(
+            lambda _name: type(
+                "Encoding", (), {"encode": staticmethod(lambda text: list(text))}
+            )()
+        )
+        fake_post_processor = ModuleType("ragnarok.generate.post_processor")
+
+        class FakeGPTPostProcessor:
+            def __call__(self, response):
+                return [], {"text": response, "citations": []}
+
+        fake_post_processor.GPTPostProcessor = FakeGPTPostProcessor
+
+        with patch.dict(
+            sys.modules,
+            {
+                "openai": fake_openai,
+                "tiktoken": fake_tiktoken,
+                "ragnarok.generate.post_processor": fake_post_processor,
+            },
+        ):
+            if "ragnarok.generate.gpt" in sys.modules:
+                del sys.modules["ragnarok.generate.gpt"]
+            from ragnarok.generate.gpt import SafeOpenai
+
+            model = SafeOpenai(
+                model="openrouter/hunter-alpha",
+                context_size=1024,
+                prompt_mode=PromptMode.CHATQA,
+                keys=["test-key"],
+                api_base="https://openrouter.ai/api/v1",
+                reasoning_effort="high",
+                store_reasoning=True,
+            )
+            answers, rag_exec_info = model.run_llm(
+                [
+                    {"role": "system", "content": "System prompt"},
+                    {"role": "user", "content": "User prompt"},
+                ]
+            )
+
+        self.assertEqual(answers, [])
+        self.assertEqual(rag_exec_info.reasoning, "chain")
+        self.assertEqual(
+            recorded_kwargs["extra_body"],
+            {"reasoning": {"effort": "high", "exclude": False}},
+        )
+        self.assertNotIn("reasoning_effort", recorded_kwargs)
+
+    def test_safe_openai_uses_openrouter_extra_body_async(self):
+        fake_openai = ModuleType("openai")
+        fake_openai.proxy = None
+        fake_openai.api_key = None
+        fake_openai.api_version = None
+        fake_openai.api_type = None
+        fake_openai.api_base = None
+        fake_openai.chat = type("ChatNamespace", (), {})()
+        fake_openai.Completion = type("CompletionNamespace", (), {})()
+
+        fake_tiktoken = ModuleType("tiktoken")
+        fake_tiktoken.get_encoding = staticmethod(
+            lambda _name: type(
+                "Encoding", (), {"encode": staticmethod(lambda text: list(text))}
+            )()
+        )
+        fake_post_processor = ModuleType("ragnarok.generate.post_processor")
+
+        class FakeGPTPostProcessor:
+            def __call__(self, response):
+                return [], {"text": response, "citations": []}
+
+        fake_post_processor.GPTPostProcessor = FakeGPTPostProcessor
+
+        with patch.dict(
+            sys.modules,
+            {
+                "openai": fake_openai,
+                "tiktoken": fake_tiktoken,
+                "ragnarok.generate.post_processor": fake_post_processor,
+            },
+        ):
+            if "ragnarok.generate.gpt" in sys.modules:
+                del sys.modules["ragnarok.generate.gpt"]
+            from ragnarok.generate.gpt import SafeOpenai
+
+            model = SafeOpenai(
+                model="openrouter/hunter-alpha",
+                context_size=1024,
+                prompt_mode=PromptMode.CHATQA,
+                keys=["test-key"],
+                api_base="https://openrouter.ai/api/v1",
+                reasoning_effort="high",
+                store_reasoning=True,
+            )
+
+            recorded_kwargs = {}
+
+            async def fake_create(**kwargs):
+                recorded_kwargs.update(kwargs)
+                return SimpleNamespace(
+                    choices=[
+                        SimpleNamespace(
+                            message=SimpleNamespace(
+                                content="Final answer.",
+                                model_extra={"reasoning": "chain"},
+                            )
+                        )
+                    ]
+                )
+
+            model._async_client = SimpleNamespace(
+                chat=SimpleNamespace(completions=SimpleNamespace(create=fake_create))
+            )
+            model._async_client_key_id = model._cur_key_id
+
+            answers, rag_exec_info = asyncio.run(
+                model.async_run_llm(
+                    [
+                        {"role": "system", "content": "System prompt"},
+                        {"role": "user", "content": "User prompt"},
+                    ]
+                )
+            )
+
+        self.assertEqual(answers, [])
+        self.assertEqual(rag_exec_info.reasoning, "chain")
+        self.assertEqual(
+            recorded_kwargs["extra_body"],
+            {"reasoning": {"effort": "high", "exclude": False}},
+        )
+        self.assertNotIn("reasoning_effort", recorded_kwargs)
+
 
 if __name__ == "__main__":
     unittest.main()

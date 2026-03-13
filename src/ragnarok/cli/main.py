@@ -817,7 +817,24 @@ def _run_view_command(args: argparse.Namespace) -> CommandResponse:
 def _format_text_response(response: CommandResponse) -> str:
     envelope = response.to_envelope()
     if response.command == "generate":
-        return ""
+        artifacts = envelope.get("artifacts", [])
+        if not artifacts:
+            return ""
+        data = artifacts[0].get("data", [])
+        if not data:
+            return ""
+        rendered_records: list[str] = []
+        for record in data:
+            answer_lines = [
+                answer.get("text", "")
+                for answer in record.get("answer", [])
+                if answer.get("text")
+            ]
+            if answer_lines:
+                rendered_records.append("\n".join(answer_lines))
+            else:
+                rendered_records.append("")
+        return "\n\n".join(rendered_records).rstrip()
     if response.command == "describe" or response.command == "schema":
         return json.dumps(envelope["artifacts"][0]["data"], indent=2)
     if response.command == "doctor":

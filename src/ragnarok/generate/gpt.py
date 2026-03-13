@@ -122,6 +122,20 @@ class SafeOpenai(LLM):
             openai.api_base = api_base
             self.use_azure_ai = True
 
+    def _build_reasoning_params(self) -> Dict[str, Any]:
+        if self._reasoning_effort is None:
+            return {}
+        if self._api_base and "openrouter.ai" in self._api_base:
+            return {
+                "extra_body": {
+                    "reasoning": {
+                        "effort": self._reasoning_effort,
+                        "exclude": False,
+                    }
+                }
+            }
+        return {"reasoning_effort": self._reasoning_effort}
+
     def _create_async_client(self, key_id: int) -> Any:
         api_key = self._keys[key_id]
         if self.use_azure_ai:
@@ -214,8 +228,7 @@ class SafeOpenai(LLM):
             "completion_mode": SafeOpenai.CompletionMode.CHAT,
             "model": self._model,
         }
-        if self._reasoning_effort is not None:
-            completion_params["reasoning_effort"] = self._reasoning_effort
+        completion_params.update(self._build_reasoning_params())
         response = self._call_completion(**completion_params)
         message = response.choices[0].message
         response_text = message.content or ""
@@ -292,8 +305,7 @@ class SafeOpenai(LLM):
             "completion_mode": SafeOpenai.CompletionMode.CHAT,
             "model": self._model,
         }
-        if self._reasoning_effort is not None:
-            completion_params["reasoning_effort"] = self._reasoning_effort
+        completion_params.update(self._build_reasoning_params())
         response = await self._call_completion_async(**completion_params)
         message = response.choices[0].message
         response_text = message.content or ""

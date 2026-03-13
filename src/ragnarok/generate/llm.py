@@ -294,6 +294,12 @@ class LLM(ABC):
                 return str(message["reasoning"]).strip()
             if message.get("reasoning_content"):
                 return str(message["reasoning_content"]).strip()
+        model_extra = getattr(message, "model_extra", None)
+        if isinstance(model_extra, dict):
+            if model_extra.get("reasoning"):
+                return str(model_extra["reasoning"]).strip()
+            if model_extra.get("reasoning_content"):
+                return str(model_extra["reasoning_content"]).strip()
         return None
 
     def _extract_reasoning_from_text(self, response: str) -> Tuple[Optional[str], str]:

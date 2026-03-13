@@ -197,6 +197,32 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertEqual(output["resolved"]["execution_mode"], "async")
         self.assertEqual(output["artifacts"][0]["data"][0]["topic"], "what is python")
 
+    def test_generate_direct_text_output_is_not_empty(self):
+        stdout = StringIO()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model-path",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Answer for what is python.", stdout.getvalue())
+
     def test_generate_batch_request_file_writes_output(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             input_path = Path(temp_dir) / "requests.jsonl"
