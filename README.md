@@ -91,6 +91,10 @@ currently intended for OpenAI-compatible responses that expose reasoning fields
 and open-weight models that emit `<think>...</think>` blocks. The public TREC
 result file under `results/` is unchanged.
 
+For OpenAI-compatible models that support effort controls, you can also pass
+`--reasoning_effort none|minimal|low|medium|high|xhigh`. Ragnarok forwards that
+setting only on the OpenAI-compatible generation path.
+
 ## Contributing 
 
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).

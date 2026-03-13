@@ -12,6 +12,15 @@ from ragnarok.generate.templates.ragnarok_templates import RagnarokTemplates
 
 
 class SafeOpenai(LLM):
+    SUPPORTED_REASONING_EFFORTS = (
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    )
+
     def __init__(
         self,
         model: str,
@@ -20,6 +29,7 @@ class SafeOpenai(LLM):
         max_output_tokens: int = 1500,
         num_few_shot_examples: int = 0,
         store_reasoning: bool = False,
+        reasoning_effort: str | None = None,
         keys=None,
         key_start_id=None,
         proxy=None,
@@ -84,6 +94,16 @@ class SafeOpenai(LLM):
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
         self._post_processor = GPTPostProcessor()
+        if (
+            reasoning_effort is not None
+            and reasoning_effort not in self.SUPPORTED_REASONING_EFFORTS
+        ):
+            raise ValueError(
+                "Unsupported reasoning_effort: "
+                f"{reasoning_effort}. Expected one of "
+                f"{', '.join(self.SUPPORTED_REASONING_EFFORTS)}."
+            )
+        self._reasoning_effort = reasoning_effort
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
         self.use_azure_ai = False
@@ -138,15 +158,17 @@ class SafeOpenai(LLM):
         prompt: Union[str, List[Dict[str, str]]],
         logging: bool = False,
     ) -> Tuple[str, RAGExecInfo]:
-        model_key = "model"
         if logging:
             print(f"Prompt: {prompt}")
-        response = self._call_completion(
-            messages=prompt,
-            temperature=0.1,
-            completion_mode=SafeOpenai.CompletionMode.CHAT,
-            **{model_key: self._model},
-        )
+        completion_params: Dict[str, Any] = {
+            "messages": prompt,
+            "temperature": 0.1,
+            "completion_mode": SafeOpenai.CompletionMode.CHAT,
+            "model": self._model,
+        }
+        if self._reasoning_effort is not None:
+            completion_params["reasoning_effort"] = self._reasoning_effort
+        response = self._call_completion(**completion_params)
         message = response.choices[0].message
         response_text = message.content or ""
         reasoning = self._extract_reasoning_from_message(message)

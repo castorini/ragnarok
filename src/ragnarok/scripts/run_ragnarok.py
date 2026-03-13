@@ -60,6 +60,7 @@ def main(args):
     run_id = args.run_id
     vllm_batched = args.vllm_batched
     include_reasoning = args.include_reasoning
+    reasoning_effort = args.reasoning_effort
 
     _ = retrieve_and_generate(
         model_path,
@@ -77,6 +78,7 @@ def main(args):
         print_prompts_responses,
         vllm_batched=vllm_batched,
         include_reasoning=include_reasoning,
+        reasoning_effort=reasoning_effort,
         use_azure_openai=use_azure_openai,
         run_id=run_id,
     )
@@ -170,6 +172,12 @@ if __name__ == "__main__":
         "--include_reasoning",
         action="store_true",
         help="store reasoning content in the rag execution summary sidecar when the backend exposes it",
+    )
+    parser.add_argument(
+        "--reasoning_effort",
+        type=str,
+        choices=["none", "minimal", "low", "medium", "high", "xhigh"],
+        help="OpenAI-compatible reasoning effort level to request for supported models",
     )
     args = parser.parse_args()
     main(args)

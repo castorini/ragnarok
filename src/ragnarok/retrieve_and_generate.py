@@ -44,6 +44,7 @@ def retrieve_and_generate(
     qid: int = 1,
     vllm_batched: bool = False,
     include_reasoning: bool = False,
+    reasoning_effort: str | None = None,
     use_azure_openai: bool = False,
     num_passes: int = 1,
     window_size: int = 20,
@@ -73,6 +74,7 @@ def retrieve_and_generate(
         qid (int): The query ID of the search query.
         vllm_batched (bool): Whether to use batched VLLM.
         include_reasoning (bool): Whether to store backend reasoning content in the RAG execution summary sidecar when available.
+        reasoning_effort (str | None): OpenAI-compatible reasoning effort level to request when supported by the target model.
         use_azure_openai (bool): Whether to use Azure OpenAI services.
         num_passes (int): The number of passes for iterative retrieval and generation.
         window_size (int): The size of the sliding window for context retrieval.
@@ -103,6 +105,7 @@ def retrieve_and_generate(
             max_output_tokens=max_output_tokens,
             num_few_shot_examples=num_few_shot_examples,
             store_reasoning=include_reasoning,
+            reasoning_effort=reasoning_effort,
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
