@@ -1,15 +1,35 @@
 import os
 import re
+from importlib import import_module
 from typing import Any, Dict, List, Tuple
-
-import spacy
-import stanza
 
 from ragnarok.data import CitedSentence
 
 
+class RegexTokenizer:
+    def tokenize(
+        self, text: str, replace_newline: str = " ", sep: str = "\n"
+    ) -> List[str]:
+        text = replace_newline.join(
+            text.replace("\n", replace_newline).split(replace_newline)
+        ).strip()
+        if not text:
+            return []
+        sentences = [
+            sentence.strip()
+            for sentence in re.split(r"(?<=[.!?])\s+", text)
+            if sentence.strip() and re.search("[a-zA-Z]", sentence)
+        ]
+        if sentences:
+            return sentences
+        if sep in text:
+            return [part.strip() for part in text.split(sep) if part.strip()]
+        return [text]
+
+
 class StanzaTokenizer:
     def __init__(self, lang="en", processors="tokenize"):
+        stanza = import_module("stanza")
         self.pipeline = stanza.Pipeline(lang=lang, processors=processors)
 
     def tokenize(
@@ -38,9 +58,10 @@ class StanzaTokenizer:
 
 class SpacyTokenizer:
     def __init__(self, model="en_core_web_trf"):
+        spacy = import_module("spacy")
         try:
             self.nlp = spacy.load(model)
-        except:
+        except Exception:
             os.system(f"python -m spacy download {model}")
             self.nlp = spacy.load(model)
 
@@ -66,11 +87,15 @@ class SpacyTokenizer:
 
 class CoherePostProcessor:
     def __init__(self, tokenizer="spacy") -> None:
-        self.tokenizer = (
-            StanzaTokenizer(lang="en", processors="tokenize")
-            if tokenizer == "stanza"
-            else SpacyTokenizer(model="en_core_web_trf")
-        )
+        self.tokenizer = self._build_tokenizer(tokenizer)
+
+    def _build_tokenizer(self, tokenizer: str) -> Any:
+        try:
+            if tokenizer == "stanza":
+                return StanzaTokenizer(lang="en", processors="tokenize")
+            return SpacyTokenizer(model="en_core_web_trf")
+        except ModuleNotFoundError:
+            return RegexTokenizer()
 
     def _find_sentence_citations(
         self, text_output: str, sentence: str, cohere_citations: List[Dict[str, Any]]
@@ -131,7 +156,15 @@ class CoherePostProcessor:
 
 class GPTPostProcessor:
     def __init__(self, tokenizer="spacy") -> None:
-        self.tokenizer = SpacyTokenizer(model="en_core_web_trf")
+        self.tokenizer = self._build_tokenizer(tokenizer)
+
+    def _build_tokenizer(self, tokenizer: str) -> Any:
+        try:
+            if tokenizer == "stanza":
+                return StanzaTokenizer(lang="en", processors="tokenize")
+            return SpacyTokenizer(model="en_core_web_trf")
+        except ModuleNotFoundError:
+            return RegexTokenizer()
 
     def _find_sentence_citations(
         self, sentence: str, citation_range: List[int] = list(range(50))

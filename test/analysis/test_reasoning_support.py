@@ -25,6 +25,30 @@ class DummyLLM(LLM):
 
 
 class TestReasoningSupport(unittest.TestCase):
+    def test_gpt_post_processor_falls_back_without_spacy_or_stanza(self):
+        blocked = {"spacy", "stanza"}
+        original_import = __import__
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name.split(".")[0] in blocked:
+                raise ModuleNotFoundError(name)
+            return original_import(name, globals, locals, fromlist, level)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            if "ragnarok.generate.post_processor" in sys.modules:
+                del sys.modules["ragnarok.generate.post_processor"]
+            from ragnarok.generate.post_processor import GPTPostProcessor
+
+            answers, rag_exec_response = GPTPostProcessor()(
+                "Sentence one [1]. Sentence two [2]."
+            )
+
+        self.assertEqual([answer.text for answer in answers], ["Sentence one.", "Sentence two."])
+        self.assertEqual([answer.citations for answer in answers], [[0], [1]])
+        self.assertEqual(
+            rag_exec_response["text"], "Sentence one [1]. Sentence two [2]."
+        )
+
     def test_extract_reasoning_from_think_tags(self):
         llm = DummyLLM(
             model="dummy",
