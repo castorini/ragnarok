@@ -498,10 +498,9 @@ class TestRagnarokCLI(unittest.TestCase):
             )
             self.assertEqual(output["artifacts"][0]["data"]["summary"]["run_ids"], ["demo-run"])
             self.assertEqual(len(output["artifacts"][0]["data"]["sampled_records"]), 1)
-            self.assertTrue(
-                output["artifacts"][0]["data"]["sampled_records"][0]["topic"].endswith(
-                    "..."
-                )
+            self.assertEqual(
+                output["artifacts"][0]["data"]["sampled_records"][0]["topic"],
+                ("What is Python used for? " * 12).strip(),
             )
 
     def test_view_generate_output_text_respects_record_limit(self):

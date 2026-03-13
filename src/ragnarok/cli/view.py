@@ -42,10 +42,8 @@ def _style(text: str, color: str, enabled: bool) -> str:
 
 
 def _truncate(text: str, limit: int = 140) -> str:
-    cleaned = " ".join(text.split())
-    if len(cleaned) <= limit:
-        return cleaned
-    return f"{cleaned[: limit - 3]}..."
+    del limit
+    return " ".join(text.split())
 
 
 def load_records(path: str) -> list[dict[str, Any]]:
@@ -109,7 +107,7 @@ def build_view_summary(
                 "topic_id": record["topic_id"],
                 "topic": _truncate(str(record["topic"]), 150),
                 "response_length": record["response_length"],
-                "references": list(record["references"][:5]),
+                "references": list(record["references"]),
                 "answer": [
                     {
                         "text": _truncate(str(sentence.get("text", "")), 180),
