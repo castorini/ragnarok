@@ -168,17 +168,21 @@ If you would like to contribute to the project, please refer to the [contributio
 
 ## 🦙🐧 Model Zoo
 
-Most LLMs supported by VLLM/FastChat should additionally be supported by Ragnarök too, albeit we do not test all of them. If you would like to see a specific model added, please open an issue or a pull request. The following is a table of generation models which we regularly use with Ragnarök:
+Ragnarok does not require a hardcoded model whitelist for most common cloud and
+open-weight generation setups. In practice, most models exposed through
+OpenAI-compatible APIs, OpenRouter, and vLLM can be used as long as they are
+compatible with the selected backend and prompt path.
 
-| Model Name        | Identifier/Link                            |
-|-------------------|---------------------------------------------|
-| GPT-4o            | `gpt-4o`                                   |
-| GPT-4           | `gpt-4`                              |
-| GPT-3.5-turbo    | `gpt-35-turbo`                            |
-| command-r-plus    | `command-r-plus`                     |
-| command-r         | `command-r`                          |
-| Llama-3 8B Instruct | `meta-llama/Meta-Llama-3-8B-Instruct` |
-| Llama3-ChatQA-1.5 | `nvidia/Llama3-ChatQA-1.5` |
+Instead of maintaining a static list of model identifiers in this README, use
+the upstream model catalogs:
+
+- OpenAI models: [platform.openai.com/docs/models](https://platform.openai.com/docs/models)
+- OpenRouter models: [openrouter.ai/models](https://openrouter.ai/models)
+- vLLM supported models: [docs.vllm.ai/en/latest/models/supported_models.html](https://docs.vllm.ai/en/latest/models/supported_models.html)
+
+If you find a backend or model family that should work but does not, open an
+issue or pull request with the exact model identifier, backend, and failure
+mode.
 
 
 ## ✨ References
