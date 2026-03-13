@@ -126,7 +126,7 @@ ragnarok generate --model-path command-r-plus --topk 20 \
   --context-size 8192 --max-output-tokens 1024
 ```
 
-Or to run the `gpt-4o` model (ChatQA inspired format) on the `rag24.raggy-dev` topics with multi-stage retrieval + reranking ()`bm25` followed by `rank_zephyr_rho`) and augmented-generation on the top-5 MS MARCO v2.1 segments, you can run the following command:
+Or to run the `gpt-4o` model (ChatQA inspired format) on the `rag24.raggy-dev` topics with multi-stage retrieval + reranking (`bm25` followed by `rank_zephyr_rho`) and augmented-generation on the top-5 MS MARCO v2.1 segments, you can run the following command:
 ```bash
 ragnarok generate --model-path gpt-4o --topk 100,5 \
     --dataset rag24.raggy-dev --retrieval-method bm25,rank_zephyr_rho --prompt-mode chatqa \
