@@ -32,6 +32,13 @@ from .operations import (
 )
 from .responses import CommandResponse
 from .spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
+from .view import (
+    ViewError,
+    build_view_summary,
+    detect_artifact_type,
+    load_records,
+    render_view_summary,
+)
 
 
 class CLIError(Exception):
@@ -306,6 +313,15 @@ def build_parser() -> CLIArgumentParser:
     doctor_parser = subparsers.add_parser("doctor")
     doctor_parser.add_argument("--output", choices=["text", "json"], default="text")
 
+    view_parser = subparsers.add_parser("view")
+    view_parser.add_argument("path", type=str)
+    view_parser.add_argument("--type", dest="artifact_type", type=str)
+    view_parser.add_argument("--records", type=int, default=3)
+    view_parser.add_argument(
+        "--color", choices=["auto", "always", "never"], default="auto"
+    )
+    view_parser.add_argument("--output", choices=["text", "json"], default="text")
+
     return parser
 
 
@@ -474,6 +490,38 @@ def _run_convert_command(args: argparse.Namespace) -> CommandResponse:
     )
 
 
+def _run_view_command(args: argparse.Namespace) -> CommandResponse:
+    _ensure_file_exists(args.path, command="view", field_name="path")
+    try:
+        records = load_records(args.path)
+        artifact_type = detect_artifact_type(records, args.artifact_type)
+    except ViewError as error:
+        raise CLIError(
+            str(error),
+            exit_code=EXIT_CODES["validation_error"],
+            status="validation_error",
+            error_code="invalid_view_input",
+            command="view",
+            details={"path": args.path, "artifact_type": args.artifact_type},
+        ) from error
+
+    view_summary = build_view_summary(
+        args.path, records, artifact_type, record_limit=args.records
+    )
+    return CommandResponse(
+        command="view",
+        mode="inspect",
+        inputs={"path": args.path},
+        resolved={
+            "artifact_type": artifact_type,
+            "records": args.records,
+            "color": args.color,
+        },
+        artifacts=[{"kind": "data", "data": view_summary}],
+        metrics=view_summary["summary"],
+    )
+
+
 def _format_text_response(response: CommandResponse) -> str:
     envelope = response.to_envelope()
     if response.command == "describe" or response.command == "schema":
@@ -482,6 +530,11 @@ def _format_text_response(response: CommandResponse) -> str:
         return json.dumps(envelope["metrics"], indent=2)
     if response.command == "validate":
         return json.dumps(envelope["validation"], indent=2)
+    if response.command == "view":
+        return render_view_summary(
+            cast(dict[str, Any], envelope["artifacts"][0]["data"]),
+            color=cast(str, envelope["resolved"]["color"]),
+        )
     return json.dumps(envelope, indent=2)
 
 
@@ -497,6 +550,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             response = _run_validate_command(args)
         elif args.command == "convert":
             response = _run_convert_command(args)
+        elif args.command == "view":
+            response = _run_view_command(args)
         elif args.command == "describe":
             response = CommandResponse(
                 command="describe",

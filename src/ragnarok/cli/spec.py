@@ -11,6 +11,7 @@ KNOWN_COMMANDS = (
     "generate",
     "validate",
     "convert",
+    "view",
     "describe",
     "schema",
     "doctor",

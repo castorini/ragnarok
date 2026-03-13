@@ -37,6 +37,14 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
         "summary": "Convert older Ragnarok artifacts into the newer TREC 2025 format.",
         "targets": ["trec25-format"],
     },
+    "view": {
+        "summary": "Inspect Ragnarok artifact files with a human-readable preview.",
+        "examples": [
+            "ragnarok view results.jsonl",
+            "ragnarok view results.jsonl --records 1",
+        ],
+        "supported_types": ["generate-output-record"],
+    },
 }
 
 
@@ -116,6 +124,10 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     "trec25-converted-output-record": {
         "type": "object",
         "required": ["metadata", "references", "answer"],
+    },
+    "view-summary": {
+        "type": "object",
+        "required": ["path", "artifact_type", "summary", "sampled_records"],
     },
     "cli-envelope": {
         "type": "object",
