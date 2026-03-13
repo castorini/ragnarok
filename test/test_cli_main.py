@@ -230,6 +230,51 @@ class TestRagnarokCLI(unittest.TestCase):
                 records[0]["answer"][0]["text"], "Answer for what is python."
             )
 
+    def test_generate_batch_request_file_is_quiet_in_text_mode(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "requests.jsonl"
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                input_path,
+                [
+                    {
+                        "query": {"qid": "q1", "text": "what is python"},
+                        "candidates": [
+                            {
+                                "docid": "d1",
+                                "score": 1.0,
+                                "doc": {
+                                    "segment": "Python is used for web development."
+                                },
+                            }
+                        ],
+                    }
+                ],
+            )
+
+            stdout = StringIO()
+            with redirect_stdout(stdout), patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ):
+                exit_code = main(
+                    [
+                        "generate",
+                        "--model-path",
+                        "gpt-4o",
+                        "--input-file",
+                        str(input_path),
+                        "--output-file",
+                        str(output_path),
+                        "--prompt-mode",
+                        "chatqa",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertTrue(output_path.exists())
+
     def test_generate_batch_request_file_async_writes_output(self):
         class AsyncOnlyAgent(FakeAgent):
             def answer_batch(

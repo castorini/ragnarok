@@ -524,6 +524,8 @@ def _run_view_command(args: argparse.Namespace) -> CommandResponse:
 
 def _format_text_response(response: CommandResponse) -> str:
     envelope = response.to_envelope()
+    if response.command == "generate":
+        return ""
     if response.command == "describe" or response.command == "schema":
         return json.dumps(envelope["artifacts"][0]["data"], indent=2)
     if response.command == "doctor":
@@ -573,7 +575,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if getattr(args, "output", "text") == "json":
             _emit_json(response.to_envelope())
         else:
-            sys.stdout.write(_format_text_response(response) + "\n")
+            text = _format_text_response(response)
+            if text:
+                sys.stdout.write(text + "\n")
         return response.exit_code
     except CLIError as error:
         response = _build_error_response(error)
