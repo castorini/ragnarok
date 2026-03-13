@@ -57,8 +57,9 @@ class RAG:
     def answer(
         self,
         request: Request,
+        topk: int | None = None,
         rank_start: int = 0,
-        rank_end: int = 20,
+        rank_end: int | None = 20,
         shuffle_candidates: bool = False,
         logging: bool = False,
     ) -> Result:
@@ -67,18 +68,28 @@ class RAG:
 
         Args:
             request (Request): The answering request which has a query and a candidates list.
+            topk (int | None, optional): The number of top candidates to include.
+                Preferred over `rank_end` for new callers.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
-            rank_end (int, optional): The end rank for processing. Defaults to 20.
+            rank_end (int | None, optional): Backward-compatible alias for the
+                number of top candidates to include. Defaults to 20.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before answering. Defaults to False.
             logging (bool, optional): Enables logging of the answering process. Defaults to False.
 
         Returns:
             Result: the generated result which contains the attributed answer.
         """
+        if rank_start != 0:
+            raise ValueError(
+                "RAG.answer() does not support rank_start != 0. Use topk or "
+                "rank_end to control how many candidates are included."
+            )
+        effective_topk = topk if topk is not None else rank_end
+        if effective_topk is None:
+            effective_topk = 20
         results = self.answer_batch(
             requests=[request],
-            rank_start=rank_start,
-            rank_end=rank_end,
+            topk=effective_topk,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
         )

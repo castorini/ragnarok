@@ -4,9 +4,10 @@ import sys
 import tempfile
 import unittest
 from types import ModuleType
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from ragnarok.data import DataWriter, Query, RAGExecInfo, Result
+from ragnarok.generate.generator import RAG
 from ragnarok.generate.llm import LLM, PromptMode
 
 
@@ -25,6 +26,32 @@ class DummyLLM(LLM):
 
 
 class TestReasoningSupport(unittest.TestCase):
+    def test_rag_answer_accepts_topk_keyword(self):
+        rag = RAG(agent=MagicMock())
+        expected = Result(query=Query(text="q", qid="1"))
+        rag.answer_batch = MagicMock(return_value=[expected])  # type: ignore[method-assign]
+
+        result = rag.answer(
+            request=MagicMock(),
+            topk=7,
+            shuffle_candidates=True,
+            logging=True,
+        )
+
+        rag.answer_batch.assert_called_once_with(
+            requests=[unittest.mock.ANY],
+            topk=7,
+            shuffle_candidates=True,
+            logging=True,
+        )
+        self.assertIs(result, expected)
+
+    def test_rag_answer_rejects_nonzero_rank_start(self):
+        rag = RAG(agent=MagicMock())
+
+        with self.assertRaises(ValueError):
+            rag.answer(request=MagicMock(), rank_start=1)
+
     def test_gpt_post_processor_falls_back_without_spacy_or_stanza(self):
         blocked = {"spacy", "stanza"}
         original_import = __import__
