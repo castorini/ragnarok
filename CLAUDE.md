@@ -12,6 +12,7 @@
 
 ## Repository Structure
 - `src/ragnarok/`: core package code.
+- `examples/`: runnable user-facing demos. `rag_demo.py` is the lightweight inline-hit smoke test.
 - `src/ragnarok/scripts/`: runnable scripts (entrypoints for RAG workflows and format/check utilities).
 - `src/ragnarok/api/`: API and Gradio/web-server-related code.
 - `src/ragnarok/generate/`: model integrations (OpenAI/Cohere/open-source/vLLM paths).
@@ -49,11 +50,14 @@
 ## Testing
 - Default test command (also reflected in `pr-format.yml`):
   - `uv run python -m unittest discover -s test`
+- Quick example validation:
+  - `uv run python examples/rag_demo.py --help`
 - Prefer adding/maintaining `unittest` tests in `test/**` to match current style.
 - Some tests depend on optional/external packages or data paths; ensure required deps are installed in the active environment before claiming failures/regressions.
 
 ## Running Main Pipelines
 - Main script: `src/ragnarok/scripts/run_ragnarok.py`.
+- Lightweight smoke-test example: `examples/rag_demo.py`.
 - Typical invocation is in README/docs; key args include:
   - `--model_path`
   - `--dataset`

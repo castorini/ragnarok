@@ -36,7 +36,8 @@ uv sync --group dev
 ```
 
 If you prefer not to activate the virtual environment, use `uv run`, for example
-`uv run python src/ragnarok/scripts/run_ragnarok.py --help`.
+`uv run python src/ragnarok/scripts/run_ragnarok.py --help` or
+`uv run python examples/rag_demo.py --help`.
 
 Install optional stacks only when you need them:
 
@@ -94,6 +95,19 @@ result file under `results/` is unchanged.
 For OpenAI-compatible models that support effort controls, you can also pass
 `--reasoning_effort none|minimal|low|medium|high|xhigh`. Ragnarok forwards that
 setting only on the OpenAI-compatible generation path.
+
+### Quick Demo
+
+For a small inline-hit RAG smoke test without preparing a dataset-backed
+retrieval run, use:
+
+```bash
+uv run python examples/rag_demo.py --model gpt-4o
+```
+
+Pass `--use_azure_openai` for Azure OpenAI, `--include_reasoning` to capture
+reasoning where supported, and `--print_prompt` when you want to inspect the
+rendered prompt.
 
 ## Contributing 
 
