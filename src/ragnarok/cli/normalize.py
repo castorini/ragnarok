@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from ragnarok.data import Candidate, Query, Request
 
+def _normalize_query(query_payload: Any) -> Any:
+    from ragnarok.data import Query
 
-def _normalize_query(query_payload: Any) -> Query:
     if isinstance(query_payload, str):
         return Query(text=query_payload, qid="q0")
     if isinstance(query_payload, dict) and isinstance(query_payload.get("text"), str):
@@ -13,7 +13,9 @@ def _normalize_query(query_payload: Any) -> Query:
     raise ValueError("query must be a string or an object with a text field")
 
 
-def _normalize_candidate(candidate_payload: Any, index: int) -> Candidate:
+def _normalize_candidate(candidate_payload: Any, index: int) -> Any:
+    from ragnarok.data import Candidate
+
     if isinstance(candidate_payload, str):
         return Candidate(
             docid=f"d{index}",
@@ -39,7 +41,9 @@ def _normalize_candidate(candidate_payload: Any, index: int) -> Candidate:
     )
 
 
-def normalize_direct_generate_input(payload: dict[str, Any]) -> Request:
+def normalize_direct_generate_input(payload: dict[str, Any]) -> Any:
+    from ragnarok.data import Request
+
     candidates_payload = payload.get("candidates")
     if not isinstance(candidates_payload, list):
         raise ValueError("candidates must be a list")
@@ -49,5 +53,7 @@ def normalize_direct_generate_input(payload: dict[str, Any]) -> Request:
             _normalize_candidate(candidate_payload, index)
             for index, candidate_payload in enumerate(candidates_payload)
         ],
-        ranking_exec_summary=cast(list[dict[str, Any]], payload.get("ranking_exec_summary", [])),
+        ranking_exec_summary=cast(
+            list[dict[str, Any]], payload.get("ranking_exec_summary", [])
+        ),
     )

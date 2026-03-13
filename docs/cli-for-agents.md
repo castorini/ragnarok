@@ -19,7 +19,10 @@ activated, use `uv run ragnarok ...`.
 - `ragnarok doctor`: Report Python, environment-variable, optional dependency,
   and Java or `pyserini` readiness.
 
-## Command Mapping
+## Compatibility Mapping
+
+These raw script paths remain available as compatibility entrypoints, but new
+automation should target `ragnarok ...`.
 
 Old:
 ```bash
@@ -49,6 +52,13 @@ python src/ragnarok/scripts/validate_trec_rag25_gen.py --input run.jsonl --topic
 New:
 ```bash
 ragnarok validate rag25-output --input run.jsonl --topics topics.jsonl
+```
+
+If you want the validator to write a repaired `.fixed` artifact for RAG 2025
+output, opt in explicitly:
+
+```bash
+ragnarok validate rag25-output --input run.jsonl --topics topics.jsonl --apply-fixes
 ```
 
 Old:
@@ -125,9 +135,12 @@ ragnarok doctor --output json
 ## Notes
 
 - JSON output uses the shared Castorini CLI envelope shape.
+- Artifact entries in JSON output use the shared `kind` plus `name` contract.
 - `generate --execution-mode async` is currently supported for direct JSON and
   request-file generation. Dataset-backed retrieval plus generation remains
   synchronous for now and returns a validation error if async mode is requested.
+- `validate rag25-output` is non-mutating by default. Repair output is written
+  only when `--apply-fixes`, `--fix-length`, or `--fix-citations` is requested.
 - `generate --dry-run` and `generate --validate-only` resolve inputs without
   running a model.
 - Write policies mirror the other packaged CLIs: default fail if the output file

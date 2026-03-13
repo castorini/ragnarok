@@ -7,8 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any, NoReturn, Sequence, cast
 
-from ragnarok.generate.llm import PromptMode
-
+from .adapters import make_data_artifact, make_file_artifact
 from .introspection import (
     COMMAND_DESCRIPTIONS,
     SCHEMAS,
@@ -231,101 +230,385 @@ def _read_direct_payload(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def build_parser() -> CLIArgumentParser:
-    parser = CLIArgumentParser(prog="ragnarok")
+    parser = CLIArgumentParser(
+        prog="ragnarok",
+        description=(
+            "Ragnarok packaged CLI for generation, validation, conversion, and "
+            "artifact inspection."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Common patterns:\n"
+            "  ragnarok generate --model-path gpt-4o --input-json "
+            '\'{"query":"q","candidates":["p"]}\' --prompt-mode chatqa --output json\n'
+            "  ragnarok validate generate --input-json "
+            '\'{"query":"q","candidates":["p"]}\' --output json\n'
+            "  ragnarok doctor --output json"
+        ),
+    )
     subparsers = parser.add_subparsers(
         dest="command", required=True, parser_class=CLIArgumentParser
     )
 
-    generate_parser = subparsers.add_parser("generate")
-    generate_inputs = generate_parser.add_mutually_exclusive_group(required=True)
-    generate_inputs.add_argument("--dataset", type=str)
-    generate_inputs.add_argument("--input-file", type=str)
-    generate_inputs.add_argument("--stdin", action="store_true")
-    generate_inputs.add_argument("--input-json", type=str)
-    generate_parser.add_argument("--model-path", type=str, required=True)
-    generate_parser.add_argument("--use-azure-openai", action="store_true")
-    generate_parser.add_argument("--context-size", type=int, default=8192)
-    generate_parser.add_argument("--topk", type=parse_topk, default=[100, 20])
-    generate_parser.add_argument("--num-gpus", type=int, default=1)
-    generate_parser.add_argument("--retrieval-method", type=parse_retrieval_methods)
-    generate_parser.add_argument("--prompt-mode", required=True)
-    generate_parser.add_argument("--shuffle-candidates", action="store_true")
-    generate_parser.add_argument("--print-prompts-responses", action="store_true")
-    generate_parser.add_argument("--num-few-shot-examples", type=int, default=0)
-    generate_parser.add_argument("--max-output-tokens", type=int, default=1500)
-    generate_parser.add_argument("--run-id", type=str, default="ragnarok")
-    generate_parser.add_argument("--vllm-batched", action="store_true")
-    generate_parser.add_argument(
-        "--execution-mode", choices=["sync", "async"], default="sync"
+    generate_parser = subparsers.add_parser(
+        "generate",
+        help="Run generation from direct JSON input, batch JSONL, or a dataset.",
+        description=(
+            "Generate RAG answers from direct JSON input, batch JSONL request files, "
+            "or dataset-backed retrieval."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  ragnarok generate --model-path gpt-4o --input-json "
+            '\'{"query":"q","candidates":["p"]}\' --prompt-mode chatqa --output json\n'
+            "  ragnarok generate --model-path gpt-4o --input-file requests.jsonl "
+            "--output-file results.jsonl --prompt-mode chatqa --execution-mode async"
+        ),
     )
-    generate_parser.add_argument("--max-concurrency", type=int, default=8)
-    generate_parser.add_argument("--include-reasoning", action="store_true")
+    generate_inputs = generate_parser.add_mutually_exclusive_group(required=True)
+    generate_inputs.add_argument(
+        "--dataset",
+        type=str,
+        help="Dataset identifier for dataset-backed retrieval and generation.",
+    )
+    generate_inputs.add_argument(
+        "--input-file",
+        type=str,
+        help="Batch JSON or JSONL request file in the shared query-candidate schema.",
+    )
+    generate_inputs.add_argument(
+        "--stdin",
+        action="store_true",
+        help="Read one direct JSON request from standard input.",
+    )
+    generate_inputs.add_argument(
+        "--input-json",
+        type=str,
+        help="Direct JSON request in the shared query-candidate schema.",
+    )
+    generate_parser.add_argument(
+        "--model-path",
+        type=str,
+        required=True,
+        help="Model or deployment identifier to use for generation.",
+    )
+    generate_parser.add_argument(
+        "--use-azure-openai",
+        action="store_true",
+        help="Use Azure OpenAI environment settings for OpenAI-compatible generation.",
+    )
+    generate_parser.add_argument(
+        "--context-size",
+        type=int,
+        default=8192,
+        help="Maximum context window passed to the generation backend.",
+    )
+    generate_parser.add_argument(
+        "--topk",
+        type=parse_topk,
+        default=[100, 20],
+        help="Comma-separated retrieval depths; for request input only the last value is used for answer generation.",
+    )
+    generate_parser.add_argument(
+        "--num-gpus",
+        type=int,
+        default=1,
+        help="Number of GPUs for local open-weight generation backends.",
+    )
+    generate_parser.add_argument(
+        "--retrieval-method",
+        type=parse_retrieval_methods,
+        help="Comma-separated retrieval or reranking stages for dataset-backed generation.",
+    )
+    generate_parser.add_argument(
+        "--prompt-mode",
+        required=True,
+        help="Prompt template mode such as chatqa or cohere.",
+    )
+    generate_parser.add_argument(
+        "--shuffle-candidates",
+        action="store_true",
+        help="Shuffle candidate passages before generation.",
+    )
+    generate_parser.add_argument(
+        "--print-prompts-responses",
+        action="store_true",
+        help="Print rendered prompts and raw responses during execution.",
+    )
+    generate_parser.add_argument(
+        "--num-few-shot-examples",
+        type=int,
+        default=0,
+        help="Number of few-shot examples to inject into the prompt.",
+    )
+    generate_parser.add_argument(
+        "--max-output-tokens",
+        type=int,
+        default=1500,
+        help="Maximum generated output tokens.",
+    )
+    generate_parser.add_argument(
+        "--run-id",
+        type=str,
+        default="ragnarok",
+        help="Run identifier stored in generated artifacts.",
+    )
+    generate_parser.add_argument(
+        "--vllm-batched",
+        action="store_true",
+        help="Use vLLM batch generation where supported.",
+    )
+    generate_parser.add_argument(
+        "--execution-mode",
+        choices=["sync", "async"],
+        default="sync",
+        help="Execution mode for direct JSON input or batch JSONL input.",
+    )
+    generate_parser.add_argument(
+        "--max-concurrency",
+        type=int,
+        default=8,
+        help="Maximum concurrent requests for async generation.",
+    )
+    generate_parser.add_argument(
+        "--include-reasoning",
+        action="store_true",
+        help="Include backend reasoning or trace fields in sidecar artifacts where supported.",
+    )
     generate_parser.add_argument(
         "--reasoning-effort",
         choices=["none", "minimal", "low", "medium", "high", "xhigh"],
+        help="Reasoning effort for OpenAI-compatible generation backends that support it.",
     )
     generate_parser.add_argument(
-        "--output", choices=["text", "json", "jsonl"], default="text"
+        "--output",
+        choices=["text", "json", "jsonl"],
+        default="text",
+        help="Human-readable text, machine-readable JSON envelope, or generated JSONL records.",
     )
-    generate_parser.add_argument("--output-file", type=str)
-    generate_parser.add_argument("--dry-run", action="store_true")
-    generate_parser.add_argument("--validate-only", action="store_true")
-    generate_parser.add_argument("--resume", action="store_true")
-    generate_parser.add_argument("--overwrite", action="store_true")
-    generate_parser.add_argument("--fail-if-exists", action="store_true")
-    generate_parser.add_argument("--manifest-path", type=str)
-    generate_parser.add_argument("--log-level", type=int, default=0, choices=[0, 1, 2])
+    generate_parser.add_argument(
+        "--output-file",
+        type=str,
+        help="Output JSONL path for batch or dataset generation.",
+    )
+    generate_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Resolve the command and validate inputs without running models.",
+    )
+    generate_parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Validate the declared contract without running models.",
+    )
+    generate_parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Allow writing to an existing output file without truncating it.",
+    )
+    generate_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Truncate an existing output file before writing results.",
+    )
+    generate_parser.add_argument(
+        "--fail-if-exists",
+        action="store_true",
+        help="Fail if the target output path already exists.",
+    )
+    generate_parser.add_argument(
+        "--manifest-path",
+        type=str,
+        help="Write the final JSON envelope to a manifest file.",
+    )
+    generate_parser.add_argument(
+        "--log-level",
+        type=int,
+        default=0,
+        choices=[0, 1, 2],
+        help="Logging verbosity: 0=warnings, 1=info, 2=debug.",
+    )
 
-    validate_parser = subparsers.add_parser("validate")
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Validate request payloads or existing output artifacts without running models.",
+        description="Validate direct JSON input, batch JSONL requests, or TREC output artifacts without running models.",
+    )
     validate_parser.add_argument(
-        "target", choices=["generate", "rag24-output", "rag25-output"]
+        "target",
+        choices=["generate", "rag24-output", "rag25-output"],
+        help="Validation target to inspect.",
     )
     validate_inputs = validate_parser.add_mutually_exclusive_group()
-    validate_inputs.add_argument("--input-file", type=str)
-    validate_inputs.add_argument("--stdin", action="store_true")
-    validate_inputs.add_argument("--input-json", type=str)
-    validate_parser.add_argument("--topicfile", type=str)
-    validate_parser.add_argument("--runfile", type=str)
-    validate_parser.add_argument("--input", type=str)
-    validate_parser.add_argument("--topics", type=str)
-    validate_parser.add_argument("--format", type=int, choices=[1, 2], default=1)
-    validate_parser.add_argument("--fix-length", action="store_true", default=True)
-    validate_parser.add_argument("--fix-citations", action="store_true", default=True)
-    validate_parser.add_argument("--verbose", action="store_true")
-    validate_parser.add_argument("--output", choices=["text", "json"], default="text")
-
-    convert_parser = subparsers.add_parser("convert")
-    convert_parser.add_argument("target", choices=["trec25-format"])
-    convert_parser.add_argument("--input-file", required=True, type=str)
-    convert_parser.add_argument("--output-file", required=True, type=str)
-    convert_parser.add_argument("--prompt-file", type=str)
-    convert_parser.add_argument("--verbose", action="store_true")
-    convert_parser.add_argument("--output", choices=["text", "json"], default="text")
-
-    describe_parser = subparsers.add_parser("describe")
-    describe_parser.add_argument("target", choices=sorted(COMMAND_DESCRIPTIONS))
-    describe_parser.add_argument("--output", choices=["text", "json"], default="text")
-
-    schema_parser = subparsers.add_parser("schema")
-    schema_parser.add_argument("target", choices=sorted(SCHEMAS))
-    schema_parser.add_argument("--output", choices=["text", "json"], default="text")
-
-    doctor_parser = subparsers.add_parser("doctor")
-    doctor_parser.add_argument("--output", choices=["text", "json"], default="text")
-
-    view_parser = subparsers.add_parser("view")
-    view_parser.add_argument("path", type=str)
-    view_parser.add_argument("--type", dest="artifact_type", type=str)
-    view_parser.add_argument("--records", type=int, default=3)
-    view_parser.add_argument(
-        "--color", choices=["auto", "always", "never"], default="auto"
+    validate_inputs.add_argument(
+        "--input-file", type=str, help="Batch JSON or JSONL request file to validate."
     )
-    view_parser.add_argument("--output", choices=["text", "json"], default="text")
+    validate_inputs.add_argument(
+        "--stdin",
+        action="store_true",
+        help="Read one direct JSON payload from standard input.",
+    )
+    validate_inputs.add_argument(
+        "--input-json", type=str, help="Direct JSON payload to validate."
+    )
+    validate_parser.add_argument(
+        "--topicfile",
+        type=str,
+        help="TREC RAG 2024 topics TSV used for output validation.",
+    )
+    validate_parser.add_argument(
+        "--runfile", type=str, help="TREC RAG 2024 run JSONL to validate."
+    )
+    validate_parser.add_argument(
+        "--input",
+        type=str,
+        help="TREC RAG 2025 output JSONL to validate, or '-' for stdin.",
+    )
+    validate_parser.add_argument(
+        "--topics", type=str, help="TREC RAG 2025 topic JSONL used for validation."
+    )
+    validate_parser.add_argument(
+        "--format",
+        type=int,
+        choices=[1, 2],
+        default=1,
+        help="Citation format for RAG 2025 output validation.",
+    )
+    validate_parser.add_argument(
+        "--apply-fixes",
+        action="store_true",
+        help="Allow the RAG 2025 validator to write a .fixed artifact when repairable issues are found.",
+    )
+    validate_parser.add_argument(
+        "--fix-length",
+        action="store_true",
+        default=False,
+        help="Trim overly long RAG 2025 answers during validation.",
+    )
+    validate_parser.add_argument(
+        "--fix-citations",
+        action="store_true",
+        default=False,
+        help="Repair duplicate or out-of-range RAG 2025 citations during validation.",
+    )
+    validate_parser.add_argument(
+        "--verbose", action="store_true", help="Print detailed validator progress."
+    )
+    validate_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable validation summary or JSON envelope.",
+    )
+
+    convert_parser = subparsers.add_parser(
+        "convert",
+        help="Convert older Ragnarok artifacts into the newer TREC 2025 output format.",
+        description="Convert older Ragnarok JSONL artifacts into the newer TREC 2025 output format.",
+    )
+    convert_parser.add_argument(
+        "target", choices=["trec25-format"], help="Conversion target to produce."
+    )
+    convert_parser.add_argument(
+        "--input-file", required=True, type=str, help="Input JSONL file to convert."
+    )
+    convert_parser.add_argument(
+        "--output-file", required=True, type=str, help="Output JSONL file to write."
+    )
+    convert_parser.add_argument(
+        "--prompt-file",
+        type=str,
+        help="Optional prompt sidecar JSONL to merge into the converted output.",
+    )
+    convert_parser.add_argument(
+        "--verbose", action="store_true", help="Print detailed conversion progress."
+    )
+    convert_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable summary or JSON envelope.",
+    )
+
+    describe_parser = subparsers.add_parser(
+        "describe",
+        help="Inspect structured metadata for a public Ragnarok command.",
+    )
+    describe_parser.add_argument(
+        "target",
+        choices=sorted(COMMAND_DESCRIPTIONS),
+        help="Public command to describe.",
+    )
+    describe_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable description or JSON envelope.",
+    )
+
+    schema_parser = subparsers.add_parser(
+        "schema",
+        help="Print JSON schemas for supported inputs, outputs, and envelopes.",
+    )
+    schema_parser.add_argument(
+        "target", choices=sorted(SCHEMAS), help="Schema artifact to print."
+    )
+    schema_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable schema or JSON envelope.",
+    )
+
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Report environment, dependency, and backend readiness for the packaged CLI.",
+    )
+    doctor_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable readiness report or JSON envelope.",
+    )
+
+    view_parser = subparsers.add_parser(
+        "view",
+        help="Inspect an existing generation artifact.",
+        description="Inspect an existing Ragnarok generation artifact and render a stable summary.",
+    )
+    view_parser.add_argument("path", type=str, help="Artifact path to inspect.")
+    view_parser.add_argument(
+        "--type",
+        dest="artifact_type",
+        type=str,
+        help="Explicit artifact type when automatic detection is ambiguous.",
+    )
+    view_parser.add_argument(
+        "--records",
+        type=int,
+        default=3,
+        help="Number of records to sample in the inspection summary.",
+    )
+    view_parser.add_argument(
+        "--color",
+        choices=["auto", "always", "never"],
+        default="auto",
+        help="Color policy for text-mode rendering.",
+    )
+    view_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable summary or JSON envelope.",
+    )
 
     return parser
 
 
 def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
+    from ragnarok.generate.llm import PromptMode
+
     args.prompt_mode = PromptMode(args.prompt_mode)
     if args.dataset is None and args.retrieval_method is None:
         args.retrieval_method = [parse_retrieval_methods("bm25")[0]]
@@ -367,7 +650,9 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
         logger = setup_logging(args.log_level)
         artifacts, metrics = run_dataset_generation(args, logger)
         if artifacts:
-            response.artifacts.append({"kind": "data", "data": artifacts})
+            response.artifacts.append(
+                make_data_artifact("generation-results", artifacts)
+            )
         response.metrics = metrics
         return response
 
@@ -399,9 +684,13 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
         else:
             records, metrics = run_request_generation(requests, args, logger)
         if args.output == "json":
-            response.artifacts.append({"kind": "data", "data": records})
+            response.artifacts.append(make_data_artifact("generation-results", records))
         else:
-            response.artifacts.append({"kind": "file", "path": args.output_file})
+            response.artifacts.append(
+                make_file_artifact(
+                    "generation-results-jsonl", cast(str, args.output_file)
+                )
+            )
         response.metrics = metrics
         return response
 
@@ -411,13 +700,13 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
     if args.dry_run or args.validate_only:
         response.mode = "validate" if args.validate_only else "dry-run"
         response.artifacts.append(
-            {
-                "kind": "data",
-                "data": {
+            make_data_artifact(
+                "validated-request",
+                {
                     "query": {"qid": request.query.qid, "text": request.query.text},
                     "candidate_count": len(request.candidates),
                 },
-            }
+            )
         )
         return response
     logger = setup_logging(args.log_level)
@@ -428,7 +717,7 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
     else:
         records, metrics = run_request_generation([request], args, logger)
     response.metrics = metrics
-    response.artifacts.append({"kind": "data", "data": records})
+    response.artifacts.append(make_data_artifact("generation-results", records))
     return response
 
 
@@ -470,6 +759,9 @@ def _run_validate_command(args: argparse.Namespace) -> CommandResponse:
     if args.input != "-":
         _ensure_file_exists(args.input, command="validate", field_name="input")
     _ensure_file_exists(args.topics, command="validate", field_name="topics")
+    if args.apply_fixes and not (args.fix_length or args.fix_citations):
+        args.fix_length = True
+        args.fix_citations = True
     summary, stdout = run_validate_rag25(args)
     response.validation = summary
     response.metrics = {"stdout": stdout}
@@ -485,7 +777,7 @@ def _run_convert_command(args: argparse.Namespace) -> CommandResponse:
     summary, stdout = run_convert_trec25(args)
     return CommandResponse(
         command="convert",
-        artifacts=[{"kind": "file", "path": args.output_file}],
+        artifacts=[make_file_artifact("converted-output", args.output_file)],
         metrics={"stdout": stdout, **summary},
     )
 
@@ -517,7 +809,7 @@ def _run_view_command(args: argparse.Namespace) -> CommandResponse:
             "records": args.records,
             "color": args.color,
         },
-        artifacts=[{"kind": "data", "data": view_summary}],
+        artifacts=[make_data_artifact("view-summary", view_summary)],
         metrics=view_summary["summary"],
     )
 
@@ -558,17 +850,27 @@ def main(argv: Sequence[str] | None = None) -> int:
             response = CommandResponse(
                 command="describe",
                 mode="inspect",
-                artifacts=[{"kind": "data", "data": COMMAND_DESCRIPTIONS[args.target]}],
+                artifacts=[
+                    make_data_artifact(args.target, COMMAND_DESCRIPTIONS[args.target])
+                ],
+                inputs={"target": args.target},
+                resolved={"target_command": args.target},
             )
         elif args.command == "schema":
             response = CommandResponse(
                 command="schema",
                 mode="inspect",
-                artifacts=[{"kind": "data", "data": SCHEMAS[args.target]}],
+                artifacts=[make_data_artifact(args.target, SCHEMAS[args.target])],
+                inputs={"target": args.target},
+                resolved={"schema": args.target},
             )
         else:
+            report = doctor_report()
             response = CommandResponse(
-                command="doctor", mode="inspect", metrics=doctor_report()
+                command="doctor",
+                mode="inspect",
+                metrics=report,
+                validation={"python_ok": report["python_ok"]},
             )
 
         _write_manifest(getattr(args, "manifest_path", None), response)

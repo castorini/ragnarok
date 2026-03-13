@@ -6,11 +6,6 @@ import io
 import logging
 from typing import Any
 
-from ragnarok.data import Request, result_to_dict, write_results_jsonl
-from ragnarok.generate.generator import RAG
-from ragnarok.retrieve_and_generate import retrieve_and_generate
-from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod
-
 from .io import read_json, read_jsonl
 
 
@@ -21,7 +16,9 @@ def parse_topk(value: str) -> list[int]:
         raise ValueError(f"Invalid comma-separated list of integers: {value}") from exc
 
 
-def parse_retrieval_methods(value: str) -> list[RetrievalMethod]:
+def parse_retrieval_methods(value: str) -> list[Any]:
+    from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod
+
     try:
         return [RetrievalMethod(method) for method in value.split(",")]
     except ValueError as exc:
@@ -39,6 +36,13 @@ def detect_device() -> str:
 
 
 def create_generation_agent(args: Any) -> Any:
+    from ragnarok.generate.llm import PromptMode
+
+    prompt_mode = (
+        args.prompt_mode
+        if isinstance(args.prompt_mode, PromptMode)
+        else PromptMode(args.prompt_mode)
+    )
     if "gpt" in args.model_path:
         from ragnarok.generate.api_keys import get_azure_openai_args, get_openai_api_key
         from ragnarok.generate.gpt import SafeOpenai
@@ -46,7 +50,7 @@ def create_generation_agent(args: Any) -> Any:
         return SafeOpenai(
             model=args.model_path,
             context_size=args.context_size,
-            prompt_mode=args.prompt_mode,
+            prompt_mode=prompt_mode,
             max_output_tokens=args.max_output_tokens,
             num_few_shot_examples=args.num_few_shot_examples,
             store_reasoning=args.include_reasoning,
@@ -60,7 +64,7 @@ def create_generation_agent(args: Any) -> Any:
         return Cohere(
             model=args.model_path,
             context_size=args.context_size,
-            prompt_mode=args.prompt_mode,
+            prompt_mode=prompt_mode,
             max_output_tokens=args.max_output_tokens,
             num_few_shot_examples=args.num_few_shot_examples,
         )
@@ -70,7 +74,7 @@ def create_generation_agent(args: Any) -> Any:
         return OSLLM(
             model=args.model_path,
             context_size=args.context_size,
-            prompt_mode=args.prompt_mode,
+            prompt_mode=prompt_mode,
             max_output_tokens=args.max_output_tokens,
             num_few_shot_examples=args.num_few_shot_examples,
             store_reasoning=args.include_reasoning,
@@ -88,8 +92,11 @@ def load_request_records(path: str) -> list[dict[str, Any]]:
 
 
 def run_request_generation(
-    requests: list[Request], args: Any, logger: logging.Logger
+    requests: list[Any], args: Any, logger: logging.Logger
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    from ragnarok.data import result_to_dict, write_results_jsonl
+    from ragnarok.generate.generator import RAG
+
     agent = create_generation_agent(args)
     rag = RAG(agent=agent, run_id=args.run_id)
     logger.info("Generating %d request(s)", len(requests))
@@ -107,8 +114,11 @@ def run_request_generation(
 
 
 async def async_run_request_generation(
-    requests: list[Request], args: Any, logger: logging.Logger
+    requests: list[Any], args: Any, logger: logging.Logger
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    from ragnarok.data import result_to_dict, write_results_jsonl
+    from ragnarok.generate.generator import RAG
+
     agent = create_generation_agent(args)
     rag = RAG(agent=agent, run_id=args.run_id)
     logger.info(
@@ -133,6 +143,9 @@ async def async_run_request_generation(
 def run_dataset_generation(
     args: Any, logger: logging.Logger
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    from ragnarok.data import result_to_dict
+    from ragnarok.retrieve_and_generate import retrieve_and_generate
+
     logger.info("Running dataset-backed generation for %s", args.dataset)
     output_capture = io.StringIO()
     with contextlib.redirect_stdout(output_capture):
@@ -161,12 +174,11 @@ def run_dataset_generation(
     return artifact_data, {"stdout": output_capture.getvalue()}
 
 
-def convert_generate_records_to_requests(
-    records: list[dict[str, Any]]
-) -> list[Request]:
-    requests: list[Request] = []
+def convert_generate_records_to_requests(records: list[dict[str, Any]]) -> list[Any]:
+    from ragnarok.data import Request
     from dacite import from_dict
 
+    requests: list[Request] = []
     for record in records:
         requests.append(from_dict(data_class=Request, data=record))
     return requests

@@ -93,8 +93,12 @@ class FakeAgent:
 class TestRagnarokCLI(unittest.TestCase):
     def test_generate_direct_via_input_json(self):
         stdout = StringIO()
-        with redirect_stdout(stdout), patch(
-            "ragnarok.cli.operations.create_generation_agent", return_value=FakeAgent()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ),
         ):
             exit_code = main(
                 [
@@ -116,15 +120,22 @@ class TestRagnarokCLI(unittest.TestCase):
         output = json.loads(stdout.getvalue())
         self.assertEqual(output["command"], "generate")
         self.assertEqual(output["status"], "success")
+        self.assertEqual(output["artifacts"][0]["kind"], "data")
+        self.assertEqual(output["artifacts"][0]["name"], "generation-results")
         self.assertEqual(output["artifacts"][0]["data"][0]["topic"], "what is python")
 
     def test_generate_direct_via_stdin(self):
         stdout = StringIO()
-        with redirect_stdout(stdout), patch(
-            "sys.stdin.read",
-            return_value=json.dumps({"query": "q", "candidates": ["passage"]}),
-        ), patch(
-            "ragnarok.cli.operations.create_generation_agent", return_value=FakeAgent()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "sys.stdin.read",
+                return_value=json.dumps({"query": "q", "candidates": ["passage"]}),
+            ),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ),
         ):
             exit_code = main(
                 [
@@ -156,9 +167,12 @@ class TestRagnarokCLI(unittest.TestCase):
                 raise AssertionError("sync answer_batch should not run in async mode")
 
         stdout = StringIO()
-        with redirect_stdout(stdout), patch(
-            "ragnarok.cli.operations.create_generation_agent",
-            return_value=AsyncOnlyAgent(),
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=AsyncOnlyAgent(),
+            ),
         ):
             exit_code = main(
                 [
@@ -253,9 +267,12 @@ class TestRagnarokCLI(unittest.TestCase):
             )
 
             stdout = StringIO()
-            with redirect_stdout(stdout), patch(
-                "ragnarok.cli.operations.create_generation_agent",
-                return_value=FakeAgent(),
+            with (
+                redirect_stdout(stdout),
+                patch(
+                    "ragnarok.cli.operations.create_generation_agent",
+                    return_value=FakeAgent(),
+                ),
             ):
                 exit_code = main(
                     [
@@ -506,6 +523,17 @@ class TestRagnarokCLI(unittest.TestCase):
             )
         )
 
+    def test_top_level_help_includes_command_summaries(self):
+        stdout = StringIO()
+        with self.assertRaises(SystemExit) as exc_info:
+            with redirect_stdout(stdout):
+                main(["--help"])
+        self.assertEqual(exc_info.exception.code, 0)
+        rendered = stdout.getvalue().lower()
+        self.assertIn("ragnarok packaged cli", rendered)
+        self.assertIn("run generation from direct json input", rendered)
+        self.assertIn("inspect an existing generation artifact", rendered)
+
     def test_view_generate_output_returns_json_summary(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = Path(temp_dir) / "results.jsonl"
@@ -541,7 +569,9 @@ class TestRagnarokCLI(unittest.TestCase):
                 output["artifacts"][0]["data"]["artifact_type"],
                 "generate-output-record",
             )
-            self.assertEqual(output["artifacts"][0]["data"]["summary"]["run_ids"], ["demo-run"])
+            self.assertEqual(
+                output["artifacts"][0]["data"]["summary"]["run_ids"], ["demo-run"]
+            )
             self.assertEqual(len(output["artifacts"][0]["data"]["sampled_records"]), 1)
             self.assertEqual(
                 output["artifacts"][0]["data"]["sampled_records"][0]["topic"],
@@ -575,7 +605,9 @@ class TestRagnarokCLI(unittest.TestCase):
 
             stdout = StringIO()
             with redirect_stdout(stdout):
-                exit_code = main(["view", str(output_path), "--records", "1", "--color", "never"])
+                exit_code = main(
+                    ["view", str(output_path), "--records", "1", "--color", "never"]
+                )
 
             self.assertEqual(exit_code, 0)
             text = stdout.getvalue()

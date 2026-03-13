@@ -36,8 +36,7 @@ uv sync --group dev
 ```
 
 If you prefer not to activate the virtual environment, use `uv run`, for example
-`uv run python src/ragnarok/scripts/run_ragnarok.py --help` or
-`uv run python examples/rag_demo.py --help`.
+`uv run ragnarok --help` or `uv run python examples/rag_demo.py --help`.
 
 Install optional stacks only when you need them:
 
@@ -84,6 +83,7 @@ activated environment, run `ragnarok ...`; otherwise use `uv run ragnarok ...`.
 - `ragnarok describe`: inspect command metadata and examples
 - `ragnarok schema`: print supported JSON schemas
 - `ragnarok doctor`: report environment and dependency readiness
+- `ragnarok view`: inspect an existing generation artifact without re-running a model
 
 ### Direct And Introspection Examples
 
@@ -112,8 +112,14 @@ ragnarok generate \
 ```bash
 ragnarok describe generate --output json
 ragnarok schema generate-direct-input --output json
+ragnarok validate generate --input-json '{"query":"q","candidates":["p"]}' --output json
 ragnarok doctor --output json
+ragnarok view results.jsonl --records 1
 ```
+
+For TREC RAG 2025 output validation, `ragnarok validate rag25-output ...` is
+non-mutating by default. If you explicitly want repairable issues written to a
+`.fixed` artifact, add `--apply-fixes` or one of the fix flags.
 
 
 ## RAG

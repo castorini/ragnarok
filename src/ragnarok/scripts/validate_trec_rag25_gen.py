@@ -223,8 +223,8 @@ def validate_rag25_file(
     input_path: str,
     topics_path: str,
     format_type: int = 1,
-    fix_length: bool = True,
-    fix_citations: bool = True,
+    fix_length: bool = False,
+    fix_citations: bool = False,
     verbose: bool = False,
 ):
     valid_topic_ids = load_topic_ids(topics_path)
@@ -331,13 +331,11 @@ def main():
         "--fix-length",
         action="store_true",
         help=f"Trim answers to {RESPONSE_LIMIT} tokens if needed",
-        default=True,
     )
     p.add_argument(
         "--fix-citations",
         action="store_true",
         help=f"Trim citations to {CITATION_LIMIT} if needed and update indexes",
-        default=True,
     )
     p.add_argument("--verbose", action="store_true", help="Print details when trimming")
     args = p.parse_args()
