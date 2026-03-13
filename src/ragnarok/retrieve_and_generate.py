@@ -4,11 +4,8 @@ from ragnarok.data import Query, Request
 
 # from ragnarok.evaluation.nugget_eval import EvalFunction
 from ragnarok.generate.api_keys import get_azure_openai_args, get_openai_api_key
-from ragnarok.generate.cohere import Cohere
 from ragnarok.generate.generator import RAG
-from ragnarok.generate.gpt import SafeOpenai
 from ragnarok.generate.llm import PromptMode
-from ragnarok.generate.os_llm import OSLLM
 from ragnarok.retrieve_and_rerank.restriever import Restriever
 from ragnarok.retrieve_and_rerank.retriever import (
     CacheInputFormat,
@@ -16,6 +13,14 @@ from ragnarok.retrieve_and_rerank.retriever import (
     RetrievalMode,
     Retriever,
 )
+
+
+def _missing_extra(extra_name: str, package_hint: str) -> ImportError:
+    return ImportError(
+        f"Optional dependency missing for '{extra_name}' support ({package_hint}). "
+        f"Install it with `uv sync --extra {extra_name}` or "
+        f"`pip install -e '.[{extra_name}]'`."
+    )
 
 
 def retrieve_and_generate(
@@ -84,6 +89,10 @@ def retrieve_and_generate(
     if "gpt" in generator_path:
         print("Using Azure OpenAI API" if use_azure_openai else "Using OpenAI API")
         print(f"Model: {generator_path}")
+        try:
+            from ragnarok.generate.gpt import SafeOpenai
+        except ImportError as exc:
+            raise _missing_extra("cloud", "openai,tiktoken") from exc
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
             model=generator_path,
@@ -95,6 +104,10 @@ def retrieve_and_generate(
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
     elif "command-r" in generator_path:
+        try:
+            from ragnarok.generate.cohere import Cohere
+        except ImportError as exc:
+            raise _missing_extra("cloud", "cohere") from exc
         agent = Cohere(
             model=generator_path,
             context_size=context_size,
@@ -107,6 +120,12 @@ def retrieve_and_generate(
         or "mistral" in generator_path.lower()
         or "qwen" in generator_path.lower()
     ):
+        try:
+            from ragnarok.generate.os_llm import OSLLM
+        except ImportError as exc:
+            raise _missing_extra(
+                "local", "torch,transformers,fschat,vllm,spacy,stanza"
+            ) from exc
         agent = OSLLM(
             model=generator_path,
             context_size=context_size,

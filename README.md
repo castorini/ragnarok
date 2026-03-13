@@ -14,14 +14,52 @@ Ragnarök is a battleground for the best retrieval-augmented generation (RAG) mo
 
 ### Source Installation
 
-Create a new conda environment and install the dependencies:
+`uv` is the canonical contributor workflow for this repository. The existing
+conda path remains available for contributors who want it.
+
+Install `uv` if needed:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+For development from source:
+
+```bash
+git clone https://github.com/castorini/ragnarok.git
+cd ragnarok
+uv python install 3.11
+uv venv --python 3.11
+source .venv/bin/activate
+uv sync --group dev
+```
+
+If you prefer not to activate the virtual environment, use `uv run`, for example
+`uv run python src/ragnarok/scripts/run_ragnarok.py --help`.
+
+Install optional stacks only when you need them:
+
+```bash
+uv sync --group dev --extra cloud
+uv sync --group dev --extra local
+uv sync --group dev --extra api
+uv sync --group dev --extra pyserini
+uv sync --group dev --extra all
+```
+
+If you want to keep using conda, create a Python 3.11 environment and install
+the same base package dependencies:
 
 ```bash
 conda create -n ragnarok python=3.11 -y
 conda activate ragnarok
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 # For CUDA 11.8
 pip install -r requirements.txt
+pip install -e .
 ```
+
+Then install any optional stack you need, for example `pip install -e ".[cloud]"`
+or `pip install -e ".[local]"`.
 
 ### PyPI Installation
 

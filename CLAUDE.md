@@ -8,7 +8,7 @@
 - Primary language: Python.
 - Packaging uses `pyproject.toml` + `setuptools` (`src` layout).
 - Required Python version is `>=3.11` (`pyproject.toml`).
-- README examples assume a Python 3.11 conda environment.
+- README examples assume a Python 3.11 `uv` environment, with conda kept as an optional path.
 
 ## Repository Structure
 - `src/ragnarok/`: core package code.
@@ -20,12 +20,22 @@
 - `docs/`: track-specific run/eval docs (`rag24.md`, `rag25.md`, `elo.md`).
 
 ## Install and Setup
-- Source install pattern:
-  - `pip install -r requirements.txt`
-  - `pip install -e .`
-- If using GPU models, follow README’s PyTorch install guidance first.
+- Canonical contributor setup uses `uv`:
+  - `uv python install 3.11`
+  - `uv venv --python 3.11`
+  - `source .venv/bin/activate`
+  - `uv sync --group dev`
+- `uv run ...` is the no-activation fallback for docs and CI.
+- Install optional runtime stacks only when needed:
+  - `uv sync --extra cloud` for OpenAI/Cohere paths
+  - `uv sync --extra local` for open-weight local model paths
+  - `uv sync --extra api` for Flask/Gradio and related UI helpers
+  - `uv sync --extra pyserini` for `pyserini`-backed retrieval helpers
+- Keep the optional conda path in the README for contributors who need it.
 - Keep dependency declarations in sync:
-  - Runtime deps: `requirements.txt` (loaded dynamically by `pyproject.toml`).
+  - Base runtime deps: `requirements.txt` (loaded dynamically by `pyproject.toml`)
+  - Optional runtime stacks: `[project.optional-dependencies]` in `pyproject.toml`
+  - Dev deps: `[dependency-groups].dev` in `pyproject.toml`
 
 ## Formatting and Linting
 - Pre-commit is the canonical formatter/lint entrypoint.
@@ -38,7 +48,7 @@
 
 ## Testing
 - Default test command (also reflected in `pr-format.yml`):
-  - `python -m unittest discover -s test`
+  - `uv run python -m unittest discover -s test`
 - Prefer adding/maintaining `unittest` tests in `test/**` to match current style.
 - Some tests depend on optional/external packages or data paths; ensure required deps are installed in the active environment before claiming failures/regressions.
 

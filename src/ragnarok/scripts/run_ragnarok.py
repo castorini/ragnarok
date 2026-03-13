@@ -7,8 +7,6 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-import torch
-
 from ragnarok.generate.llm import PromptMode
 from ragnarok.retrieve_and_generate import retrieve_and_generate
 from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMode
@@ -34,6 +32,15 @@ def parse_retrieval_methods(value):
         )
 
 
+def detect_device():
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
 def main(args):
     model_path = args.model_path
     use_azure_openai = args.use_azure_openai
@@ -48,7 +55,7 @@ def main(args):
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
     max_output_tokens = args.max_output_tokens
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = detect_device()
     retrieval_mode = RetrievalMode.DATASET
     run_id = args.run_id
     vllm_batched = args.vllm_batched

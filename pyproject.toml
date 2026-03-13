@@ -22,6 +22,53 @@ requires-python = ">= 3.11"
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
+[project.optional-dependencies]
+cloud = [
+    "cohere>=5.3.4",
+    "openai>=1.30.5",
+    "tiktoken>=0.6.0",
+]
+local = [
+    "fschat[model_worker]>=0.2.36",
+    "spacy==3.7.2",
+    "stanza>=1.8.2",
+    "torch",
+    "torchaudio",
+    "torchvision",
+    "transformers>=4.40.1",
+    "vllm>=0.4.3",
+]
+api = [
+    "flask>=3.0.0",
+    "gradio==4.26.0",
+    "pandas>=2.2.2",
+]
+pyserini = [
+    "pyserini>=0.44.0",
+]
+all = [
+    "cohere>=5.3.4",
+    "openai>=1.30.5",
+    "tiktoken>=0.6.0",
+    "fschat[model_worker]>=0.2.36",
+    "spacy==3.7.2",
+    "stanza>=1.8.2",
+    "torch",
+    "torchaudio",
+    "torchvision",
+    "transformers>=4.40.1",
+    "vllm>=0.4.3",
+    "flask>=3.0.0",
+    "gradio==4.26.0",
+    "pandas>=2.2.2",
+    "pyserini>=0.44.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=3.8.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/castorini/ragnarok"
 
