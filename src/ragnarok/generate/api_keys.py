@@ -6,19 +6,25 @@ from dotenv import load_dotenv
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
+def get_public_openai_api_key() -> str | None:
+    load_dotenv()
+    return os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI_API_KEY")
+
+
+def get_openrouter_api_key() -> str | None:
+    load_dotenv()
+    return os.getenv("OPENROUTER_API_KEY")
+
+
 def get_openai_api_key() -> str | None:
     load_dotenv()
-    return (
-        os.getenv("OPENAI_API_KEY")
-        or os.getenv("OPEN_AI_API_KEY")
-        or os.getenv("OPENROUTER_API_KEY")
-    )
+    return get_public_openai_api_key() or get_openrouter_api_key()
 
 
 def uses_openrouter(model_name: str) -> bool:
     load_dotenv()
-    openai_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI_API_KEY")
-    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    openai_key = get_public_openai_api_key()
+    openrouter_key = get_openrouter_api_key()
     return model_name.startswith("openrouter/") or (
         bool(openrouter_key) and not bool(openai_key)
     )
@@ -30,13 +36,15 @@ def get_openai_compatible_args(
     load_dotenv()
     if use_azure_openai:
         args = get_azure_openai_args()
-        args["keys"] = get_openai_api_key()
+        args["keys"] = get_public_openai_api_key()
         return args
 
-    args: Dict[str, Any] = {"keys": get_openai_api_key()}
     if uses_openrouter(model_name):
-        args["api_base"] = OPENROUTER_BASE_URL
-    return args
+        return {
+            "keys": get_openrouter_api_key(),
+            "api_base": OPENROUTER_BASE_URL,
+        }
+    return {"keys": get_public_openai_api_key()}
 
 
 def get_azure_openai_args() -> Dict[str, str]:

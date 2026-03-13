@@ -100,6 +100,22 @@ class TestReasoningSupport(unittest.TestCase):
         )
         self.assertEqual(fake_safe_openai.call_args.kwargs["keys"], "router-key")
 
+    def test_openrouter_models_use_openrouter_key_even_when_openai_key_exists(self):
+        from ragnarok.generate.api_keys import get_openai_compatible_args
+
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "openai-key",
+                "OPENROUTER_API_KEY": "router-key",
+            },
+            clear=False,
+        ):
+            args = get_openai_compatible_args("openrouter/hunter-alpha")
+
+        self.assertEqual(args["keys"], "router-key")
+        self.assertEqual(args["api_base"], "https://openrouter.ai/api/v1")
+
     def test_ragnarok_templates_use_chat_messages_for_openrouter_models(self):
         template = RagnarokTemplates(prompt_mode=PromptMode.CHATQA)
 
