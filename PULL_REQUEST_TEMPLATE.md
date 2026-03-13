@@ -1,27 +1,38 @@
-# Pull Request Checklist
+# Summary
 
-## Reference Issue
+Describe the behavioral change in 2-5 sentences. If this is documentation-only or maintenance-only, say so explicitly.
 
-Please provide the reference to issue this PR is addressing (# followed by the issue number). If there is no associated issue, write "N/A".
+## Related Issue
 
-ref: 
+Reference the GitHub issue this pull request addresses. If none exists, write `N/A`.
 
-## Checklist Items
+## What Changed
 
-Before submitting your pull request, please review these items:
+- 
 
-- [ ] Have you followed the [contributing guidelines](CONTRIBUTING.md)?
-- [ ] Have you verified that there are no existing [Pull Requests](https://github.com/castorini/ragnarok/pulls) for the same update/change?
-- [ ] Have you updated any relevant documentation or added new tests where needed?
+## Validation
 
-# PR Type
+- [ ] `pre-commit run --all-files`
+- [ ] `python -m unittest discover -s test`
+- [ ] Not run, with justification explained below
 
-What kind of change does this PR introduce?
+List any additional commands, datasets, or manual checks used:
 
-- [ ] Bugfix
+```text
+paste commands and outcomes here
+```
+
+## Checklist
+
+- [ ] I followed [CONTRIBUTING.md](CONTRIBUTING.md).
+- [ ] I updated relevant documentation or help text for user-facing changes.
+- [ ] I added or updated tests for non-trivial behavior changes, or explained why not.
+- [ ] I called out any output-format, dependency, or performance impact.
+
+## Type of Change
+
+- [ ] Bug fix
 - [ ] Feature
-- [ ] Code style update (formatting, local variables)
-- [ ] Refactoring (no functional changes, no api changes)
-- [ ] Documentation content changes
-- [ ] Other... 
-    - Description: 
+- [ ] Refactor
+- [ ] Documentation
+- [ ] Maintenance
