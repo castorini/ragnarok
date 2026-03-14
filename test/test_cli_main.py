@@ -223,8 +223,12 @@ class TestRagnarokCLI(unittest.TestCase):
             )
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("Answer for what is python.", stdout.getvalue())
-        self.assertIn("[1]", stdout.getvalue())
+        self.assertEqual(
+            stdout.getvalue(),
+            "query: what is python\n"
+            "answer: Answer for what is python. [1]\n"
+            "references: [d0]\n",
+        )
 
     def test_generate_direct_json_output_includes_reasoning_traces(self):
         stdout = StringIO()
@@ -284,9 +288,12 @@ class TestRagnarokCLI(unittest.TestCase):
             )
 
         self.assertEqual(exit_code, 0)
-        self.assertIn(
-            "Reasoning Trace 1: Used the only candidate as support.",
+        self.assertEqual(
             stdout.getvalue(),
+            "query: what is python\n"
+            "answer: Answer for what is python. [1]\n"
+            "references: [d0]\n"
+            "reasoning: Used the only candidate as support.\n",
         )
 
     def test_generate_batch_request_file_writes_output(self):

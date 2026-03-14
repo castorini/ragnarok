@@ -825,7 +825,7 @@ def _format_text_response(response: CommandResponse) -> str:
             return ""
         rendered_records: list[str] = []
         for record in data:
-            lines: list[str] = []
+            answer_lines: list[str] = []
             for answer in record.get("answer", []):
                 text = answer.get("text", "")
                 if not text:
@@ -837,19 +837,19 @@ def _format_text_response(response: CommandResponse) -> str:
                         str(int(citation) + 1) for citation in citations
                     )
                     citation_suffix = f" [{human_citations}]"
-                lines.append(f"{text}{citation_suffix}")
+                answer_lines.append(f"{text}{citation_suffix}")
+            lines = [
+                f"query: {record.get('topic', '')}",
+                f"answer: {' '.join(answer_lines).strip()}",
+                f"references: [{', '.join(str(reference) for reference in record.get('references', []))}]",
+            ]
             reasoning_traces = [
                 trace.strip()
                 for trace in record.get("reasoning_traces", [])
                 if isinstance(trace, str) and trace.strip()
             ]
             if reasoning_traces:
-                if lines:
-                    lines.append("")
-                lines.extend(
-                    f"Reasoning Trace {index}: {trace}"
-                    for index, trace in enumerate(reasoning_traces, start=1)
-                )
+                lines.append(f"reasoning: {reasoning_traces[0]}")
             rendered_records.append("\n".join(lines).rstrip())
         return "\n\n".join(rendered_records).rstrip()
     if response.command == "describe" or response.command == "schema":
