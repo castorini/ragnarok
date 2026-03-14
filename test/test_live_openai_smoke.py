@@ -83,3 +83,44 @@ class RagnarokLiveOpenAISmokeTests(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertTrue(results[0]["answer"])
         print(self._pretty_render(payload))
+
+    def test_generate_direct_openai_reasoning_smoke(self) -> None:
+        if not os.getenv("OPENAI_API_KEY") and not os.getenv("OPENROUTER_API_KEY"):
+            self.skipTest("OPENAI_API_KEY or OPENROUTER_API_KEY is required.")
+
+        model = os.getenv("RAGNAROK_LIVE_OPENAI_REASONING_MODEL", "gpt-5-mini")
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model",
+                    model,
+                    "--include-reasoning",
+                    "--reasoning-effort",
+                    "low",
+                    "--input-json",
+                    json.dumps(
+                        {
+                            "query": "how long is life cycle of flea",
+                            "candidates": [
+                                "The life cycle of a flea can last anywhere from 20 days to an entire year."
+                            ],
+                        }
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["command"], "generate")
+        self.assertEqual(payload["status"], "success")
+        results = payload["artifacts"][0]["data"]
+        self.assertEqual(len(results), 1)
+        self.assertTrue(results[0]["answer"])
+        self.assertTrue(results[0].get("reasoning_traces"))
+        print(self._pretty_render(payload))
