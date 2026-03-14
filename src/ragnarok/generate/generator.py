@@ -45,7 +45,8 @@ class RAG:
             )
         else:
             results = []
-            for request in tqdm(requests):
+            request_iterable = tqdm(requests) if len(requests) > 1 else requests
+            for request in request_iterable:
                 result = self._agent.answer_batch(
                     [request],
                     topk=min(topk, len(request.candidates)),

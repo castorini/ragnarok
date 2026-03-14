@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import redirect_stdout
 from io import StringIO
 from textwrap import indent
 
@@ -53,8 +53,7 @@ class RagnarokLiveOpenAISmokeTests(unittest.TestCase):
 
         model = os.getenv("RAGNAROK_LIVE_OPENAI_MODEL", "gpt-4o-mini")
         stdout = StringIO()
-        stderr = StringIO()
-        with redirect_stdout(stdout), redirect_stderr(stderr):
+        with redirect_stdout(stdout):
             exit_code = main(
                 [
                     "generate",
