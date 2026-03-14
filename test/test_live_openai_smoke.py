@@ -98,7 +98,7 @@ class RagnarokLiveOpenAISmokeTests(unittest.TestCase):
                     model,
                     "--include-reasoning",
                     "--reasoning-effort",
-                    "low",
+                    "medium",
                     "--input-json",
                     json.dumps(
                         {
