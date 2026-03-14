@@ -47,7 +47,7 @@ class RagnarokLiveOpenAISmokeTests(unittest.TestCase):
             )
         return "\n".join(lines)
 
-    def test_generate_direct_openai_smoke(self) -> None:
+    def test_direct_generate_openai_smoke(self) -> None:
         if not os.getenv("OPENAI_API_KEY") and not os.getenv("OPENROUTER_API_KEY"):
             self.skipTest("OPENAI_API_KEY or OPENROUTER_API_KEY is required.")
 
@@ -84,7 +84,7 @@ class RagnarokLiveOpenAISmokeTests(unittest.TestCase):
         self.assertTrue(results[0]["answer"])
         print(self._pretty_render(payload))
 
-    def test_generate_direct_openai_reasoning_smoke(self) -> None:
+    def test_direct_generate_openai_reasoning_smoke(self) -> None:
         if not os.getenv("OPENAI_API_KEY") and not os.getenv("OPENROUTER_API_KEY"):
             self.skipTest("OPENAI_API_KEY or OPENROUTER_API_KEY is required.")
 
