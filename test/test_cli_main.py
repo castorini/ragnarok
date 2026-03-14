@@ -230,6 +230,103 @@ class TestRagnarokCLI(unittest.TestCase):
             "references: [d0]\n",
         )
 
+    def test_generate_direct_json_output_can_include_redacted_trace(self):
+        stdout = StringIO()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(reasoning="Used the only candidate as support."),
+            ),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--include-trace",
+                    "--include-reasoning",
+                    "--redact-prompts",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        record = output["artifacts"][0]["data"][0]
+        self.assertEqual(
+            record["reasoning_traces"], ["Used the only candidate as support."]
+        )
+        self.assertIsNone(record["trace"]["prompt"])
+        self.assertEqual(record["trace"]["response"], "response")
+        self.assertEqual(record["trace"]["input_token_count"], 12)
+
+    def test_generate_direct_model_alias_sets_resolved_model(self):
+        stdout = StringIO()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps({"query": "q", "candidates": ["p"]}),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(output["resolved"]["model"], "gpt-4o")
+
+    def test_generate_forwards_use_openrouter_to_openai_compatible_args(self):
+        stdout = StringIO()
+        fake_agent = FakeAgent()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.generate.api_keys.get_openai_compatible_args",
+                return_value={
+                    "keys": "router-key",
+                    "api_base": "https://openrouter.ai/api/v1",
+                },
+            ) as patched_args,
+            patch("ragnarok.generate.gpt.SafeOpenai", return_value=fake_agent),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model",
+                    "gpt-4o",
+                    "--use-openrouter",
+                    "--input-json",
+                    json.dumps({"query": "q", "candidates": ["p"]}),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        patched_args.assert_called_once_with("gpt-4o", False, True)
+
     def test_generate_direct_json_output_includes_reasoning_traces(self):
         stdout = StringIO()
         with (

@@ -83,7 +83,11 @@ def create_generation_agent(args: Any) -> Any:
             num_few_shot_examples=args.num_few_shot_examples,
             store_reasoning=args.include_reasoning,
             reasoning_effort=args.reasoning_effort,
-            **get_openai_compatible_args(model_name, args.use_azure_openai),
+            **get_openai_compatible_args(
+                model_name,
+                args.use_azure_openai,
+                getattr(args, "use_openrouter", False),
+            ),
         )
 
 
@@ -110,7 +114,15 @@ def run_request_generation(
         logging=args.print_prompts_responses,
         vllm=args.vllm_batched,
     )
-    serialized = [result_to_dict(result, args.run_id) for result in results]
+    serialized = [
+        result_to_dict(
+            result,
+            args.run_id,
+            include_trace=getattr(args, "include_trace", False),
+            redact_prompts=getattr(args, "redact_prompts", False),
+        )
+        for result in results
+    ]
     if args.output_file is not None:
         write_results_jsonl(results, args.output_file, args.run_id)
     return serialized, {"generated_records": len(serialized)}
@@ -137,7 +149,15 @@ async def async_run_request_generation(
         vllm=args.vllm_batched,
         max_concurrency=getattr(args, "max_concurrency", 8),
     )
-    serialized = [result_to_dict(result, args.run_id) for result in results]
+    serialized = [
+        result_to_dict(
+            result,
+            args.run_id,
+            include_trace=getattr(args, "include_trace", False),
+            redact_prompts=getattr(args, "redact_prompts", False),
+        )
+        for result in results
+    ]
     if args.output_file is not None:
         write_results_jsonl(results, args.output_file, args.run_id)
     return serialized, {"generated_records": len(serialized)}
@@ -172,7 +192,16 @@ def run_dataset_generation(
             run_id=args.run_id,
         )
     artifact_data = (
-        [result_to_dict(result, args.run_id)] if hasattr(result, "query") else []
+        [
+            result_to_dict(
+                result,
+                args.run_id,
+                include_trace=getattr(args, "include_trace", False),
+                redact_prompts=getattr(args, "redact_prompts", False),
+            )
+        ]
+        if hasattr(result, "query")
+        else []
     )
     return artifact_data, {"stdout": output_capture.getvalue()}
 

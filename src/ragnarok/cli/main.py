@@ -229,6 +229,23 @@ def _read_direct_payload(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
+def _resolve_model_name(args: argparse.Namespace) -> str:
+    model = getattr(args, "model", None)
+    model_path = getattr(args, "model_path", None)
+    if model:
+        args.model_path = model
+        return cast(str, model)
+    if model_path:
+        return cast(str, model_path)
+    raise CLIError(
+        "generate requires --model or --model-path",
+        exit_code=EXIT_CODES["invalid_arguments"],
+        status="validation_error",
+        error_code="missing_model",
+        command="generate",
+    )
+
+
 def build_parser() -> CLIArgumentParser:
     parser = CLIArgumentParser(
         prog="ragnarok",
@@ -239,7 +256,7 @@ def build_parser() -> CLIArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Common patterns:\n"
-            "  ragnarok generate --model-path gpt-4o --input-json "
+            "  ragnarok generate --model gpt-4o --input-json "
             '\'{"query":"q","candidates":["p"]}\' --prompt-mode chatqa --output json\n'
             "  ragnarok validate generate --input-json "
             '\'{"query":"q","candidates":["p"]}\' --output json\n'
@@ -260,9 +277,9 @@ def build_parser() -> CLIArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  ragnarok generate --model-path gpt-4o --input-json "
+            "  ragnarok generate --model gpt-4o --input-json "
             '\'{"query":"q","candidates":["p"]}\' --prompt-mode chatqa --output json\n'
-            "  ragnarok generate --model-path gpt-4o --input-file requests.jsonl "
+            "  ragnarok generate --model gpt-4o --input-file requests.jsonl "
             "--output-file results.jsonl --prompt-mode chatqa --execution-mode async"
         ),
     )
@@ -287,16 +304,26 @@ def build_parser() -> CLIArgumentParser:
         type=str,
         help="Direct JSON request in the shared query-candidate schema.",
     )
-    generate_parser.add_argument(
+    model_group = generate_parser.add_mutually_exclusive_group(required=True)
+    model_group.add_argument(
+        "--model",
+        type=str,
+        help="Model or deployment identifier to use for generation.",
+    )
+    model_group.add_argument(
         "--model-path",
         type=str,
-        required=True,
-        help="Model or deployment identifier to use for generation.",
+        help="Deprecated alias for --model.",
     )
     generate_parser.add_argument(
         "--use-azure-openai",
         action="store_true",
         help="Use Azure OpenAI environment settings for OpenAI-compatible generation.",
+    )
+    generate_parser.add_argument(
+        "--use-openrouter",
+        action="store_true",
+        help="Use OpenRouter for OpenAI-compatible generation.",
     )
     generate_parser.add_argument(
         "--context-size",
@@ -375,6 +402,16 @@ def build_parser() -> CLIArgumentParser:
         "--include-reasoning",
         action="store_true",
         help="Include backend reasoning or trace fields in sidecar artifacts where supported.",
+    )
+    generate_parser.add_argument(
+        "--include-trace",
+        action="store_true",
+        help="Include generation trace fields in emitted results where available.",
+    )
+    generate_parser.add_argument(
+        "--redact-prompts",
+        action="store_true",
+        help="Redact prompt content from emitted trace fields.",
     )
     generate_parser.add_argument(
         "--reasoning-effort",
@@ -609,6 +646,7 @@ def build_parser() -> CLIArgumentParser:
 def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
     from ragnarok.generate.llm import PromptMode
 
+    model_name = _resolve_model_name(args)
     args.prompt_mode = PromptMode(args.prompt_mode)
     if args.dataset is None and args.retrieval_method is None:
         args.retrieval_method = [parse_retrieval_methods("bm25")[0]]
@@ -624,13 +662,15 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
             "output_file": args.output_file,
         },
         resolved={
-            "model_path": args.model_path,
+            "model": model_name,
+            "model_path": model_name,
             "topk": args.topk,
             "prompt_mode": str(args.prompt_mode),
             "retrieval_method": [str(method) for method in args.retrieval_method or []],
             "run_id": args.run_id,
             "execution_mode": args.execution_mode,
             "max_concurrency": args.max_concurrency,
+            "use_openrouter": args.use_openrouter,
         },
     )
 

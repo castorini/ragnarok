@@ -21,8 +21,10 @@ def get_openai_api_key() -> str | None:
     return get_public_openai_api_key() or get_openrouter_api_key()
 
 
-def uses_openrouter(model_name: str) -> bool:
+def uses_openrouter(model_name: str, use_openrouter: bool = False) -> bool:
     load_dotenv()
+    if use_openrouter:
+        return True
     openai_key = get_public_openai_api_key()
     openrouter_key = get_openrouter_api_key()
     return model_name.startswith("openrouter/") or (
@@ -31,7 +33,7 @@ def uses_openrouter(model_name: str) -> bool:
 
 
 def get_openai_compatible_args(
-    model_name: str, use_azure_openai: bool = False
+    model_name: str, use_azure_openai: bool = False, use_openrouter: bool = False
 ) -> Dict[str, Any]:
     load_dotenv()
     if use_azure_openai:
@@ -39,7 +41,7 @@ def get_openai_compatible_args(
         args["keys"] = get_public_openai_api_key()
         return args
 
-    if uses_openrouter(model_name):
+    if uses_openrouter(model_name, use_openrouter=use_openrouter):
         return {
             "keys": get_openrouter_api_key(),
             "api_base": OPENROUTER_BASE_URL,

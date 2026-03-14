@@ -60,7 +60,13 @@ class OutputFormat(Enum):
         return self.value
 
 
-def result_to_dict(result: Result, run_id: str) -> Dict[str, Any]:
+def result_to_dict(
+    result: Result,
+    run_id: str,
+    *,
+    include_trace: bool = False,
+    redact_prompts: bool = False,
+) -> Dict[str, Any]:
     record = {
         "run_id": run_id,
         "topic_id": result.query.qid,
@@ -80,6 +86,13 @@ def result_to_dict(result: Result, run_id: str) -> Dict[str, Any]:
         reasoning = result.rag_exec_summary.reasoning
     if reasoning:
         record["reasoning_traces"] = [reasoning]
+    if include_trace and result.rag_exec_summary is not None:
+        record["trace"] = {
+            "prompt": None if redact_prompts else result.rag_exec_summary.prompt,
+            "response": result.rag_exec_summary.response,
+            "input_token_count": result.rag_exec_summary.input_token_count,
+            "output_token_count": result.rag_exec_summary.output_token_count,
+        }
     return record
 
 
