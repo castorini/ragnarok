@@ -105,7 +105,7 @@ class TestRagnarokCLI(unittest.TestCase):
             exit_code = main(
                 [
                     "generate",
-                    "--model-path",
+                    "--model",
                     "gpt-4o",
                     "--input-json",
                     json.dumps(
@@ -142,7 +142,7 @@ class TestRagnarokCLI(unittest.TestCase):
             exit_code = main(
                 [
                     "generate",
-                    "--model-path",
+                    "--model",
                     "gpt-4o",
                     "--stdin",
                     "--prompt-mode",
@@ -179,7 +179,7 @@ class TestRagnarokCLI(unittest.TestCase):
             exit_code = main(
                 [
                     "generate",
-                    "--model-path",
+                    "--model",
                     "gpt-4o",
                     "--input-json",
                     json.dumps(
@@ -211,7 +211,7 @@ class TestRagnarokCLI(unittest.TestCase):
             exit_code = main(
                 [
                     "generate",
-                    "--model-path",
+                    "--model",
                     "gpt-4o",
                     "--input-json",
                     json.dumps(
@@ -339,7 +339,7 @@ class TestRagnarokCLI(unittest.TestCase):
             exit_code = main(
                 [
                     "generate",
-                    "--model-path",
+                    "--model",
                     "gpt-4o",
                     "--input-json",
                     json.dumps(
@@ -372,7 +372,7 @@ class TestRagnarokCLI(unittest.TestCase):
             exit_code = main(
                 [
                     "generate",
-                    "--model-path",
+                    "--model",
                     "gpt-4o",
                     "--input-json",
                     json.dumps(
@@ -422,7 +422,7 @@ class TestRagnarokCLI(unittest.TestCase):
                 exit_code = main(
                     [
                         "generate",
-                        "--model-path",
+                        "--model",
                         "gpt-4o",
                         "--input-file",
                         str(input_path),
@@ -473,7 +473,7 @@ class TestRagnarokCLI(unittest.TestCase):
                 exit_code = main(
                     [
                         "generate",
-                        "--model-path",
+                        "--model",
                         "gpt-4o",
                         "--input-file",
                         str(input_path),
@@ -528,7 +528,7 @@ class TestRagnarokCLI(unittest.TestCase):
                 exit_code = main(
                     [
                         "generate",
-                        "--model-path",
+                        "--model",
                         "gpt-4o",
                         "--input-file",
                         str(input_path),
@@ -563,7 +563,7 @@ class TestRagnarokCLI(unittest.TestCase):
             exit_code = main(
                 [
                     "generate",
-                    "--model-path",
+                    "--model",
                     "gpt-4o",
                     "--dataset",
                     "rag24.raggy-dev",
@@ -587,7 +587,7 @@ class TestRagnarokCLI(unittest.TestCase):
         exit_code = main(
             [
                 "generate",
-                "--model-path",
+                "--model",
                 "gpt-4o",
                 "--dataset",
                 "rag24.raggy-dev",
@@ -606,7 +606,7 @@ class TestRagnarokCLI(unittest.TestCase):
         exit_code = main(
             [
                 "generate",
-                "--model-path",
+                "--model",
                 "gpt-4o",
                 "--dataset",
                 "rag24.raggy-dev",
@@ -638,7 +638,7 @@ class TestRagnarokCLI(unittest.TestCase):
             exit_code = main(
                 [
                     "generate",
-                    "--model-path",
+                    "--model",
                     "gpt-4o",
                     "--input-file",
                     str(input_path),
@@ -675,7 +675,7 @@ class TestRagnarokCLI(unittest.TestCase):
                 overwrite_exit = main(
                     [
                         "generate",
-                        "--model-path",
+                        "--model",
                         "gpt-4o",
                         "--input-file",
                         str(input_path),
@@ -695,7 +695,7 @@ class TestRagnarokCLI(unittest.TestCase):
                 resume_exit = main(
                     [
                         "generate",
-                        "--model-path",
+                        "--model",
                         "gpt-4o",
                         "--input-file",
                         str(input_path),
@@ -854,7 +854,7 @@ class TestRagnarokCLI(unittest.TestCase):
         exit_code = main(
             [
                 "generate",
-                "--model-path",
+                "--model",
                 "gpt-4o",
                 "--input-file",
                 "/tmp/does-not-exist.jsonl",

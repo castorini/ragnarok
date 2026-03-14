@@ -20,11 +20,11 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
         "inspection_safe": False,
         "examples": [
             (
-                "ragnarok generate --model-path gpt-4o --dataset rag24.raggy-dev "
+                "ragnarok generate --model gpt-4o --dataset rag24.raggy-dev "
                 "--retrieval-method bm25 --topk 20 --prompt-mode chatqa"
             ),
             (
-                "ragnarok generate --model-path gpt-4o --input-json "
+                "ragnarok generate --model gpt-4o --input-json "
                 '\'{"query":"q","candidates":["p"]}\' --output json'
             ),
         ],

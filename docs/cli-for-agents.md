@@ -31,7 +31,7 @@ python src/ragnarok/scripts/run_ragnarok.py --model_path=gpt-4o --dataset=rag24.
 
 New:
 ```bash
-ragnarok generate --model-path gpt-4o --dataset rag24.raggy-dev --retrieval-method bm25 --topk 20 --prompt-mode chatqa
+ragnarok generate --model gpt-4o --dataset rag24.raggy-dev --retrieval-method bm25 --topk 20 --prompt-mode chatqa
 ```
 
 Old:
@@ -77,7 +77,7 @@ Direct single request:
 
 ```bash
 ragnarok generate \
-  --model-path gpt-4o \
+  --model gpt-4o \
   --input-json '{"query":"how long is life cycle of flea","candidates":["The life cycle of a flea can last anywhere from 20 days to an entire year."]}' \
   --prompt-mode chatqa \
   --output json
@@ -87,7 +87,7 @@ Batch request file:
 
 ```bash
 ragnarok generate \
-  --model-path gpt-4o \
+  --model gpt-4o \
   --input-file requests.jsonl \
   --output-file results.jsonl \
   --prompt-mode chatqa
@@ -97,7 +97,7 @@ Async request-file generation:
 
 ```bash
 ragnarok generate \
-  --model-path gpt-4o \
+  --model gpt-4o \
   --input-file requests.jsonl \
   --output-file results.jsonl \
   --prompt-mode chatqa \
@@ -109,7 +109,7 @@ Dataset-backed retrieval and generation:
 
 ```bash
 ragnarok generate \
-  --model-path gpt-4o \
+  --model gpt-4o \
   --dataset rag24.raggy-dev \
   --retrieval-method bm25,rank_zephyr_rho \
   --topk 100,5 \

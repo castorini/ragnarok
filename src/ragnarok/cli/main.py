@@ -231,14 +231,11 @@ def _read_direct_payload(args: argparse.Namespace) -> dict[str, Any]:
 
 def _resolve_model_name(args: argparse.Namespace) -> str:
     model = getattr(args, "model", None)
-    model_path = getattr(args, "model_path", None)
     if model:
         args.model_path = model
         return cast(str, model)
-    if model_path:
-        return cast(str, model_path)
     raise CLIError(
-        "generate requires --model or --model-path",
+        "generate requires --model",
         exit_code=EXIT_CODES["invalid_arguments"],
         status="validation_error",
         error_code="missing_model",
@@ -304,16 +301,11 @@ def build_parser() -> CLIArgumentParser:
         type=str,
         help="Direct JSON request in the shared query-candidate schema.",
     )
-    model_group = generate_parser.add_mutually_exclusive_group(required=True)
-    model_group.add_argument(
+    generate_parser.add_argument(
         "--model",
         type=str,
+        required=True,
         help="Model or deployment identifier to use for generation.",
-    )
-    model_group.add_argument(
-        "--model-path",
-        type=str,
-        help="Deprecated alias for --model.",
     )
     generate_parser.add_argument(
         "--use-azure-openai",

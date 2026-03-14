@@ -60,7 +60,7 @@
 - Main script: `src/ragnarok/scripts/run_ragnarok.py`.
 - Lightweight smoke-test examples: `examples/rag_demo.py` for the async-first path and `examples/sync_rag_demo.py` for synchronous compatibility.
 - Typical invocation is in README/docs; key args include:
-  - `--model_path`
+  - `--model`
   - `--dataset`
   - `--retrieval_method` (comma-separated enum values)
   - `--topk` (comma-separated ints, aligned with retrieval stages)

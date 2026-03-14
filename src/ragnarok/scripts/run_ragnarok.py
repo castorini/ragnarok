@@ -88,7 +88,10 @@ def cli_compatible_main(argv=None):
     from ragnarok.cli.main import main as cli_main
 
     argv = sys.argv[1:] if argv is None else argv
-    return cli_main(["generate", *argv])
+    translated: list[str] = ["generate"]
+    for token in argv:
+        translated.append("--model" if token == "--model_path" else token)
+    return cli_main(translated)
 
 
 """ sample run:

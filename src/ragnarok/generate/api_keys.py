@@ -8,12 +8,12 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 def get_public_openai_api_key() -> str | None:
     load_dotenv()
-    return os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI_API_KEY")
+    return os.getenv("OPENAI_API_KEY") or None
 
 
 def get_openrouter_api_key() -> str | None:
     load_dotenv()
-    return os.getenv("OPENROUTER_API_KEY")
+    return os.getenv("OPENROUTER_API_KEY") or None
 
 
 def get_openai_api_key() -> str | None:

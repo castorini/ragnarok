@@ -19,11 +19,11 @@ KNOWN_COMMANDS = (
 
 TOP_LEVEL_EXAMPLES = (
     (
-        "ragnarok generate --model-path gpt-4o --dataset rag24.raggy-dev "
+        "ragnarok generate --model gpt-4o --dataset rag24.raggy-dev "
         "--retrieval-method bm25 --topk 20 --prompt-mode chatqa"
     ),
     (
-        "ragnarok generate --model-path gpt-4o --input-json "
+        "ragnarok generate --model gpt-4o --input-json "
         '\'{"query":"q","candidates":["p"]}\' --output json'
     ),
     "ragnarok doctor --output json",
