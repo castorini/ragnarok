@@ -71,24 +71,23 @@ def create_generation_agent(args: Any) -> Any:
 
     # Default to the OpenAI-compatible client for unknown model identifiers.
     # This keeps the backend selection flexible for providers such as OpenRouter.
-    if True:
-        from ragnarok.generate.api_keys import get_openai_compatible_args
-        from ragnarok.generate.gpt import SafeOpenai
+    from ragnarok.generate.api_keys import get_openai_compatible_args
+    from ragnarok.generate.gpt import SafeOpenai
 
-        return SafeOpenai(
-            model=model_name,
-            context_size=args.context_size,
-            prompt_mode=prompt_mode,
-            max_output_tokens=args.max_output_tokens,
-            num_few_shot_examples=args.num_few_shot_examples,
-            store_reasoning=args.include_reasoning,
-            reasoning_effort=args.reasoning_effort,
-            **get_openai_compatible_args(
-                model_name,
-                args.use_azure_openai,
-                getattr(args, "use_openrouter", False),
-            ),
-        )
+    return SafeOpenai(
+        model=model_name,
+        context_size=args.context_size,
+        prompt_mode=prompt_mode,
+        max_output_tokens=args.max_output_tokens,
+        num_few_shot_examples=args.num_few_shot_examples,
+        store_reasoning=args.include_reasoning,
+        reasoning_effort=args.reasoning_effort,
+        **get_openai_compatible_args(
+            model_name,
+            args.use_azure_openai,
+            getattr(args, "use_openrouter", False),
+        ),
+    )
 
 
 def load_request_records(path: str) -> list[dict[str, Any]]:

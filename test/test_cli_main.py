@@ -739,7 +739,7 @@ class TestRagnarokCLI(unittest.TestCase):
                     {
                         "run_id": "demo-run",
                         "topic_id": "q1",
-                        "topic": "What is Python used for? " * 12,
+                        "topic": "What is Python used for? " * 5,
                         "references": ["d1", "d2", "d3"],
                         "response_length": 42,
                         "answer": [
@@ -771,7 +771,7 @@ class TestRagnarokCLI(unittest.TestCase):
             self.assertEqual(len(output["artifacts"][0]["data"]["sampled_records"]), 1)
             self.assertEqual(
                 output["artifacts"][0]["data"]["sampled_records"][0]["topic"],
-                ("What is Python used for? " * 12).strip(),
+                ("What is Python used for? " * 5).strip(),
             )
 
     def test_view_generate_output_text_respects_record_limit(self):

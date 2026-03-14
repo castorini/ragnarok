@@ -5,12 +5,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 ANSI_CODES = {
     "reset": "\033[0m",
     "bold": "\033[1m",
     "cyan": "\033[36m",
     "green": "\033[32m",
+    "yellow": "\033[33m",
+    "red": "\033[31m",
 }
 
 GENERATE_REQUIRED_KEYS = {
@@ -42,8 +43,10 @@ def _style(text: str, color: str, enabled: bool) -> str:
 
 
 def _truncate(text: str, limit: int = 140) -> str:
-    del limit
-    return " ".join(text.split())
+    collapsed = " ".join(text.split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return collapsed[: limit - 1] + "\u2026"
 
 
 def load_records(path: str) -> list[dict[str, Any]]:
@@ -64,11 +67,7 @@ def load_records(path: str) -> list[dict[str, Any]]:
             if isinstance(payload, list):
                 return payload
             raise ViewError(f"unsupported JSON payload in {path}")
-        records = [
-            json.loads(line)
-            for line in raw_text.splitlines()
-            if line.strip()
-        ]
+        records = [json.loads(line) for line in raw_text.splitlines() if line.strip()]
     except json.JSONDecodeError as exc:
         raise ViewError(f"file is not valid JSON/JSONL: {path}") from exc
 
@@ -98,7 +97,9 @@ def build_view_summary(
     path: str, records: list[dict[str, Any]], artifact_type: str, *, record_limit: int
 ) -> dict[str, Any]:
     limit = max(record_limit, 0)
-    run_ids = sorted({str(record.get("run_id", "")) for record in records if record.get("run_id")})
+    run_ids = sorted(
+        {str(record.get("run_id", "")) for record in records if record.get("run_id")}
+    )
     sampled_records: list[dict[str, Any]] = []
     for record in records[:limit]:
         sampled_records.append(

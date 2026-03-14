@@ -815,7 +815,6 @@ def _run_convert_command(args: argparse.Namespace) -> CommandResponse:
 
 
 def _run_view_command(args: argparse.Namespace) -> CommandResponse:
-    _ensure_file_exists(args.path, command="view", field_name="path")
     try:
         records = load_records(args.path)
         artifact_type = detect_artifact_type(records, args.artifact_type)
@@ -847,12 +846,10 @@ def _run_view_command(args: argparse.Namespace) -> CommandResponse:
 
 
 def _format_text_response(response: CommandResponse) -> str:
-    envelope = response.to_envelope()
     if response.command == "generate":
-        artifacts = envelope.get("artifacts", [])
-        if not artifacts:
+        if not response.artifacts:
             return ""
-        data = artifacts[0].get("data", [])
+        data = response.artifacts[0].get("data", [])
         if not data:
             return ""
         rendered_records: list[str] = []
@@ -884,18 +881,18 @@ def _format_text_response(response: CommandResponse) -> str:
                 lines.append(f"reasoning: {reasoning_traces[0]}")
             rendered_records.append("\n".join(lines).rstrip())
         return "\n\n".join(rendered_records).rstrip()
-    if response.command == "describe" or response.command == "schema":
-        return json.dumps(envelope["artifacts"][0]["data"], indent=2)
+    if response.command in ("describe", "schema"):
+        return json.dumps(response.artifacts[0]["data"], indent=2)
     if response.command == "doctor":
-        return json.dumps(envelope["metrics"], indent=2)
+        return json.dumps(response.metrics, indent=2)
     if response.command == "validate":
-        return json.dumps(envelope["validation"], indent=2)
+        return json.dumps(response.validation, indent=2)
     if response.command == "view":
         return render_view_summary(
-            cast(dict[str, Any], envelope["artifacts"][0]["data"]),
-            color=cast(str, envelope["resolved"]["color"]),
+            cast(dict[str, Any], response.artifacts[0]["data"]),
+            color=cast(str, response.resolved["color"]),
         )
-    return json.dumps(envelope, indent=2)
+    return json.dumps(response.to_envelope(), indent=2)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
