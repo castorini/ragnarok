@@ -110,6 +110,8 @@ class SafeOpenai(LLM):
         self._api_version = api_version
         self._async_client = None
         self._async_client_key_id = None
+        self._sync_client = None
+        self._sync_client_key_id = None
         self._async_key_lock = asyncio.Lock()
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
@@ -135,6 +137,88 @@ class SafeOpenai(LLM):
                 }
             }
         return {"reasoning_effort": self._reasoning_effort}
+
+    def _uses_reasoning_style_api(self) -> bool:
+        return (
+            "o1" in self._model
+            or "o3" in self._model
+            or "o4" in self._model
+            or "gpt-5" in self._model
+        )
+
+    def _uses_responses_reasoning_api(self) -> bool:
+        return self._reasoning_effort is not None and self._uses_reasoning_style_api()
+
+    def _normalize_messages(
+        self, messages: List[Dict[str, str]]
+    ) -> List[Dict[str, str]]:
+        if "o1" in self._model or "o3" in self._model or "o4" in self._model:
+            normalized_messages = [message.copy() for message in messages[1:]]
+            normalized_messages[0]["content"] = (
+                messages[0]["content"] + "\n" + messages[1]["content"]
+            )
+            return normalized_messages
+        return messages
+
+    def _build_responses_params(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
+        return {
+            "model": self._model,
+            "input": [
+                {
+                    "type": "message",
+                    "role": message["role"],
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": message["content"],
+                        }
+                    ],
+                }
+                for message in self._normalize_messages(messages)
+            ],
+            "max_output_tokens": self.num_output_tokens(),
+            "timeout": 30,
+            "reasoning": {
+                "effort": self._reasoning_effort,
+                "summary": "auto",
+            },
+        }
+
+    def _create_sync_client(self, key_id: int) -> Any:
+        api_key = self._keys[key_id]
+        if self.use_azure_ai:
+            client_cls = getattr(openai, "AzureOpenAI", None)
+            if client_cls is None:
+                from openai import AzureOpenAI
+
+                client_cls = AzureOpenAI
+            return client_cls(
+                api_key=api_key,
+                api_version=self._api_version,
+                azure_endpoint=self._api_base,
+            )
+        client_cls = getattr(openai, "OpenAI", None)
+        if client_cls is None:
+            from openai import OpenAI
+
+            client_cls = OpenAI
+        client_kwargs: Dict[str, Any] = {"api_key": api_key}
+        if self._api_base:
+            client_kwargs["base_url"] = self._api_base
+        return client_cls(**client_kwargs)
+
+    def _get_sync_client(self) -> Any:
+        if self._sync_client is None or self._sync_client_key_id != self._cur_key_id:
+            self._sync_client = self._create_sync_client(self._cur_key_id)
+            self._sync_client_key_id = self._cur_key_id
+        return self._sync_client
+
+    def _rotate_sync_key(self) -> Any:
+        self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
+        openai.api_key = self._keys[self._cur_key_id]
+        self._sync_client = self._create_sync_client(self._cur_key_id)
+        self._sync_client_key_id = self._cur_key_id
+        return self._sync_client
 
     def _create_async_client(self, key_id: int) -> Any:
         api_key = self._keys[key_id]
@@ -215,6 +299,22 @@ class SafeOpenai(LLM):
                 time.sleep(0.1)
         return completion
 
+    def _call_responses(self, **kwargs: Any) -> Any:
+        while True:
+            try:
+                client = self._get_sync_client()
+                return client.responses.create(**kwargs)
+            except Exception as e:
+                print(str(e))
+                if "This model's maximum context length is" in str(e):
+                    print("reduce_length")
+                    return "ERROR::reduce_length"
+                if "The response was filtered" in str(e):
+                    print("The response was filtered")
+                    return "ERROR::The response was filtered"
+                self._rotate_sync_key()
+                time.sleep(0.1)
+
     def run_llm(
         self,
         prompt: Union[str, List[Dict[str, str]]],
@@ -222,17 +322,28 @@ class SafeOpenai(LLM):
     ) -> Tuple[str, RAGExecInfo]:
         if logging:
             print(f"Prompt: {prompt}")
+        normalized_prompt = self._normalize_messages(prompt)
         completion_params: Dict[str, Any] = {
-            "messages": prompt,
+            "messages": normalized_prompt,
             "temperature": 0.1,
             "completion_mode": SafeOpenai.CompletionMode.CHAT,
             "model": self._model,
         }
-        completion_params.update(self._build_reasoning_params())
-        response = self._call_completion(**completion_params)
-        message = response.choices[0].message
-        response_text = message.content or ""
-        reasoning = self._extract_reasoning_from_message(message)
+        if self._uses_responses_reasoning_api():
+            response = self._call_responses(**self._build_responses_params(prompt))
+            response_text = self._extract_text_from_responses_output(response)
+            reasoning = self._extract_reasoning_from_responses_output(
+                response,
+                prefer_direct_reasoning=bool(
+                    self._api_base and "openrouter.ai" in self._api_base
+                ),
+            )
+        else:
+            completion_params.update(self._build_reasoning_params())
+            response = self._call_completion(**completion_params)
+            message = response.choices[0].message
+            response_text = message.content or ""
+            reasoning = self._extract_reasoning_from_message(message)
         tagged_reasoning, cleaned_response = self._extract_reasoning_from_text(
             response_text
         )
@@ -299,17 +410,31 @@ class SafeOpenai(LLM):
     ) -> Tuple[str, RAGExecInfo]:
         if logging:
             print(f"Prompt: {prompt}")
+        normalized_prompt = self._normalize_messages(prompt)
         completion_params: Dict[str, Any] = {
-            "messages": prompt,
+            "messages": normalized_prompt,
             "temperature": 0.1,
             "completion_mode": SafeOpenai.CompletionMode.CHAT,
             "model": self._model,
         }
-        completion_params.update(self._build_reasoning_params())
-        response = await self._call_completion_async(**completion_params)
-        message = response.choices[0].message
-        response_text = message.content or ""
-        reasoning = self._extract_reasoning_from_message(message)
+        if self._uses_responses_reasoning_api():
+            client = await self._get_async_client()
+            response = await client.responses.create(
+                **self._build_responses_params(prompt)
+            )
+            response_text = self._extract_text_from_responses_output(response)
+            reasoning = self._extract_reasoning_from_responses_output(
+                response,
+                prefer_direct_reasoning=bool(
+                    self._api_base and "openrouter.ai" in self._api_base
+                ),
+            )
+        else:
+            completion_params.update(self._build_reasoning_params())
+            response = await self._call_completion_async(**completion_params)
+            message = response.choices[0].message
+            response_text = message.content or ""
+            reasoning = self._extract_reasoning_from_message(message)
         tagged_reasoning, cleaned_response = self._extract_reasoning_from_text(
             response_text
         )

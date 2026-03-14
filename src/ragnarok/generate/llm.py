@@ -302,6 +302,95 @@ class LLM(ABC):
                 return str(model_extra["reasoning_content"]).strip()
         return None
 
+    def _extract_reasoning_from_responses_output(
+        self, response: Any, prefer_direct_reasoning: bool = False
+    ) -> Optional[str]:
+        if not self._store_reasoning or response is None:
+            return None
+        reasoning_parts: List[str] = []
+        for item in getattr(response, "output", []):
+            item_type = getattr(item, "type", None)
+            if item_type is None and isinstance(item, dict):
+                item_type = item.get("type")
+            if item_type != "reasoning":
+                continue
+            direct_parts: List[str] = []
+            summaries = getattr(item, "summary", None)
+            if summaries is None and isinstance(item, dict):
+                summaries = item.get("summary", [])
+            summary_parts: List[str] = []
+            for summary in summaries or []:
+                if isinstance(summary, str):
+                    summary_parts.append(summary.strip())
+                    continue
+                summary_type = getattr(summary, "type", None)
+                if summary_type is None and isinstance(summary, dict):
+                    summary_type = summary.get("type")
+                if summary_type not in (None, "summary_text"):
+                    continue
+                summary_text = getattr(summary, "text", None)
+                if summary_text is None and isinstance(summary, dict):
+                    summary_text = summary.get("text")
+                if summary_text:
+                    summary_parts.append(str(summary_text).strip())
+            direct_reasoning = getattr(item, "reasoning", None)
+            if direct_reasoning is None and isinstance(item, dict):
+                direct_reasoning = item.get("reasoning")
+            if direct_reasoning:
+                direct_parts.append(str(direct_reasoning).strip())
+            direct_reasoning_content = getattr(item, "reasoning_content", None)
+            if direct_reasoning_content is None and isinstance(item, dict):
+                direct_reasoning_content = item.get("reasoning_content")
+            if direct_reasoning_content:
+                direct_parts.append(str(direct_reasoning_content).strip())
+            item_content = getattr(item, "content", None)
+            if item_content is None and isinstance(item, dict):
+                item_content = item.get("content", [])
+            for content in item_content or []:
+                if isinstance(content, str):
+                    direct_parts.append(content.strip())
+                    continue
+                content_text = getattr(content, "text", None)
+                if content_text is None and isinstance(content, dict):
+                    content_text = content.get("text")
+                if content_text:
+                    direct_parts.append(str(content_text).strip())
+            reasoning_parts.extend(
+                direct_parts or summary_parts
+                if prefer_direct_reasoning
+                else summary_parts or direct_parts
+            )
+        return "\n".join(part for part in reasoning_parts if part) or None
+
+    def _extract_text_from_responses_output(self, response: Any) -> str:
+        if response is None:
+            return ""
+        output_text = getattr(response, "output_text", None)
+        if output_text:
+            return str(output_text)
+        text_parts: List[str] = []
+        for item in getattr(response, "output", []):
+            item_type = getattr(item, "type", None)
+            if item_type is None and isinstance(item, dict):
+                item_type = item.get("type")
+            if item_type != "message":
+                continue
+            content_items = getattr(item, "content", None)
+            if content_items is None and isinstance(item, dict):
+                content_items = item.get("content", [])
+            for content in content_items or []:
+                content_type = getattr(content, "type", None)
+                if content_type is None and isinstance(content, dict):
+                    content_type = content.get("type")
+                if content_type != "output_text":
+                    continue
+                content_text = getattr(content, "text", None)
+                if content_text is None and isinstance(content, dict):
+                    content_text = content.get("text")
+                if content_text:
+                    text_parts.append(str(content_text))
+        return "\n".join(text_parts)
+
     def _extract_reasoning_from_text(self, response: str) -> Tuple[Optional[str], str]:
         if response is None:
             return None, ""

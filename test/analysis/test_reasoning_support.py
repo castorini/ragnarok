@@ -307,21 +307,20 @@ class TestReasoningSupport(unittest.TestCase):
         self.assertEqual(lines[0]["rag_exec_summary"]["reasoning"], "Model reasoning")
         self.assertNotIn("reasoning", lines[1]["rag_exec_summary"])
 
-    def test_safe_openai_forwards_reasoning_effort(self):
+    def test_safe_openai_uses_responses_api_for_openai_reasoning_models(self):
         recorded_kwargs = {}
-
-        class FakeResponse:
-            class Choice:
-                class Message:
-                    content = "Final answer."
-
-                message = Message()
-
-            choices = [Choice()]
 
         def fake_create(**kwargs):
             recorded_kwargs.update(kwargs)
-            return FakeResponse()
+            return SimpleNamespace(
+                output_text="Final answer.",
+                output=[
+                    SimpleNamespace(
+                        type="reasoning",
+                        summary=[SimpleNamespace(type="summary_text", text="chain")],
+                    )
+                ],
+            )
 
         fake_openai = ModuleType("openai")
         fake_openai.proxy = None
@@ -329,6 +328,9 @@ class TestReasoningSupport(unittest.TestCase):
         fake_openai.api_version = None
         fake_openai.api_type = None
         fake_openai.api_base = None
+        fake_openai.OpenAI = lambda **kwargs: SimpleNamespace(
+            responses=SimpleNamespace(create=staticmethod(fake_create))
+        )
         fake_openai.chat = type(
             "ChatNamespace",
             (),
@@ -382,7 +384,25 @@ class TestReasoningSupport(unittest.TestCase):
                 ]
             )
 
-        self.assertEqual(recorded_kwargs["reasoning_effort"], "medium")
+        self.assertEqual(
+            recorded_kwargs["reasoning"],
+            {"effort": "medium", "summary": "auto"},
+        )
+        self.assertEqual(
+            recorded_kwargs["input"],
+            [
+                {
+                    "type": "message",
+                    "role": "system",
+                    "content": [{"type": "input_text", "text": "System prompt"}],
+                },
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": "User prompt"}],
+                },
+            ],
+        )
 
     def test_extract_reasoning_from_model_extra(self):
         llm = DummyLLM(
@@ -566,6 +586,225 @@ class TestReasoningSupport(unittest.TestCase):
             {"reasoning": {"effort": "high", "exclude": False}},
         )
         self.assertNotIn("reasoning_effort", recorded_kwargs)
+
+    def test_safe_openai_uses_responses_api_for_openrouter_reasoning_models_sync(self):
+        recorded_kwargs = {}
+
+        def fake_create(**kwargs):
+            recorded_kwargs.update(kwargs)
+            return SimpleNamespace(
+                output_text="Final answer.",
+                output=[SimpleNamespace(type="reasoning", summary=["router chain"])],
+            )
+
+        fake_openai = ModuleType("openai")
+        fake_openai.proxy = None
+        fake_openai.api_key = None
+        fake_openai.api_version = None
+        fake_openai.api_type = None
+        fake_openai.api_base = None
+        fake_openai.OpenAI = lambda **kwargs: SimpleNamespace(
+            responses=SimpleNamespace(create=staticmethod(fake_create))
+        )
+        fake_openai.chat = type("ChatNamespace", (), {})()
+        fake_openai.Completion = type("CompletionNamespace", (), {})()
+
+        fake_tiktoken = ModuleType("tiktoken")
+        fake_tiktoken.get_encoding = staticmethod(
+            lambda _name: type(
+                "Encoding", (), {"encode": staticmethod(lambda text: list(text))}
+            )()
+        )
+        fake_post_processor = ModuleType("ragnarok.generate.post_processor")
+
+        class FakeGPTPostProcessor:
+            def __call__(self, response):
+                return [], {"text": response, "citations": []}
+
+        fake_post_processor.GPTPostProcessor = FakeGPTPostProcessor
+
+        with patch.dict(
+            sys.modules,
+            {
+                "openai": fake_openai,
+                "tiktoken": fake_tiktoken,
+                "ragnarok.generate.post_processor": fake_post_processor,
+            },
+        ):
+            if "ragnarok.generate.gpt" in sys.modules:
+                del sys.modules["ragnarok.generate.gpt"]
+            from ragnarok.generate.gpt import SafeOpenai
+
+            model = SafeOpenai(
+                model="openrouter/openai/o4-mini",
+                context_size=1024,
+                prompt_mode=PromptMode.CHATQA,
+                keys=["test-key"],
+                api_base="https://openrouter.ai/api/v1",
+                reasoning_effort="high",
+                store_reasoning=True,
+            )
+            answers, rag_exec_info = model.run_llm(
+                [
+                    {"role": "system", "content": "System prompt"},
+                    {"role": "user", "content": "User prompt"},
+                ]
+            )
+
+        self.assertEqual(answers, [])
+        self.assertEqual(rag_exec_info.reasoning, "router chain")
+        self.assertEqual(
+            recorded_kwargs["reasoning"],
+            {"effort": "high", "summary": "auto"},
+        )
+
+    def test_safe_openai_prefers_direct_reasoning_for_openrouter_responses_sync(self):
+        def fake_create(**kwargs):
+            del kwargs
+            return SimpleNamespace(
+                output_text="Final answer.",
+                output=[
+                    SimpleNamespace(
+                        type="reasoning",
+                        reasoning="raw router reasoning",
+                        summary=["router summary"],
+                    )
+                ],
+            )
+
+        fake_openai = ModuleType("openai")
+        fake_openai.proxy = None
+        fake_openai.api_key = None
+        fake_openai.api_version = None
+        fake_openai.api_type = None
+        fake_openai.api_base = None
+        fake_openai.OpenAI = lambda **kwargs: SimpleNamespace(
+            responses=SimpleNamespace(create=staticmethod(fake_create))
+        )
+        fake_openai.chat = type("ChatNamespace", (), {})()
+        fake_openai.Completion = type("CompletionNamespace", (), {})()
+
+        fake_tiktoken = ModuleType("tiktoken")
+        fake_tiktoken.get_encoding = staticmethod(
+            lambda _name: type(
+                "Encoding", (), {"encode": staticmethod(lambda text: list(text))}
+            )()
+        )
+        fake_post_processor = ModuleType("ragnarok.generate.post_processor")
+
+        class FakeGPTPostProcessor:
+            def __call__(self, response):
+                return [], {"text": response, "citations": []}
+
+        fake_post_processor.GPTPostProcessor = FakeGPTPostProcessor
+
+        with patch.dict(
+            sys.modules,
+            {
+                "openai": fake_openai,
+                "tiktoken": fake_tiktoken,
+                "ragnarok.generate.post_processor": fake_post_processor,
+            },
+        ):
+            if "ragnarok.generate.gpt" in sys.modules:
+                del sys.modules["ragnarok.generate.gpt"]
+            from ragnarok.generate.gpt import SafeOpenai
+
+            model = SafeOpenai(
+                model="openrouter/openai/o4-mini",
+                context_size=1024,
+                prompt_mode=PromptMode.CHATQA,
+                keys=["test-key"],
+                api_base="https://openrouter.ai/api/v1",
+                reasoning_effort="high",
+                store_reasoning=True,
+            )
+            _, rag_exec_info = model.run_llm(
+                [
+                    {"role": "system", "content": "System prompt"},
+                    {"role": "user", "content": "User prompt"},
+                ]
+            )
+
+        self.assertEqual(rag_exec_info.reasoning, "raw router reasoning")
+
+    def test_safe_openai_uses_responses_api_for_openrouter_reasoning_models_async(self):
+        fake_openai = ModuleType("openai")
+        fake_openai.proxy = None
+        fake_openai.api_key = None
+        fake_openai.api_version = None
+        fake_openai.api_type = None
+        fake_openai.api_base = None
+        fake_openai.chat = type("ChatNamespace", (), {})()
+        fake_openai.Completion = type("CompletionNamespace", (), {})()
+
+        fake_tiktoken = ModuleType("tiktoken")
+        fake_tiktoken.get_encoding = staticmethod(
+            lambda _name: type(
+                "Encoding", (), {"encode": staticmethod(lambda text: list(text))}
+            )()
+        )
+        fake_post_processor = ModuleType("ragnarok.generate.post_processor")
+
+        class FakeGPTPostProcessor:
+            def __call__(self, response):
+                return [], {"text": response, "citations": []}
+
+        fake_post_processor.GPTPostProcessor = FakeGPTPostProcessor
+
+        with patch.dict(
+            sys.modules,
+            {
+                "openai": fake_openai,
+                "tiktoken": fake_tiktoken,
+                "ragnarok.generate.post_processor": fake_post_processor,
+            },
+        ):
+            if "ragnarok.generate.gpt" in sys.modules:
+                del sys.modules["ragnarok.generate.gpt"]
+            from ragnarok.generate.gpt import SafeOpenai
+
+            model = SafeOpenai(
+                model="openrouter/openai/o4-mini",
+                context_size=1024,
+                prompt_mode=PromptMode.CHATQA,
+                keys=["test-key"],
+                api_base="https://openrouter.ai/api/v1",
+                reasoning_effort="high",
+                store_reasoning=True,
+            )
+
+            recorded_kwargs = {}
+
+            async def fake_create(**kwargs):
+                recorded_kwargs.update(kwargs)
+                return SimpleNamespace(
+                    output_text="Final answer.",
+                    output=[
+                        SimpleNamespace(type="reasoning", summary=["router chain"])
+                    ],
+                )
+
+            model._async_client = SimpleNamespace(
+                responses=SimpleNamespace(create=fake_create)
+            )
+            model._async_client_key_id = model._cur_key_id
+
+            answers, rag_exec_info = asyncio.run(
+                model.async_run_llm(
+                    [
+                        {"role": "system", "content": "System prompt"},
+                        {"role": "user", "content": "User prompt"},
+                    ]
+                )
+            )
+
+        self.assertEqual(answers, [])
+        self.assertEqual(rag_exec_info.reasoning, "router chain")
+        self.assertEqual(
+            recorded_kwargs["reasoning"],
+            {"effort": "high", "summary": "auto"},
+        )
 
 
 if __name__ == "__main__":
