@@ -1250,6 +1250,37 @@ class TestRagnarokCLI(unittest.TestCase):
                 converted[0]["metadata"]["prompt"], "Tell me about Python."
             )
 
+    def test_pipe_generate_json_output_is_valid_jsonl(self):
+        stdout = StringIO()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=FakeAgent(),
+            ),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        envelope = json.loads(stdout.getvalue())
+        self.assertEqual(envelope["schema_version"], "castorini.cli.v1")
+        records = envelope["artifacts"][0]["data"]
+        self.assertTrue(all("topic" in r and "answer" in r for r in records))
+
     def test_legacy_run_ragnarok_wrapper_delegates_to_cli(self):
         from ragnarok.scripts.run_ragnarok import cli_compatible_main
 
