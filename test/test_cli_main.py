@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -93,6 +94,33 @@ class FakeAgent:
 
 
 class TestRagnarokCLI(unittest.TestCase):
+    def test_no_color_env_suppresses_ansi_codes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                output_path,
+                [
+                    {
+                        "run_id": "demo-run",
+                        "topic_id": "q1",
+                        "topic": "topic one",
+                        "references": ["d1"],
+                        "response_length": 10,
+                        "answer": [{"text": "answer one", "citations": [0]}],
+                    }
+                ],
+            )
+
+            stdout = StringIO()
+            with patch.dict(os.environ, {"NO_COLOR": ""}):
+                with redirect_stdout(stdout):
+                    exit_code = main(
+                        ["view", str(output_path), "--color", "always"]
+                    )
+
+            self.assertEqual(exit_code, 0)
+            self.assertNotIn("\033[", stdout.getvalue())
+
     def test_version_flag_prints_version_and_exits(self):
         stdout = StringIO()
         with self.assertRaises(SystemExit) as exc_info:
