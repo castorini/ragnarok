@@ -275,6 +275,13 @@ def build_parser() -> CLIArgumentParser:
         action="version",
         version=f"%(prog)s {importlib.metadata.version('pyragnarok')}",
     )
+    parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        default=False,
+        help="Suppress all log output (sets log level to CRITICAL).",
+    )
     subparsers = parser.add_subparsers(
         dest="command", required=True, parser_class=CLIArgumentParser
     )
@@ -776,7 +783,7 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
         if args.dry_run or args.validate_only:
             response.mode = "validate" if args.validate_only else "dry-run"
             return response
-        logger = setup_logging(args.log_level)
+        logger = setup_logging(args.log_level, quiet=getattr(args, "quiet", False))
         artifacts, metrics = run_dataset_generation(args, logger)
         if artifacts:
             response.artifacts.append(
@@ -805,7 +812,7 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
         requests = convert_generate_records_to_requests(
             load_request_records(args.input_file)
         )
-        logger = setup_logging(args.log_level)
+        logger = setup_logging(args.log_level, quiet=getattr(args, "quiet", False))
         if args.execution_mode == "async":
             records, metrics = asyncio.run(
                 async_run_request_generation(requests, args, logger)
@@ -838,7 +845,7 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
             )
         )
         return response
-    logger = setup_logging(args.log_level)
+    logger = setup_logging(args.log_level, quiet=getattr(args, "quiet", False))
     if args.execution_mode == "async":
         records, metrics = asyncio.run(
             async_run_request_generation([request], args, logger)

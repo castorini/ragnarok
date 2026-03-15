@@ -94,6 +94,18 @@ class FakeAgent:
 
 
 class TestRagnarokCLI(unittest.TestCase):
+    def test_quiet_flag_suppresses_stderr(self):
+        import io
+        from contextlib import redirect_stderr
+
+        stderr = io.StringIO()
+        stdout = StringIO()
+        with redirect_stderr(stderr), redirect_stdout(stdout):
+            exit_code = main(["--quiet", "doctor", "--output", "json"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr.getvalue(), "")
+
     def test_no_color_env_suppresses_ansi_codes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = Path(temp_dir) / "results.jsonl"
@@ -114,9 +126,7 @@ class TestRagnarokCLI(unittest.TestCase):
             stdout = StringIO()
             with patch.dict(os.environ, {"NO_COLOR": ""}):
                 with redirect_stdout(stdout):
-                    exit_code = main(
-                        ["view", str(output_path), "--color", "always"]
-                    )
+                    exit_code = main(["view", str(output_path), "--color", "always"])
 
             self.assertEqual(exit_code, 0)
             self.assertNotIn("\033[", stdout.getvalue())
