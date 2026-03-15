@@ -3,7 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from ragnarok.generate.llm import PromptMode
-from ragnarok.generate.templates.ragnarok_templates import RenderedPrompt, RagnarokTemplates
+from ragnarok.generate.templates.ragnarok_templates import (
+    RagnarokTemplates,
+    RenderedPrompt,
+)
 
 
 def list_prompt_modes() -> list[dict[str, Any]]:

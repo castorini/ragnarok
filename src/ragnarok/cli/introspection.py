@@ -9,7 +9,6 @@ from typing import Any
 from .io import read_json, read_jsonl
 from .normalize import normalize_direct_generate_input
 
-
 COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
     "generate": {
         "summary": (

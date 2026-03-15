@@ -13,6 +13,7 @@ activated, use `uv run ragnarok ...`.
 - `ragnarok convert trec25-format`: Convert older Ragnarok JSONL into the newer
   TREC 2025 format.
 - `ragnarok view`: Render an existing Ragnarok output artifact for humans.
+- `ragnarok prompt`: Inspect prompt-mode definitions and render exact prompts for direct input without running a model.
 - `ragnarok describe`: Inspect command metadata and examples.
 - `ragnarok schema`: Print JSON schemas for inputs, outputs, and the shared CLI
   envelope.
@@ -121,6 +122,21 @@ View an existing generation artifact:
 ```bash
 ragnarok view results.jsonl
 ragnarok view results.jsonl --records 1
+```
+
+Inspect or render prompt modes:
+
+```bash
+ragnarok prompt list
+ragnarok prompt show --prompt-mode chatqa
+ragnarok prompt render \
+  --prompt-mode chatqa \
+  --model gpt-4o \
+  --input-json '{"query":"q","candidates":["p"]}'
+ragnarok prompt render \
+  --prompt-mode chatqa \
+  --model chatqa \
+  --input-json '{"query":"q","candidates":["p"]}'
 ```
 
 ## Introspection And Validation

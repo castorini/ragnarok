@@ -30,12 +30,12 @@ from .operations import (
     run_validate_rag25,
 )
 from .prompt_view import (
-    build_rendered_prompt_view,
     build_prompt_mode_view,
+    build_rendered_prompt_view,
     list_prompt_modes,
     render_prompt_catalog_text,
-    render_rendered_prompt_text,
     render_prompt_mode_text,
+    render_rendered_prompt_text,
 )
 from .responses import CommandResponse
 from .spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
