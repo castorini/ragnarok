@@ -134,6 +134,75 @@ class TestRagnarokCLI(unittest.TestCase):
             "Ensure each sentence has at least one citation.", view["instruction"]
         )
 
+    def test_prompt_render_returns_chat_messages_for_gpt_models(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "prompt",
+                    "render",
+                    "--prompt-mode",
+                    "chatqa",
+                    "--model",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps({"query": "what is python", "candidates": ["Python is useful."]}),
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        view = output["artifacts"][0]["data"]
+        self.assertEqual(view["prompt"]["format"], "chat_messages")
+        self.assertEqual(view["prompt"]["messages"][0]["role"], "system")
+        self.assertIn("Query: what is python", view["prompt"]["user_message"])
+
+    def test_prompt_render_returns_single_string_for_chatqa_models(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "prompt",
+                    "render",
+                    "--prompt-mode",
+                    "chatqa",
+                    "--model",
+                    "chatqa",
+                    "--input-json",
+                    json.dumps({"query": "what is python", "candidates": ["Python is useful."]}),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        rendered = stdout.getvalue()
+        self.assertIn("format: single_string", rendered)
+        self.assertIn("[prompt]", rendered)
+        self.assertIn("Context:", rendered)
+
+    def test_prompt_render_rejects_unsupported_prompt_mode(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "prompt",
+                    "render",
+                    "--prompt-mode",
+                    "cohere",
+                    "--model",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps({"query": "what is python", "candidates": ["Python is useful."]}),
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 5)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(output["errors"][0]["code"], "unsupported_prompt_mode")
+
     def test_generate_direct_via_input_json(self):
         stdout = StringIO()
         with (

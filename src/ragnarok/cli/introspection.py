@@ -54,10 +54,11 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
         "examples": [
             "ragnarok prompt list",
             "ragnarok prompt show --prompt-mode chatqa",
+            'ragnarok prompt render --prompt-mode chatqa --model gpt-4o --input-json \'{"query":"q","candidates":["p"]}\'',
             "ragnarok prompt show --prompt-mode ragnarok_v4 --output json",
         ],
         "inspection_safe": True,
-        "subcommands": ["list", "show"],
+        "subcommands": ["list", "show", "render"],
     },
     "describe": {
         "summary": "Inspect structured metadata for a public Ragnarok command.",
@@ -183,6 +184,10 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "chatqa_system_message",
             "input_context_template",
         ],
+    },
+    "rendered-prompt": {
+        "type": "object",
+        "required": ["prompt", "inputs"],
     },
     "doctor-output": {
         "type": "object",

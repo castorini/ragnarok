@@ -30,9 +30,11 @@ from .operations import (
     run_validate_rag25,
 )
 from .prompt_view import (
+    build_rendered_prompt_view,
     build_prompt_mode_view,
     list_prompt_modes,
     render_prompt_catalog_text,
+    render_rendered_prompt_text,
     render_prompt_mode_text,
 )
 from .responses import CommandResponse
@@ -675,6 +677,52 @@ def build_parser() -> CLIArgumentParser:
         help="Human-readable prompt definition or JSON envelope.",
     )
 
+    prompt_render_parser = prompt_subparsers.add_parser(
+        "render",
+        help="Render one prompt mode against direct input.",
+    )
+    prompt_render_inputs = prompt_render_parser.add_mutually_exclusive_group(
+        required=True
+    )
+    prompt_render_inputs.add_argument(
+        "--stdin",
+        action="store_true",
+        help="Read one direct JSON payload from standard input.",
+    )
+    prompt_render_inputs.add_argument(
+        "--input-json",
+        type=str,
+        help="Direct JSON request in the shared query-candidate schema.",
+    )
+    prompt_render_parser.add_argument(
+        "--prompt-mode",
+        required=True,
+        help="Prompt mode to render.",
+    )
+    prompt_render_parser.add_argument(
+        "--model",
+        required=True,
+        help="Model identifier used to choose the runtime prompt shape.",
+    )
+    prompt_render_parser.add_argument(
+        "--topk",
+        type=int,
+        default=20,
+        help="Maximum number of input candidates to include in the rendered prompt.",
+    )
+    prompt_render_parser.add_argument(
+        "--part",
+        choices=["system", "user", "all"],
+        default="all",
+        help="Rendered prompt section to show in text mode.",
+    )
+    prompt_render_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable rendered prompt or JSON envelope.",
+    )
+
     return parser
 
 
@@ -910,6 +958,50 @@ def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
     )
 
 
+def _run_prompt_render_command(args: argparse.Namespace) -> CommandResponse:
+    from ragnarok.generate.llm import PromptMode
+    from ragnarok.generate.templates.ragnarok_templates import RagnarokTemplates
+
+    prompt_mode = PromptMode(args.prompt_mode)
+    if prompt_mode in {PromptMode.UNSPECIFIED, PromptMode.COHERE}:
+        raise CLIError(
+            f"prompt render does not support prompt mode {args.prompt_mode}",
+            exit_code=EXIT_CODES["validation_error"],
+            status="validation_error",
+            error_code="unsupported_prompt_mode",
+            command="prompt",
+        )
+    payload = _read_direct_payload(args)
+    request = normalize_direct_generate_input(payload)
+    topk = max(1, min(args.topk, len(request.candidates)))
+    context = [
+        f"[{index}] {candidate.doc['segment']}"
+        for index, candidate in enumerate(request.candidates[:topk], start=1)
+    ]
+    rendered = RagnarokTemplates(prompt_mode).render(
+        request.query.text,
+        context,
+        args.model,
+    )
+    return CommandResponse(
+        command="prompt",
+        mode="inspect",
+        inputs={"prompt_mode": args.prompt_mode, "model": args.model},
+        resolved={"prompt_command": "render", "topk": topk, "part": args.part},
+        artifacts=[
+            make_data_artifact(
+                "rendered-prompt",
+                build_rendered_prompt_view(
+                    rendered,
+                    query=request.query.text,
+                    context_count=len(context),
+                    topk=topk,
+                ),
+            )
+        ],
+    )
+
+
 def _format_text_response(response: CommandResponse) -> str:
     if response.command == "generate":
         if not response.artifacts:
@@ -962,6 +1054,11 @@ def _format_text_response(response: CommandResponse) -> str:
             return render_prompt_catalog_text(
                 cast(list[dict[str, Any]], response.artifacts[0]["data"])
             )
+        if response.artifacts[0]["name"] == "rendered-prompt":
+            return render_rendered_prompt_text(
+                cast(dict[str, Any], response.artifacts[0]["data"]),
+                part=cast(str, response.resolved["part"]),
+            )
         return render_prompt_mode_text(
             cast(dict[str, Any], response.artifacts[0]["data"])
         )
@@ -983,7 +1080,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "view":
             response = _run_view_command(args)
         elif args.command == "prompt":
-            response = _run_prompt_command(args)
+            if args.prompt_command == "render":
+                response = _run_prompt_render_command(args)
+            else:
+                response = _run_prompt_command(args)
         elif args.command == "describe":
             response = CommandResponse(
                 command="describe",
