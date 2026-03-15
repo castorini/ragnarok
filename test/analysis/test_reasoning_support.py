@@ -129,6 +129,43 @@ class TestReasoningSupport(unittest.TestCase):
         self.assertEqual(prompt[0]["role"], "system")
         self.assertEqual(prompt[1]["role"], "user")
 
+    def test_ragnarok_templates_render_metadata_for_chat_messages(self):
+        template = RagnarokTemplates(prompt_mode=PromptMode.RAGNAROK_V4)
+
+        rendered = template.render(
+            query="What defines Pink Floyds artistic identity?",
+            context=["[1] Pink Floyd explored alienation and social critique."],
+            model="gpt-4o",
+        )
+
+        self.assertEqual(rendered.format, "chat_messages")
+        self.assertEqual(rendered.prompt_mode, "ragnarok_v4")
+        self.assertEqual(rendered.model, "gpt-4o")
+        self.assertIsNotNone(rendered.system_message)
+        self.assertIsNotNone(rendered.user_message)
+        self.assertIsNone(rendered.combined_text)
+        self.assertEqual(rendered.runtime_prompt(), rendered.messages)
+        self.assertEqual(rendered.metadata()["context_separator"], "\n\n")
+        self.assertIn("Documents:", rendered.user_message)
+
+    def test_ragnarok_templates_render_metadata_for_single_string_models(self):
+        template = RagnarokTemplates(prompt_mode=PromptMode.CHATQA)
+
+        rendered = template.render(
+            query="What defines Pink Floyds artistic identity?",
+            context=["[1] Pink Floyd explored alienation and social critique."],
+            model="chatqa",
+        )
+
+        self.assertEqual(rendered.format, "single_string")
+        self.assertIsNone(rendered.system_message)
+        self.assertIsNone(rendered.user_message)
+        self.assertIsNone(rendered.messages)
+        self.assertIsNotNone(rendered.combined_text)
+        self.assertEqual(rendered.runtime_prompt(), rendered.combined_text)
+        self.assertEqual(rendered.metadata()["context_separator"], "\n\n")
+        self.assertIn("Context:", rendered.combined_text)
+
     def test_rag_answer_accepts_topk_keyword(self):
         rag = RAG(agent=MagicMock())
         expected = Result(query=Query(text="q", qid="1"))

@@ -1,8 +1,40 @@
-from typing import List
+from dataclasses import dataclass
+from typing import Any, List
 
 from ftfy import fix_text
 
 from ragnarok.generate.llm import PromptMode
+
+
+@dataclass(frozen=True)
+class RenderedPrompt:
+    format: str
+    prompt_mode: str
+    model: str
+    system_message: str | None
+    user_message: str | None
+    combined_text: str | None
+    messages: list[dict[str, str]] | None
+    context_separator: str
+    instruction: str
+
+    def runtime_prompt(self) -> Any:
+        if self.messages is not None:
+            return self.messages
+        return self.combined_text
+
+    def metadata(self) -> dict[str, Any]:
+        return {
+            "format": self.format,
+            "prompt_mode": self.prompt_mode,
+            "model": self.model,
+            "system_message": self.system_message,
+            "user_message": self.user_message,
+            "combined_text": self.combined_text,
+            "messages": self.messages,
+            "context_separator": self.context_separator,
+            "instruction": self.instruction,
+        }
 
 
 class RagnarokTemplates:
@@ -122,42 +154,44 @@ class RagnarokTemplates:
             for name in ("command-r", "chatqa", "llama", "mistral", "qwen")
         )
 
-    def __call__(self, query: str, context: List[str], model: str) -> List[str]:
+    def render(self, query: str, context: List[str], model: str) -> RenderedPrompt:
+        sep = self.sep
         if not (self._uses_chat_message_format(model) or "chatqa" in model.lower()):
-            self.sep = "\n"
-        str_context = self.sep.join(context)
+            sep = "\n"
+        str_context = sep.join(context)
+        instruction = self.get_instruction()
 
         if (
             self.prompt_mode == PromptMode.RAGNAROK_V4_NO_CITE
             or self.prompt_mode == PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE
         ):
             user_input_context = (
-                f"Instruction: {self.get_instruction()}"
-                + self.sep
+                f"Instruction: {instruction}"
+                + sep
                 + f"Query: {query}"
-                + self.sep
-                + f"Instruction: {self.get_instruction()}"
+                + sep
+                + f"Instruction: {instruction}"
             )
         elif self._uses_chat_message_format(model):
             user_input_context = (
-                f"Instruction: {self.get_instruction()}"
-                + self.sep
+                f"Instruction: {instruction}"
+                + sep
                 + f"Documents: {fix_text(str_context)}"
-                + self.sep
+                + sep
                 + f"Query: {query}"
-                + self.sep
-                + f"Instruction: {self.get_instruction()}"
+                + sep
+                + f"Instruction: {instruction}"
             )
             user_input_context += "\n\nAnswer:"
         else:
             user_input_context = (
-                f"Instruction: {self.get_instruction()}"
+                f"Instruction: {instruction}"
                 + "\n"
                 + f"The following are context references from which you can cite the identifier. References: {fix_text(str_context)}"
                 + "\n"
                 + f"Query: {query}"
                 + "\n"
-                + f"Instruction: {self.get_instruction()}"
+                + f"Instruction: {instruction}"
             )
 
         if self._uses_chat_message_format(model):
@@ -183,9 +217,19 @@ class RagnarokTemplates:
                     "content": fix_text(user_input_context),
                 }
             )
-            return messages
+            return RenderedPrompt(
+                format="chat_messages",
+                prompt_mode=str(self.prompt_mode),
+                model=model,
+                system_message=system_message,
+                user_message=fix_text(user_input_context),
+                combined_text=None,
+                messages=messages,
+                context_separator=sep,
+                instruction=instruction,
+            )
         elif "chatqa" in model.lower():
-            prompt = f"{self.system_message_chatqa}{self.sep}{self.input_context.format(context=str_context)}{self.sep}User: {user_input_context}"
+            prompt = f"{self.system_message_chatqa}{sep}{self.input_context.format(context=str_context)}{sep}User: {user_input_context}"
         else:
             system_message = (
                 self.system_message_gpt_no_cite
@@ -212,9 +256,32 @@ class RagnarokTemplates:
                     "content": fix_text(user_input_context),
                 }
             )
-            return messages
+            return RenderedPrompt(
+                format="chat_messages",
+                prompt_mode=str(self.prompt_mode),
+                model=model,
+                system_message=system_message,
+                user_message=fix_text(user_input_context),
+                combined_text=None,
+                messages=messages,
+                context_separator=sep,
+                instruction=instruction,
+            )
         prompt = fix_text(prompt)
-        return prompt
+        return RenderedPrompt(
+            format="single_string",
+            prompt_mode=str(self.prompt_mode),
+            model=model,
+            system_message=None,
+            user_message=None,
+            combined_text=prompt,
+            messages=None,
+            context_separator=sep,
+            instruction=instruction,
+        )
+
+    def __call__(self, query: str, context: List[str], model: str) -> Any:
+        return self.render(query, context, model).runtime_prompt()
 
     def get_instruction(self) -> str:
         if self.prompt_mode == PromptMode.RAGNAROK_V2:
