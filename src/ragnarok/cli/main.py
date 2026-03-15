@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import importlib.metadata
 import json
 import sys
 from pathlib import Path
@@ -268,6 +269,11 @@ def build_parser() -> CLIArgumentParser:
             '\'{"query":"q","candidates":["p"]}\' --output json\n'
             "  ragnarok doctor --output json"
         ),
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {importlib.metadata.version('pyragnarok')}",
     )
     subparsers = parser.add_subparsers(
         dest="command", required=True, parser_class=CLIArgumentParser

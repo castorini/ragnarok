@@ -93,6 +93,14 @@ class FakeAgent:
 
 
 class TestRagnarokCLI(unittest.TestCase):
+    def test_version_flag_prints_version_and_exits(self):
+        stdout = StringIO()
+        with self.assertRaises(SystemExit) as exc_info:
+            with redirect_stdout(stdout):
+                main(["--version"])
+        self.assertEqual(exc_info.exception.code, 0)
+        self.assertIn("ragnarok", stdout.getvalue())
+
     def test_prompt_list_returns_json_catalog(self):
         stdout = StringIO()
         with redirect_stdout(stdout):
