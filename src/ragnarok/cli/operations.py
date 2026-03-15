@@ -4,9 +4,18 @@ import contextlib
 import importlib.util
 import io
 import logging
+import sys
 from typing import Any
 
+from tqdm import tqdm
+
 from .io import read_json, read_jsonl
+
+
+def _disable_progress(args: object) -> bool:
+    quiet = getattr(args, "quiet", False)
+    output_format = getattr(args, "output", "text")
+    return quiet or output_format in ("json", "jsonl") or not sys.stderr.isatty()
 
 
 def parse_topk(value: str) -> list[int]:
@@ -105,6 +114,7 @@ def run_request_generation(
 
     agent = create_generation_agent(args)
     rag = RAG(agent=agent, run_id=args.run_id)
+    disable = _disable_progress(args)
     logger.info("Generating %d request(s)", len(requests))
     results = rag.answer_batch(
         requests,
@@ -120,7 +130,9 @@ def run_request_generation(
             include_trace=getattr(args, "include_trace", False),
             redact_prompts=getattr(args, "redact_prompts", False),
         )
-        for result in results
+        for result in tqdm(
+            results, desc="Serializing", file=sys.stderr, disable=disable
+        )
     ]
     if args.output_file is not None:
         write_results_jsonl(results, args.output_file, args.run_id)
@@ -135,6 +147,7 @@ async def async_run_request_generation(
 
     agent = create_generation_agent(args)
     rag = RAG(agent=agent, run_id=args.run_id)
+    disable = _disable_progress(args)
     logger.info(
         "Generating %d request(s) with async execution (max_concurrency=%d)",
         len(requests),
@@ -155,7 +168,9 @@ async def async_run_request_generation(
             include_trace=getattr(args, "include_trace", False),
             redact_prompts=getattr(args, "redact_prompts", False),
         )
-        for result in results
+        for result in tqdm(
+            results, desc="Serializing", file=sys.stderr, disable=disable
+        )
     ]
     if args.output_file is not None:
         write_results_jsonl(results, args.output_file, args.run_id)

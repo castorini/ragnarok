@@ -94,6 +94,60 @@ class FakeAgent:
 
 
 class TestRagnarokCLI(unittest.TestCase):
+    def test_batch_json_output_suppresses_progress_bar(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "requests.jsonl"
+            output_path = Path(temp_dir) / "results.jsonl"
+            write_jsonl(
+                input_path,
+                [
+                    {
+                        "query": {"qid": "q1", "text": "what is python"},
+                        "candidates": [
+                            {
+                                "docid": "d1",
+                                "score": 1.0,
+                                "doc": {
+                                    "segment": "Python is used for web development."
+                                },
+                            }
+                        ],
+                    }
+                ],
+            )
+
+            import io
+            from contextlib import redirect_stderr
+
+            stderr = io.StringIO()
+            stdout = StringIO()
+            with (
+                redirect_stderr(stderr),
+                redirect_stdout(stdout),
+                patch(
+                    "ragnarok.cli.operations.create_generation_agent",
+                    return_value=FakeAgent(),
+                ),
+            ):
+                exit_code = main(
+                    [
+                        "generate",
+                        "--model",
+                        "gpt-4o",
+                        "--input-file",
+                        str(input_path),
+                        "--output-file",
+                        str(output_path),
+                        "--prompt-mode",
+                        "chatqa",
+                        "--output",
+                        "json",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(stderr.getvalue(), "")
+
     def test_quiet_flag_suppresses_stderr(self):
         import io
         from contextlib import redirect_stderr
