@@ -1250,6 +1250,27 @@ class TestRagnarokCLI(unittest.TestCase):
                 converted[0]["metadata"]["prompt"], "Tell me about Python."
             )
 
+    def test_config_file_sets_default_output_format(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_dir = Path(temp_dir) / "config" / "ragnarok"
+            config_dir.mkdir(parents=True)
+            config_file = config_dir / "config.toml"
+            config_file.write_text('output = "json"\n', encoding="utf-8")
+
+            stdout = StringIO()
+            with (
+                patch.dict(
+                    os.environ, {"XDG_CONFIG_HOME": str(Path(temp_dir) / "config")}
+                ),
+                redirect_stdout(stdout),
+            ):
+                exit_code = main(["doctor"])
+
+            self.assertEqual(exit_code, 0)
+            output = json.loads(stdout.getvalue())
+            self.assertEqual(output["command"], "doctor")
+            self.assertEqual(output["metrics"]["config_file"], str(config_file))
+
     def test_pipe_generate_json_output_is_valid_jsonl(self):
         stdout = StringIO()
         with (

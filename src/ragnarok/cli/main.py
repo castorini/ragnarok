@@ -11,6 +11,7 @@ from typing import Any, NoReturn, Sequence, cast
 import shtab
 
 from .adapters import make_data_artifact, make_file_artifact
+from .config import load_config
 from .introspection import (
     COMMAND_DESCRIPTIONS,
     SCHEMAS,
@@ -1084,9 +1085,15 @@ def _format_text_response(response: CommandResponse) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(argv) if argv is not None else sys.argv[1:]
     parser = build_parser()
+    config, config_path = load_config()
     wants_json = _wants_json(argv)
     try:
         args = parser.parse_args(argv)
+        args._config_path = config_path
+        for key, value in config.items():
+            flag = f"--{key.replace('_', '-')}"
+            if flag not in argv:
+                setattr(args, key, value)
         if args.command == "generate":
             response = _run_generate_command(args)
         elif args.command == "validate":
@@ -1120,6 +1127,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         else:
             report = doctor_report()
+            report["config_file"] = str(config_path) if config_path else None
             response = CommandResponse(
                 command="doctor",
                 mode="inspect",
