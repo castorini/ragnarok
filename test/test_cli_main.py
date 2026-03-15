@@ -146,7 +146,9 @@ class TestRagnarokCLI(unittest.TestCase):
                     "--model",
                     "gpt-4o",
                     "--input-json",
-                    json.dumps({"query": "what is python", "candidates": ["Python is useful."]}),
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
                     "--output",
                     "json",
                 ]
@@ -171,7 +173,9 @@ class TestRagnarokCLI(unittest.TestCase):
                     "--model",
                     "chatqa",
                     "--input-json",
-                    json.dumps({"query": "what is python", "candidates": ["Python is useful."]}),
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
                 ]
             )
 
@@ -193,7 +197,9 @@ class TestRagnarokCLI(unittest.TestCase):
                     "--model",
                     "gpt-4o",
                     "--input-json",
-                    json.dumps({"query": "what is python", "candidates": ["Python is useful."]}),
+                    json.dumps(
+                        {"query": "what is python", "candidates": ["Python is useful."]}
+                    ),
                     "--output",
                     "json",
                 ]
