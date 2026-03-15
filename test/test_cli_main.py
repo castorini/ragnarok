@@ -185,6 +185,18 @@ class TestRagnarokCLI(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertNotIn("\033[", stdout.getvalue())
 
+    def test_print_completion_outputs_bash_script(self):
+        stdout = StringIO()
+        with self.assertRaises(SystemExit) as exc_info:
+            with redirect_stdout(stdout):
+                main(["--print-completion", "bash"])
+        self.assertEqual(exc_info.exception.code, 0)
+        output = stdout.getvalue()
+        self.assertTrue(
+            "complete" in output.lower() or "_ragnarok" in output,
+            f"Expected shell completion script, got: {output[:200]}",
+        )
+
     def test_version_flag_prints_version_and_exits(self):
         stdout = StringIO()
         with self.assertRaises(SystemExit) as exc_info:
