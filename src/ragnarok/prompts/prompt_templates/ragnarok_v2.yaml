@@ -1,0 +1,7 @@
+method: "ragnarok_v2"
+system_message: "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question based on the context references. The assistant should also indicate when the answer cannot be found in the context references."
+system_message_no_cite: "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question."
+chatqa_system_message: "System: This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context. The assistant should also indicate when the answer cannot be found in the context."
+prefix_user: "{query}"
+instruction: |-
+  Please give a full and complete answer for the question. Cite each context document inline that supports your answer within brackets [] using the IEEE format. Each sentence should have at most three citations. Order the citations in decreasing order of importance. Never include or mention anything about references, this is already provided, just answer the question such that each sentence has one or more sentence-level citations and say nothing else.

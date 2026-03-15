@@ -1,0 +1,7 @@
+method: "chatqa"
+system_message: "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question based on the context references. The assistant should also indicate when the answer cannot be found in the context references."
+system_message_no_cite: "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question."
+chatqa_system_message: "System: This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context. The assistant should also indicate when the answer cannot be found in the context."
+prefix_user: "{query}"
+instruction: |-
+  Please give a full and complete answer for the question. Cite each context document inline that supports your answer within brackets [] using the IEEE format. Ensure each sentence is properly cited.

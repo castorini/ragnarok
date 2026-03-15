@@ -171,22 +171,18 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "prompt-catalog": {
         "type": "array",
-        "items": {"type": "object", "required": ["prompt_mode", "instruction"]},
+        "items": {
+            "type": "object",
+            "required": ["prompt_mode", "method", "source_path", "placeholders"],
+        },
     },
-    "prompt-mode": {
+    "prompt-template": {
         "type": "object",
-        "required": [
-            "prompt_mode",
-            "instruction",
-            "chat_system_message",
-            "chat_system_message_no_cite",
-            "chatqa_system_message",
-            "input_context_template",
-        ],
+        "required": ["prompt_mode", "template_name", "template"],
     },
     "rendered-prompt": {
         "type": "object",
-        "required": ["prompt", "inputs"],
+        "required": ["prompt_mode", "template_name", "messages", "inputs"],
     },
     "doctor-output": {
         "type": "object",

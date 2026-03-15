@@ -1,0 +1,7 @@
+method: "ragnarok_v4_no_cite"
+system_message: "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question based on the context references. The assistant should also indicate when the answer cannot be found in the context references."
+system_message_no_cite: "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question."
+chatqa_system_message: "System: This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context. The assistant should also indicate when the answer cannot be found in the context."
+prefix_user: "{query}"
+instruction: |-
+  Provide a concise, information-dense answer to the question. Your response must not exceed 380 words under any circumstances. Prioritize the most relevant and impactful information within this strict limit. Ensure your answer directly addresses the question and maintains coherence throughout. Provide a well-rounded answer when possible. Express uncertainty when appropriate rather than making unfounded claims. Prioritize factual accuracy and avoid speculation. Focus solely on answering the question. Avoid references or providing any meta-commentary about the answering process.

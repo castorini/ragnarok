@@ -214,9 +214,15 @@ class TestRagnarokCLI(unittest.TestCase):
         output = json.loads(stdout.getvalue())
         self.assertEqual(output["command"], "prompt")
         self.assertEqual(output["artifacts"][0]["name"], "prompt-catalog")
-        modes = {entry["prompt_mode"] for entry in output["artifacts"][0]["data"]}
+        data = output["artifacts"][0]["data"]
+        modes = {entry["prompt_mode"] for entry in data}
         self.assertIn("chatqa", modes)
         self.assertIn("ragnarok_v4", modes)
+        entry = data[0]
+        self.assertIn("source_path", entry)
+        self.assertIn("method", entry)
+        self.assertIn("placeholders", entry)
+        self.assertTrue(entry["source_path"].endswith(".yaml"))
 
     def test_prompt_show_returns_text_definition(self):
         stdout = StringIO()
@@ -225,10 +231,11 @@ class TestRagnarokCLI(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         rendered = stdout.getvalue()
-        self.assertIn("Ragnarok Prompt Mode", rendered)
+        self.assertIn("Ragnarok Prompt Template", rendered)
         self.assertIn("prompt_mode: chatqa", rendered)
+        self.assertIn("[system]", rendered)
+        self.assertIn("[user]", rendered)
         self.assertIn("[instruction]", rendered)
-        self.assertIn("[chatqa_system_message]", rendered)
 
     def test_prompt_show_returns_json_definition(self):
         stdout = StringIO()
@@ -240,10 +247,14 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         output = json.loads(stdout.getvalue())
         self.assertEqual(output["command"], "prompt")
+        self.assertEqual(output["artifacts"][0]["name"], "prompt-template")
         view = output["artifacts"][0]["data"]
         self.assertEqual(view["prompt_mode"], "ragnarok_v4")
+        self.assertIn("template", view)
+        self.assertIn("source_path", view["template"])
         self.assertIn(
-            "Ensure each sentence has at least one citation.", view["instruction"]
+            "Ensure each sentence has at least one citation.",
+            view["template"]["instruction"],
         )
 
     def test_prompt_render_returns_chat_messages_for_gpt_models(self):
@@ -269,9 +280,10 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         output = json.loads(stdout.getvalue())
         view = output["artifacts"][0]["data"]
-        self.assertEqual(view["prompt"]["format"], "chat_messages")
-        self.assertEqual(view["prompt"]["messages"][0]["role"], "system")
-        self.assertIn("Query: what is python", view["prompt"]["user_message"])
+        self.assertIn("messages", view)
+        self.assertIsInstance(view["messages"], list)
+        self.assertEqual(view["messages"][0]["role"], "system")
+        self.assertIn("Query: what is python", view["messages"][1]["content"])
 
     def test_prompt_render_returns_single_string_for_chatqa_models(self):
         stdout = StringIO()
@@ -293,8 +305,8 @@ class TestRagnarokCLI(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         rendered = stdout.getvalue()
-        self.assertIn("format: single_string", rendered)
-        self.assertIn("[prompt]", rendered)
+        self.assertIn("Ragnarok Rendered Prompt", rendered)
+        self.assertIn("[user]", rendered)
         self.assertIn("Context:", rendered)
 
     def test_prompt_render_rejects_unsupported_prompt_mode(self):
@@ -320,6 +332,38 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertEqual(exit_code, 5)
         output = json.loads(stdout.getvalue())
         self.assertEqual(output["errors"][0]["code"], "unsupported_prompt_mode")
+
+    def test_yaml_templates_load_all_modes(self):
+        from ragnarok.prompts.template_loader import get_template, list_templates
+
+        templates = list_templates()
+        self.assertEqual(len(templates), 8)
+        mode_map = {
+            PromptMode.CHATQA: "chatqa",
+            PromptMode.RAGNAROK_V2: "ragnarok_v2",
+            PromptMode.RAGNAROK_V3: "ragnarok_v3",
+            PromptMode.RAGNAROK_V4: "ragnarok_v4",
+            PromptMode.RAGNAROK_V4_BIOGEN: "ragnarok_v4_biogen",
+            PromptMode.RAGNAROK_V4_NO_CITE: "ragnarok_v4_no_cite",
+            PromptMode.RAGNAROK_V5_BIOGEN: "ragnarok_v5_biogen",
+            PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE: "ragnarok_v5_biogen_no_cite",
+        }
+        from ragnarok.generate.templates.ragnarok_templates import RagnarokTemplates
+
+        for prompt_mode, yaml_name in mode_map.items():
+            tmpl = get_template(yaml_name)
+            rt = RagnarokTemplates(prompt_mode)
+            self.assertEqual(
+                rt.get_instruction(),
+                tmpl.instruction,
+                f"instruction mismatch for {yaml_name}",
+            )
+            self.assertTrue(
+                tmpl.source_path.endswith(".yaml"),
+                f"source_path should end with .yaml for {yaml_name}",
+            )
+            self.assertEqual(tmpl.method, yaml_name)
+            self.assertGreater(len(tmpl.placeholders), 0)
 
     def test_generate_direct_via_input_json(self):
         stdout = StringIO()

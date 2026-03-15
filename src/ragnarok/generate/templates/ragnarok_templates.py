@@ -4,6 +4,7 @@ from typing import Any, List
 from ftfy import fix_text
 
 from ragnarok.generate.llm import PromptMode
+from ragnarok.prompts.template_loader import PromptTemplate, get_template
 
 
 @dataclass(frozen=True)
@@ -37,114 +38,64 @@ class RenderedPrompt:
         }
 
 
+# Maps PromptMode values to YAML template names
+_MODE_TO_TEMPLATE: dict[str, str] = {
+    "chatqa": "chatqa",
+    "ragnarok_v2": "ragnarok_v2",
+    "ragnarok_v3": "ragnarok_v3",
+    "ragnarok_v4": "ragnarok_v4",
+    "ragnarok_v4_biogen": "ragnarok_v4_biogen",
+    "ragnarok_v4_no_cite": "ragnarok_v4_no_cite",
+    "ragnarok_v5_biogen": "ragnarok_v5_biogen",
+    "ragnarok_v5_biogen_no_cite": "ragnarok_v5_biogen_no_cite",
+}
+
+
 class RagnarokTemplates:
     def __init__(self, prompt_mode: PromptMode):
         self.prompt_mode = prompt_mode
-        self.system_message_gpt = "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question based on the context references. The assistant should also indicate when the answer cannot be found in the context references."
-        self.system_message_gpt_no_cite = "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful and detailed answers to the user's question."
-        self.system_message_chatqa = "System: This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context. The assistant should also indicate when the answer cannot be found in the context."
+
+        template_name = _MODE_TO_TEMPLATE.get(prompt_mode.value)
+        if template_name is not None:
+            self._template: PromptTemplate | None = get_template(template_name)
+        else:
+            self._template = None
+
+        # Load shared system messages from any template (they are identical
+        # across all YAML files) or fall back to the chatqa template.
+        ref = self._template or get_template("chatqa")
+        self.system_message_gpt = ref.system_message
+        self.system_message_gpt_no_cite = ref.system_message_no_cite
+        self.system_message_chatqa = ref.chatqa_system_message
+
         self.input_context = "Context: {context}"
+        self.user_input = "{query}"
+        self.sep = "\n\n"
+
+        # Load per-mode instruction strings from YAML templates
         self.instruction_official = (
             "Please give a full and complete answer for the question."
         )
-        self.instruction_ragnarok = (
-            "Please give a full and complete answer for the question. "
-            + "Cite each context document inline that supports your answer within brackets [] using the IEEE format. "
-            + "Ensure each sentence is properly cited."
-        )
-        self.instruction_ragnarok_v2 = (
-            "Please give a full and complete answer for the question. "
-            + "Cite each context document inline that supports your answer within brackets [] using the IEEE format. "
-            + "Each sentence should have at most three citations. "
-            + "Order the citations in decreasing order of importance. "
-            + "Never include or mention anything about references, this is already provided, just answer the question such that each sentence has one or more sentence-level citations and say nothing else."
-        )
-        self.instruction_ragnarok_v3 = (
-            "Provide a concise, information-dense answer to the question. "
-            "Your response must not exceed 380 words under any circumstances. "
-            "Prioritize the most relevant and impactful information within this strict limit. "
-            "Cite supporting context documents inline using IEEE format in square brackets []. "
-            "Include 1-3 citations per sentence, ordered by decreasing importance. "
-            "Ensure each sentence has at least one citation. "
-            "Focus solely on answering the question with properly cited information. "
-            "Avoid mentioning references or providing any meta-commentary about the answering process."
-        )
-        self.instruction_ragnarok_v4 = (
-            "Provide a concise, information-dense answer to the question. "
-            "Your response must not exceed 380 words under any circumstances. "
-            "Prioritize the most relevant and impactful information within this strict limit. "
-            "Ensure your answer directly addresses the question and maintains coherence throughout. "
-            "Cite supporting context documents inline using IEEE format in square brackets []. "
-            "Include 1-3 citations per sentence, ordered by decreasing importance. "
-            "Ensure each sentence has at least one citation. "
-            "Use multiple sources to provide a well-rounded answer when possible. "
-            "If sources contradict each other, acknowledge this and explain the discrepancy. "
-            "Express uncertainty when appropriate rather than making unfounded claims. "
-            "Prioritize factual accuracy and avoid speculation. "
-            "Focus solely on answering the question with properly cited information. "
-            "Avoid mentioning references or providing any meta-commentary about the answering process."
-        )
-        self.instruction_ragnarok_v4_no_cite = (
-            "Provide a concise, information-dense answer to the question. "
-            "Your response must not exceed 380 words under any circumstances. "
-            "Prioritize the most relevant and impactful information within this strict limit. "
-            "Ensure your answer directly addresses the question and maintains coherence throughout. "
-            "Provide a well-rounded answer when possible. "
-            "Express uncertainty when appropriate rather than making unfounded claims. "
-            "Prioritize factual accuracy and avoid speculation. "
-            "Focus solely on answering the question. "
-            "Avoid references or providing any meta-commentary about the answering process."
-        )
-        self.instruction_ragnarok_v4_biogen = (
-            "Provide a concise, information-dense answer to the question in a single cohesive paragraph, avoiding lists and bullet points. "
-            "Your response must not exceed 150 words (excluding references) under any circumstances. "
-            "Prioritize the most relevant and impactful information within this strict limit. "
-            "Ensure your answer directly addresses the question and maintains coherence throughout. "
-            "Cite the supporting context PubMed documents inline using IEEE format in square brackets []. "
-            "Include 1-3 citations per sentence, ordered by decreasing importance. "
-            "Ensure each sentence has at least one citation. "
-            "Use multiple sources to provide a well-rounded answer when possible. "
-            "If sources contradict each other, acknowledge this and explain the discrepancy. "
-            "Express uncertainty when appropriate rather than making unfounded claims. "
-            "Prioritize factual accuracy and avoid speculation or potentially harmful advice. "
-            "Focus solely on answering the question with properly cited information. "
-            "Avoid mentioning references or providing any meta-commentary about the answering process."
-        )
-        self.instruction_ragnarok_v5_biogen = (
-            "Provide a concise, information-dense answer to the biomedical question in a single cohesive paragraph, avoiding lists and bullet points. "
-            "Your response must not exceed 150 words (excluding references) under any circumstances. "
-            "Prioritize the most relevant and impactful information within this strict limit. "
-            "Ensure each sentence is clear, interpretable, and directly relevant to the question. "
-            "Cite the supporting context PubMed documents inline using IEEE format in square brackets []. "
-            "Include 1-3 citations per sentence, ordered by decreasing importance. "
-            "Ensure each sentence has at least one citation. "
-            "Use multiple sources to provide a well-rounded answer when possible. "
-            "Focus on required and relevant information, avoiding unnecessary or borderline content. "
-            "If sources contradict each other, acknowledge this and explain the discrepancy. "
-            "Express uncertainty when appropriate rather than making unfounded claims. "
-            "Prioritize factual accuracy and avoid speculation or potentially harmful advice. "
-            "For patient-oriented questions, provide information suitable for clinician review. "
-            "Assume the reader is a healthcare professional, but avoid overly technical jargon. "
-            "Do not include trivial statements or generic recommendations to see a health professional, stick to the 150 word limit. "
-            "Ensure all information is supported by the provided PubMed abstracts. "
-            "Avoid mentioning references or providing any meta-commentary about the answering process."
-        )
-        self.instruction_ragnarok_v5_biogen_no_cite = (
-            "Provide a concise, information-dense answer to the biomedical question in a single cohesive paragraph, avoiding lists and bullet points. "
-            "Your response must not exceed 150 words under any circumstances. "
-            "Prioritize the most relevant and impactful information within this strict limit. "
-            "Ensure each sentence is clear, interpretable, and directly relevant to the question. "
-            "Provide a well-rounded answer when possible. "
-            "Focus on required and relevant information, avoiding unnecessary or borderline content. "
-            "Express uncertainty when appropriate rather than making unfounded claims. "
-            "Prioritize factual accuracy and avoid speculation or potentially harmful advice. "
-            "For patient-oriented questions, provide information suitable for clinician review. "
-            "Assume the reader is a healthcare professional, but avoid overly technical jargon. "
-            "Do not include trivial statements or generic recommendations to see a health professional, stick to the 150 word limit. "
-            "Avoid providing any meta-commentary about the answering process."
-        )
-        self.user_input = "{query}"
-        self.sep = "\n\n"
+        self.instruction_ragnarok = get_template("chatqa").instruction
+        self.instruction_ragnarok_v2 = get_template("ragnarok_v2").instruction
+        self.instruction_ragnarok_v3 = get_template("ragnarok_v3").instruction
+        self.instruction_ragnarok_v4 = get_template("ragnarok_v4").instruction
+        self.instruction_ragnarok_v4_no_cite = get_template(
+            "ragnarok_v4_no_cite"
+        ).instruction
+        self.instruction_ragnarok_v4_biogen = get_template(
+            "ragnarok_v4_biogen"
+        ).instruction
+        self.instruction_ragnarok_v5_biogen = get_template(
+            "ragnarok_v5_biogen"
+        ).instruction
+        self.instruction_ragnarok_v5_biogen_no_cite = get_template(
+            "ragnarok_v5_biogen_no_cite"
+        ).instruction
+
+    @property
+    def template(self) -> PromptTemplate | None:
+        return self._template
 
     @staticmethod
     def _uses_chat_message_format(model: str) -> bool:

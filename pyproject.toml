@@ -103,10 +103,14 @@ include = [
     "ragnarok.evaluate",
     "ragnarok.generate",
     "ragnarok.generate.templates",
+    "ragnarok.prompts",
     "ragnarok.retrieve_and_rerank",
     "ragnarok.scripts",
 ]
 namespaces = false
+
+[tool.setuptools.package-data]
+"ragnarok.prompts" = ["prompt_templates/*.yaml"]
 
 [tool.setuptools]
 provides = ["ragnarok"]

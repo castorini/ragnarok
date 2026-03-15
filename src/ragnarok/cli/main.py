@@ -974,7 +974,7 @@ def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
         inputs={"prompt_mode": args.prompt_mode},
         resolved={"prompt_command": "show"},
         artifacts=[
-            make_data_artifact("prompt-mode", build_prompt_mode_view(prompt_mode))
+            make_data_artifact("prompt-template", build_prompt_mode_view(prompt_mode))
         ],
     )
 
