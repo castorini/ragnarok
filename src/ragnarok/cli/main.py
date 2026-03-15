@@ -29,6 +29,12 @@ from .operations import (
     run_validate_rag24,
     run_validate_rag25,
 )
+from .prompt_view import (
+    build_prompt_mode_view,
+    list_prompt_modes,
+    render_prompt_catalog_text,
+    render_prompt_mode_text,
+)
 from .responses import CommandResponse
 from .spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
 from .view import (
@@ -255,6 +261,7 @@ def build_parser() -> CLIArgumentParser:
             "Common patterns:\n"
             "  ragnarok generate --model gpt-4o --input-json "
             '\'{"query":"q","candidates":["p"]}\' --prompt-mode chatqa --output json\n'
+            "  ragnarok prompt show --prompt-mode chatqa\n"
             "  ragnarok validate generate --input-json "
             '\'{"query":"q","candidates":["p"]}\' --output json\n'
             "  ragnarok doctor --output json"
@@ -632,6 +639,42 @@ def build_parser() -> CLIArgumentParser:
         help="Human-readable summary or JSON envelope.",
     )
 
+    prompt_parser = subparsers.add_parser(
+        "prompt",
+        help="Inspect Ragnarok prompt-mode definitions.",
+        description="Inspect Ragnarok prompt-mode definitions.",
+    )
+    prompt_subparsers = prompt_parser.add_subparsers(
+        dest="prompt_command", required=True, parser_class=CLIArgumentParser
+    )
+
+    prompt_list_parser = prompt_subparsers.add_parser(
+        "list",
+        help="List supported prompt modes.",
+    )
+    prompt_list_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable catalog or JSON envelope.",
+    )
+
+    prompt_show_parser = prompt_subparsers.add_parser(
+        "show",
+        help="Show one prompt mode definition.",
+    )
+    prompt_show_parser.add_argument(
+        "--prompt-mode",
+        required=True,
+        help="Prompt mode to inspect.",
+    )
+    prompt_show_parser.add_argument(
+        "--output",
+        choices=["text", "json"],
+        default="text",
+        help="Human-readable prompt definition or JSON envelope.",
+    )
+
     return parser
 
 
@@ -845,6 +888,28 @@ def _run_view_command(args: argparse.Namespace) -> CommandResponse:
     )
 
 
+def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
+    if args.prompt_command == "list":
+        return CommandResponse(
+            command="prompt",
+            mode="inspect",
+            artifacts=[make_data_artifact("prompt-catalog", list_prompt_modes())],
+        )
+
+    from ragnarok.generate.llm import PromptMode
+
+    prompt_mode = PromptMode(args.prompt_mode)
+    return CommandResponse(
+        command="prompt",
+        mode="inspect",
+        inputs={"prompt_mode": args.prompt_mode},
+        resolved={"prompt_command": "show"},
+        artifacts=[
+            make_data_artifact("prompt-mode", build_prompt_mode_view(prompt_mode))
+        ],
+    )
+
+
 def _format_text_response(response: CommandResponse) -> str:
     if response.command == "generate":
         if not response.artifacts:
@@ -892,6 +957,14 @@ def _format_text_response(response: CommandResponse) -> str:
             cast(dict[str, Any], response.artifacts[0]["data"]),
             color=cast(str, response.resolved["color"]),
         )
+    if response.command == "prompt":
+        if response.artifacts[0]["name"] == "prompt-catalog":
+            return render_prompt_catalog_text(
+                cast(list[dict[str, Any]], response.artifacts[0]["data"])
+            )
+        return render_prompt_mode_text(
+            cast(dict[str, Any], response.artifacts[0]["data"])
+        )
     return json.dumps(response.to_envelope(), indent=2)
 
 
@@ -909,6 +982,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             response = _run_convert_command(args)
         elif args.command == "view":
             response = _run_view_command(args)
+        elif args.command == "prompt":
+            response = _run_prompt_command(args)
         elif args.command == "describe":
             response = CommandResponse(
                 command="describe",

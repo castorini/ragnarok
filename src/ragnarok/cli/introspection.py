@@ -49,6 +49,16 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
         "supported_types": ["generate-output-record"],
         "inspection_safe": True,
     },
+    "prompt": {
+        "summary": "Inspect Ragnarok prompt-mode definitions.",
+        "examples": [
+            "ragnarok prompt list",
+            "ragnarok prompt show --prompt-mode chatqa",
+            "ragnarok prompt show --prompt-mode ragnarok_v4 --output json",
+        ],
+        "inspection_safe": True,
+        "subcommands": ["list", "show"],
+    },
     "describe": {
         "summary": "Inspect structured metadata for a public Ragnarok command.",
         "inspection_safe": True,
@@ -158,6 +168,21 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     "view-summary": {
         "type": "object",
         "required": ["path", "artifact_type", "summary", "sampled_records"],
+    },
+    "prompt-catalog": {
+        "type": "array",
+        "items": {"type": "object", "required": ["prompt_mode", "instruction"]},
+    },
+    "prompt-mode": {
+        "type": "object",
+        "required": [
+            "prompt_mode",
+            "instruction",
+            "chat_system_message",
+            "chat_system_message_no_cite",
+            "chatqa_system_message",
+            "input_context_template",
+        ],
     },
     "doctor-output": {
         "type": "object",

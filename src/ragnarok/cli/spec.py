@@ -12,6 +12,7 @@ KNOWN_COMMANDS = (
     "validate",
     "convert",
     "view",
+    "prompt",
     "describe",
     "schema",
     "doctor",
@@ -26,5 +27,6 @@ TOP_LEVEL_EXAMPLES = (
         "ragnarok generate --model gpt-4o --input-json "
         '\'{"query":"q","candidates":["p"]}\' --output json'
     ),
+    "ragnarok prompt show --prompt-mode chatqa",
     "ragnarok doctor --output json",
 )

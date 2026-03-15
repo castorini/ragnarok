@@ -93,6 +93,47 @@ class FakeAgent:
 
 
 class TestRagnarokCLI(unittest.TestCase):
+    def test_prompt_list_returns_json_catalog(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(["prompt", "list", "--output", "json"])
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(output["command"], "prompt")
+        self.assertEqual(output["artifacts"][0]["name"], "prompt-catalog")
+        modes = {entry["prompt_mode"] for entry in output["artifacts"][0]["data"]}
+        self.assertIn("chatqa", modes)
+        self.assertIn("ragnarok_v4", modes)
+
+    def test_prompt_show_returns_text_definition(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(["prompt", "show", "--prompt-mode", "chatqa"])
+
+        self.assertEqual(exit_code, 0)
+        rendered = stdout.getvalue()
+        self.assertIn("Ragnarok Prompt Mode", rendered)
+        self.assertIn("prompt_mode: chatqa", rendered)
+        self.assertIn("[instruction]", rendered)
+        self.assertIn("[chatqa_system_message]", rendered)
+
+    def test_prompt_show_returns_json_definition(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(
+                ["prompt", "show", "--prompt-mode", "ragnarok_v4", "--output", "json"]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(output["command"], "prompt")
+        view = output["artifacts"][0]["data"]
+        self.assertEqual(view["prompt_mode"], "ragnarok_v4")
+        self.assertIn(
+            "Ensure each sentence has at least one citation.", view["instruction"]
+        )
+
     def test_generate_direct_via_input_json(self):
         stdout = StringIO()
         with (
@@ -715,6 +756,13 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertTrue(
             any(
                 "No command provided." in call.args[0]
+                for call in stderr_write.call_args_list
+            )
+        )
+        self.assertTrue(
+            any(
+                "generate, validate, convert, view, prompt, describe, schema, doctor"
+                in call.args[0]
                 for call in stderr_write.call_args_list
             )
         )
