@@ -34,7 +34,7 @@ class Restriever:
                 f"{retrieval_mode} is not supported for ServiceRetriever. Only DATASET mode is currently supported."
             )
         if not retrieval_method:
-            raise "Please provide a retrieval method."
+            raise ValueError("Please provide a retrieval method.")
         if retrieval_method == RetrievalMethod.UNSPECIFIED:
             raise ValueError(
                 f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."

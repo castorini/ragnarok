@@ -46,20 +46,6 @@ class Cohere(LLM):
         )
         self._client = cohere.Client(key)
         self._post_processor = CoherePostProcessor()
-        # self._preamble = (
-        #     "## Task And Context\n"
-        #     + "You help people answer their questions. "
-        #     + "You will be asked a very wide array of question on all kinds of topics. "
-        #     + "You should focus on serving the user's needs as best you can, which will be wide-ranging\n\n"
-        # )
-        # self._preamble += (
-        #     "## Style Guide\n"
-        #     + "Answer in full sentences, using proper grammar and spelling. "
-        #     + "Provide sentence-level citations, ensuring each sentence cites at most three sources. "
-        #     + "Order the citations in decreasing order of importance. "
-        #     + "Do not be chatty, just answer the question directly. "
-        #     + "Ensure the answer is between 300 and 400 words long, comprehensive, well-cited, and detailed."
-        # )
         self._preamble = (
             "## Task And Context\n"
             "You assist healthcare professionals in answering biomedical questions. "

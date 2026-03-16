@@ -96,11 +96,9 @@ push = false
 where = ["src"]
 include = [
     "ragnarok",
-    "ragnarok.analyze",
     "ragnarok.api",
     "ragnarok.cli",
     "ragnarok.demo",
-    "ragnarok.evaluate",
     "ragnarok.generate",
     "ragnarok.generate.templates",
     "ragnarok.prompts",

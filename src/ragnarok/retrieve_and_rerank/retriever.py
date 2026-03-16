@@ -99,7 +99,7 @@ class Retriever:
                 f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
             )
         if not retrieval_method:
-            raise "Please provide a retrieval method."
+            raise ValueError("Please provide a retrieval method.")
         if RetrievalMethod.UNSPECIFIED in retrieval_method:
             raise ValueError(
                 f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
@@ -151,12 +151,6 @@ class Retriever:
                         loaded_results = [json.loads(l) for l in f]
                 retrieved_results = [
                     from_dict(data_class=Request, data=r) for r in loaded_results
-                ]
-                # TODO remove!!! Filter those if query.qid has _ and does not end with _0
-                retrieved_results = [
-                    r
-                    for r in retrieved_results
-                    # if "_" in r.query.qid and not r.query.qid.endswith("_0")
                 ]
                 # Ensure the candidates are of at most k length
                 for r in retrieved_results:

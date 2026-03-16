@@ -8,7 +8,7 @@ from fastchat.model import load_model
 try:
     from vllm import LLM as VLLM
     from vllm import SamplingParams
-except:
+except Exception:
     LLM = None
     SamplingParams = None
 from transformers.generation import GenerationConfig
@@ -95,7 +95,7 @@ class OSLLM(LLM):
                 ignore_patterns=ignore_patterns,
             )
             self._tokenizer = self._llm.get_tokenizer()
-        except:
+        except Exception:
             self._llm, self._tokenizer = load_model(
                 model, device=device, num_gpus=num_gpus
             )
@@ -144,8 +144,8 @@ class OSLLM(LLM):
                 answer_rag_exec_info_list.append((answer, rag_exec_info))
 
             return answer_rag_exec_info_list
-        except:
-            assert False, "Failed run_llm_batched"
+        except Exception as exc:
+            raise RuntimeError("Failed run_llm_batched") from exc
 
     def run_llm(
         self, prompt: str, logging: bool = False, vllm: bool = True
@@ -156,7 +156,7 @@ class OSLLM(LLM):
             answer_rag_exec_info_list = self.run_llm_batched([prompt], logging, vllm)
             answer, rag_exec_info = answer_rag_exec_info_list[0]
             return answer, rag_exec_info
-        except:
+        except Exception:
             inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
             gen_cfg = GenerationConfig.from_model_config(self._llm.config)
             gen_cfg.max_new_tokens = self.num_output_tokens()

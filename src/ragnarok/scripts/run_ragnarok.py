@@ -7,38 +7,11 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
+from ragnarok.cli.operations import detect_device, parse_retrieval_methods, parse_topk
 from ragnarok.generate.llm import PromptMode
 from ragnarok.retrieve_and_generate import retrieve_and_generate
 from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMode
 from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
-
-
-def parse_topk(value):
-    try:
-        return [int(k) for k in value.split(",")]
-    except ValueError:
-        raise argparse.ArgumentTypeError(
-            f"Invalid comma-separated list of integers: {value}"
-        )
-
-
-def parse_retrieval_methods(value):
-    try:
-        # Ensure it is of type RetrievalMethod
-        return [RetrievalMethod(e) for e in value.split(",")]
-    except ValueError:
-        raise argparse.ArgumentTypeError(
-            f"Invalid comma-separated list of retrieval methods: {value}"
-        )
-
-
-def detect_device():
-    try:
-        import torch
-    except ImportError:
-        return "cpu"
-
-    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def main(args):
