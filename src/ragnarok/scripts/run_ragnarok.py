@@ -1,166 +1,60 @@
-import argparse
-import os
+"""Legacy compatibility wrapper for ragnarok generate.
+
+Translates snake_case flags to the kebab-case equivalents used by the
+packaged ``ragnarok`` CLI and delegates execution.
+
+sample run:
+  python src/ragnarok/scripts/run_ragnarok.py \
+    --model_path=gpt-4o --topk=20 --dataset=researchy-questions \
+    --retrieval_method=bm25,rank_zephyr --prompt_mode=chatqa \
+    --context_size=8192 --max_output_tokens=1500
+"""
+
 import sys
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-parent = os.path.dirname(SCRIPT_DIR)
-parent = os.path.dirname(parent)
-sys.path.append(parent)
-
-from ragnarok.cli.operations import detect_device, parse_retrieval_methods, parse_topk
-from ragnarok.generate.llm import PromptMode
-from ragnarok.retrieve_and_generate import retrieve_and_generate
-from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMode
-from ragnarok.retrieve_and_rerank.topics_dict import TOPICS
-
-
-def main(args):
-    model_path = args.model_path
-    use_azure_openai = args.use_azure_openai
-    context_size = args.context_size
-    topk = args.topk
-    dataset = args.dataset
-    num_gpus = args.num_gpus
-    retrieval_method = args.retrieval_method
-    prompt_mode = args.prompt_mode
-    num_few_shot_examples = args.num_few_shot_examples
-    shuffle_candidates = args.shuffle_candidates
-    print_prompts_responses = args.print_prompts_responses
-    num_few_shot_examples = args.num_few_shot_examples
-    max_output_tokens = args.max_output_tokens
-    device = detect_device()
-    retrieval_mode = RetrievalMode.DATASET
-    run_id = args.run_id
-    vllm_batched = args.vllm_batched
-    include_reasoning = args.include_reasoning
-    reasoning_effort = args.reasoning_effort
-
-    _ = retrieve_and_generate(
-        model_path,
-        dataset,
-        retrieval_mode,
-        retrieval_method,
-        topk,
-        context_size,
-        max_output_tokens,
-        device,
-        num_gpus,
-        prompt_mode,
-        num_few_shot_examples,
-        shuffle_candidates,
-        print_prompts_responses,
-        vllm_batched=vllm_batched,
-        include_reasoning=include_reasoning,
-        reasoning_effort=reasoning_effort,
-        use_azure_openai=use_azure_openai,
-        run_id=run_id,
-    )
+# Exhaustive snake_case → kebab-case flag map.  The packaged CLI uses
+# kebab-case for every flag; this table preserves backward compatibility
+# for callers that still use the old snake_case spelling.
+_FLAG_TRANSLATIONS: dict[str, str] = {
+    "--model_path": "--model",
+    "--use_azure_openai": "--use-azure-openai",
+    "--context_size": "--context-size",
+    "--num_gpus": "--num-gpus",
+    "--retrieval_method": "--retrieval-method",
+    "--prompt_mode": "--prompt-mode",
+    "--shuffle_candidates": "--shuffle-candidates",
+    "--print_prompts_responses": "--print-prompts-responses",
+    "--num_few_shot_examples": "--num-few-shot-examples",
+    "--max_output_tokens": "--max-output-tokens",
+    "--run_id": "--run-id",
+    "--vllm_batched": "--vllm-batched",
+    "--include_reasoning": "--include-reasoning",
+    "--reasoning_effort": "--reasoning-effort",
+}
 
 
-def cli_compatible_main(argv=None):
+def _translate_argv(argv: list[str]) -> list[str]:
+    """Prepend ``generate`` and translate legacy snake_case flags."""
+    translated: list[str] = ["generate"]
+    for token in argv:
+        # Handle both --flag value and --flag=value forms.
+        for old, new in _FLAG_TRANSLATIONS.items():
+            if token == old:
+                token = new
+                break
+            if token.startswith(old + "="):
+                token = new + token[len(old) :]
+                break
+        translated.append(token)
+    return translated
+
+
+def cli_compatible_main(argv: list[str] | None = None) -> int:
     from ragnarok.cli.main import main as cli_main
 
     argv = sys.argv[1:] if argv is None else argv
-    translated: list[str] = ["generate"]
-    for token in argv:
-        translated.append("--model" if token == "--model_path" else token)
-    return cli_main(translated)
+    return cli_main(_translate_argv(argv))
 
 
-""" sample run:
-python src/ragnarok/scripts/run_ragnarok.py  --model_path=cohere_command_r_plus  --topk=20 --dataset=researchy-questions  --retrieval_method=bm25,rank_zephyr --prompt_mode=chatqa  --context_size=8192 --max_output_tokens=1500
-"""
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model_path",
-        type=str,
-        required=True,
-        help="Path to the model. If `use_azure_ai`, pass your deployment name.",
-    )
-    parser.add_argument(
-        "--use_azure_openai",
-        action="store_true",
-        help="If True, use Azure OpenAI instead of regular OpenAI. Requires env var to be set: "
-        "`AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`",
-    )
-    parser.add_argument(
-        "--context_size", type=int, default=8192, help="context size used for model"
-    )
-    parser.add_argument(
-        "--topk",
-        type=parse_topk,
-        default=[100, 20],
-        help="Comma-separated list of top k values for each retrieval method. Example: 100,20",
-    )
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits 4- filename containing retrieved results",
-    )
-    parser.add_argument(
-        "--num_gpus", type=int, default=1, help="the number of GPUs to use"
-    )
-    parser.add_argument(
-        "--retrieval_method",
-        type=parse_retrieval_methods,
-        required=True,
-        help="Comma-separated list of retrieval methods. Choices: "
-        + ", ".join([e.value for e in RetrievalMethod]),
-    )
-    parser.add_argument(
-        "--prompt_mode",
-        type=PromptMode,
-        required=True,
-        choices=list(PromptMode),
-    )
-    parser.add_argument(
-        "--shuffle_candidates",
-        action="store_true",
-        help="whether to shuffle the candidates before reranking",
-    )
-    parser.add_argument(
-        "--print_prompts_responses",
-        action="store_true",
-        help="whether to print promps and responses",
-    )
-    parser.add_argument(
-        "--num_few_shot_examples",
-        type=int,
-        required=False,
-        default=0,
-        help="number of in context examples to provide",
-    )
-    parser.add_argument(
-        "--max_output_tokens",
-        type=int,
-        required=False,
-        default=1500,
-        help="maximum number of tokens in the output",
-    )
-    parser.add_argument(
-        "--run_id",
-        type=str,
-        required=False,
-        default="ragnarok",
-        help="run id to be used in the output file",
-    )
-    parser.add_argument(
-        "--vllm_batched",
-        action="store_true",
-        help="whether to use batched version of VLLM",
-    )
-    parser.add_argument(
-        "--include_reasoning",
-        action="store_true",
-        help="store reasoning content in the rag execution summary sidecar when the backend exposes it",
-    )
-    parser.add_argument(
-        "--reasoning_effort",
-        type=str,
-        choices=["none", "minimal", "low", "medium", "high", "xhigh"],
-        help="OpenAI-compatible reasoning effort level to request for supported models",
-    )
-    args = parser.parse_args()
     sys.exit(cli_compatible_main())
