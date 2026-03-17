@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import tempfile
+import types
 import unittest
 from contextlib import redirect_stdout
 from io import StringIO
@@ -154,7 +155,11 @@ class TestRagnarokCLI(unittest.TestCase):
 
         stderr = io.StringIO()
         stdout = StringIO()
-        with redirect_stderr(stderr), redirect_stdout(stdout):
+        with (
+            redirect_stderr(stderr),
+            redirect_stdout(stdout),
+            patch("ragnarok.cli.main.doctor_report", return_value={"python_ok": True}),
+        ):
             exit_code = main(["--quiet", "doctor", "--output", "json"])
 
         self.assertEqual(exit_code, 0)
@@ -570,6 +575,10 @@ class TestRagnarokCLI(unittest.TestCase):
     def test_generate_forwards_use_openrouter_to_openai_compatible_args(self):
         stdout = StringIO()
         fake_agent = FakeAgent()
+        sys.modules.setdefault("openai", types.ModuleType("openai"))
+        sys.modules.setdefault("tiktoken", types.ModuleType("tiktoken"))
+        import ragnarok.generate.gpt  # ensure submodule is loaded for patching
+
         with (
             redirect_stdout(stdout),
             patch(
