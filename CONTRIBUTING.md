@@ -29,12 +29,8 @@ Run these commands before opening a pull request:
 
 ```bash
 uv run pre-commit run --all-files
-uv run pytest -q \
-  test/test_cli_main.py \
-  test/analysis/test_reasoning_support.py \
-  test/evaluation/test_check_trec_rag24_gen.py \
-  test/retrieve/test_PyseriniRetriever.py
-uv run pytest -q test/integration/integration_cli_regressions.py
+uv run pytest -q -m core test
+uv run pytest -q -m integration test
 ```
 
 `pre-commit` is the canonical formatter and lint entrypoint for this repository. The current hooks run `black`, `isort`, and `flake8`.
@@ -47,6 +43,7 @@ uv run pytest -q test/integration/integration_cli_regressions.py
   - `core`: fast deterministic unit and CLI coverage that always runs in PR CI
   - `integration`: deterministic offline regressions that exercise end-to-end CLI flows with frozen fixtures
   - `live`: provider-backed smoke tests gated behind explicit environment variables
+- Apply the shared pytest markers (`core`, `integration`, `live`) at the module level when adding or moving tests so CI and local commands stay aligned across Castorini Python repos.
 - Keep default automated coverage offline and deterministic whenever possible.
 - If a change touches retrieval, reranking, generation post-processing, or TREC validation logic, include regression coverage or explain clearly in the pull request why coverage was not practical.
 

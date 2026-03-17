@@ -30,12 +30,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
       - name: Run core unit tests
-        run: |
-          uv run pytest -q \
-            test/test_cli_main.py \
-            test/analysis/test_reasoning_support.py \
-            test/evaluation/test_check_trec_rag24_gen.py \
-            test/retrieve/test_PyseriniRetriever.py
+        run: uv run pytest -q -m core test
   tests-integration:
     runs-on: ubuntu-latest
     needs: tests-core
@@ -48,4 +43,4 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
       - name: Run offline integration regressions
-        run: uv run pytest -q test/integration/integration_cli_regressions.py
+        run: uv run pytest -q -m integration test

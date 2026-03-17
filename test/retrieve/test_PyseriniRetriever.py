@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from dacite import from_dict
+import pytest
 
 try:
     from rank_llm.data import Request
@@ -15,6 +16,8 @@ except ModuleNotFoundError:
     PyseriniRetriever = None
     RetrievalMethod = None
     RANK_LLM_AVAILABLE = False
+
+pytestmark = pytest.mark.core
 
 if RANK_LLM_AVAILABLE:
     valid_inputs = [

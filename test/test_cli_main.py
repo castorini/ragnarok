@@ -10,11 +10,15 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 
 from ragnarok.cli.main import main
 from ragnarok.data import RAGExecInfo, Result
 from ragnarok.generate.llm import PromptMode
+
+pytestmark = pytest.mark.core
 
 
 def write_jsonl(path: Path, records: list[dict]) -> None:

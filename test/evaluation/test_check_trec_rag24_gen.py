@@ -3,7 +3,11 @@ import os
 import tempfile
 import unittest
 
+import pytest
+
 from src.ragnarok.scripts.check_trec_rag24_gen import Errlog, check_rag_gen_run
+
+pytestmark = pytest.mark.core
 
 
 class TestCheckRagGenRun(unittest.TestCase):

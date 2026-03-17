@@ -113,3 +113,13 @@ namespaces = false
 
 [tool.setuptools]
 provides = ["ragnarok"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = ["test_*.py", "integration_*.py"]
+markers = [
+    "core: deterministic unit and CLI regression coverage",
+    "integration: deterministic offline end-to-end regression coverage",
+    "live: provider-backed smoke coverage that requires explicit opt-in",
+]
+addopts = "--strict-markers"

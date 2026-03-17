@@ -7,10 +7,14 @@ import unittest
 from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from ragnarok.data import DataWriter, Query, RAGExecInfo, Result
 from ragnarok.generate.generator import RAG
 from ragnarok.generate.llm import LLM, PromptMode
 from ragnarok.generate.templates.ragnarok_templates import RagnarokTemplates
+
+pytestmark = pytest.mark.core
 
 
 class DummyLLM(LLM):

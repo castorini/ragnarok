@@ -7,7 +7,11 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
+import pytest
+
 from ragnarok.cli.main import main
+
+pytestmark = pytest.mark.integration
 
 
 class RagnarokCLIIntegrationRegressions(unittest.TestCase):

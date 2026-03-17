@@ -51,15 +51,16 @@
 
 ## Testing
 - Test tiers:
-  - `core`: `uv run pytest -q test/test_cli_main.py test/analysis/test_reasoning_support.py test/evaluation/test_check_trec_rag24_gen.py test/retrieve/test_PyseriniRetriever.py`
-  - `integration`: `uv run pytest -q test/integration/integration_cli_regressions.py`
-  - `live`: opt-in smoke tests such as `RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run pytest -q test/test_live_openai_smoke.py`
+  - `core`: `uv run pytest -q -m core test`
+  - `integration`: `uv run pytest -q -m integration test`
+  - `live`: opt-in smoke tests such as `RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run pytest -q -m live test`
 - Quick example validation:
   - `uv run python examples/rag_demo.py --help`
   - `uv run python examples/sync_rag_demo.py --help`
 - Prefer adding/maintaining tests in `test/**` that remain compatible with
   `pytest`; continuing to use `unittest.TestCase` in existing modules is fine.
 - Keep `core` and `integration` coverage offline and deterministic; provider-backed checks belong in the `live` tier.
+- Use the shared pytest markers `core`, `integration`, and `live` at the module level so CI and local commands stay consistent with the other Castorini Python repos.
 - Some tests depend on optional/external packages or data paths; ensure required deps are installed in the active environment before claiming failures/regressions.
 
 ## Running Main Pipelines
