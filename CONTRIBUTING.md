@@ -29,12 +29,12 @@ Run these commands before opening a pull request:
 
 ```bash
 uv run pre-commit run --all-files
-uv run python -m unittest \
-  test.test_cli_main \
-  test.analysis.test_reasoning_support \
-  test.evaluation.test_check_trec_rag24_gen \
-  test.retrieve.test_PyseriniRetriever
-uv run python -m unittest discover -s test/integration -p 'integration_*.py'
+uv run pytest -q \
+  test/test_cli_main.py \
+  test/analysis/test_reasoning_support.py \
+  test/evaluation/test_check_trec_rag24_gen.py \
+  test/retrieve/test_PyseriniRetriever.py
+uv run pytest -q test/integration/integration_cli_regressions.py
 ```
 
 `pre-commit` is the canonical formatter and lint entrypoint for this repository. The current hooks run `black`, `isort`, and `flake8`.
@@ -42,7 +42,7 @@ uv run python -m unittest discover -s test/integration -p 'integration_*.py'
 ## Testing Expectations
 
 - Add or update tests for non-trivial behavior changes.
-- Prefer `unittest` tests under `test/` to match the existing suite.
+- `pytest` is the canonical runner; `unittest.TestCase` remains acceptable when extending existing modules incrementally.
 - Keep tests in one of these layers:
   - `core`: fast deterministic unit and CLI coverage that always runs in PR CI
   - `integration`: deterministic offline regressions that exercise end-to-end CLI flows with frozen fixtures

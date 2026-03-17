@@ -67,6 +67,7 @@ all = [
 [dependency-groups]
 dev = [
     "pre-commit>=3.8.0",
+    "pytest>=8.4.2",
     "shtab>=1.7.0",
 ]
 

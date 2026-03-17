@@ -42,6 +42,8 @@
 - Pre-commit is the canonical formatter/lint entrypoint.
 - Install hooks once per clone: `pre-commit install`.
 - Run all checks before PR: `pre-commit run --all-files`.
+- `pytest` is the canonical test runner, even though much of the existing suite
+  still uses `unittest.TestCase` style.
 - Configured tools in `.pre-commit-config.yaml`:
   - `black` (Python 3.11)
   - `isort --profile=black` (Python 3.11)
@@ -49,13 +51,14 @@
 
 ## Testing
 - Test tiers:
-  - `core`: `uv run python -m unittest test.test_cli_main test.analysis.test_reasoning_support test.evaluation.test_check_trec_rag24_gen test.retrieve.test_PyseriniRetriever`
-  - `integration`: `uv run python -m unittest discover -s test/integration -p 'integration_*.py'`
-  - `live`: opt-in smoke tests such as `RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run python -m unittest discover -s test -p 'test_live_openai_smoke.py'`
+  - `core`: `uv run pytest -q test/test_cli_main.py test/analysis/test_reasoning_support.py test/evaluation/test_check_trec_rag24_gen.py test/retrieve/test_PyseriniRetriever.py`
+  - `integration`: `uv run pytest -q test/integration/integration_cli_regressions.py`
+  - `live`: opt-in smoke tests such as `RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run pytest -q test/test_live_openai_smoke.py`
 - Quick example validation:
   - `uv run python examples/rag_demo.py --help`
   - `uv run python examples/sync_rag_demo.py --help`
-- Prefer adding/maintaining `unittest` tests in `test/**` to match current style.
+- Prefer adding/maintaining tests in `test/**` that remain compatible with
+  `pytest`; continuing to use `unittest.TestCase` in existing modules is fine.
 - Keep `core` and `integration` coverage offline and deterministic; provider-backed checks belong in the `live` tier.
 - Some tests depend on optional/external packages or data paths; ensure required deps are installed in the active environment before claiming failures/regressions.
 

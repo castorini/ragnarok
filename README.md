@@ -177,7 +177,7 @@ For an opt-in live smoke test that exercises the packaged CLI against a real
 OpenAI-compatible backend, run:
 
 ```bash
-RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run python -m unittest discover -s test -p 'test_live_openai_smoke.py'
+RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run pytest -q test/test_live_openai_smoke.py
 ```
 
 ## Testing Tiers
@@ -191,13 +191,13 @@ Ragnarök keeps regression coverage in three layers:
 Typical local commands:
 
 ```bash
-uv run python -m unittest \
-  test.test_cli_main \
-  test.analysis.test_reasoning_support \
-  test.evaluation.test_check_trec_rag24_gen \
-  test.retrieve.test_PyseriniRetriever
-uv run python -m unittest discover -s test/integration -p 'integration_*.py'
-RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run python -m unittest discover -s test -p 'test_live_openai_smoke.py'
+uv run pytest -q \
+  test/test_cli_main.py \
+  test/analysis/test_reasoning_support.py \
+  test/evaluation/test_check_trec_rag24_gen.py \
+  test/retrieve/test_PyseriniRetriever.py
+uv run pytest -q test/integration/integration_cli_regressions.py
+RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run pytest -q test/test_live_openai_smoke.py
 ```
 
 ## Contributing 
