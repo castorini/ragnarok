@@ -10,26 +10,31 @@ Thank you for contributing to Ragnarök. This repository packages retrieval-augm
 
 ## Development Setup
 
-Ragnarök currently uses `requirements.txt` plus editable installs.
+Ragnarök uses `uv` and the `dev` dependency group defined in `pyproject.toml`.
 
 ```bash
-python3.11 -m venv .venv
+uv python install 3.11
+uv venv --python 3.11
 source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-pip install -e .
+uv sync --group dev
 pre-commit install
 ```
 
-If you use GPU-backed models locally, install the PyTorch build appropriate for your environment before `pip install -r requirements.txt`, as documented in the README.
+If you prefer not to activate the virtual environment, run commands through `uv run`.
+If you use GPU-backed models locally, install the PyTorch build appropriate for your environment before installing the optional runtime stack you need, as documented in the README.
 
 ## Local Quality Gate
 
 Run these commands before opening a pull request:
 
 ```bash
-pre-commit run --all-files
-python -m unittest discover -s test
+uv run pre-commit run --all-files
+uv run python -m unittest \
+  test.test_cli_main \
+  test.analysis.test_reasoning_support \
+  test.evaluation.test_check_trec_rag24_gen \
+  test.retrieve.test_PyseriniRetriever
+uv run python -m unittest discover -s test/integration -p 'integration_*.py'
 ```
 
 `pre-commit` is the canonical formatter and lint entrypoint for this repository. The current hooks run `black`, `isort`, and `flake8`.
@@ -38,7 +43,11 @@ python -m unittest discover -s test
 
 - Add or update tests for non-trivial behavior changes.
 - Prefer `unittest` tests under `test/` to match the existing suite.
-- Keep tests offline and deterministic whenever possible.
+- Keep tests in one of these layers:
+  - `core`: fast deterministic unit and CLI coverage that always runs in PR CI
+  - `integration`: deterministic offline regressions that exercise end-to-end CLI flows with frozen fixtures
+  - `live`: provider-backed smoke tests gated behind explicit environment variables
+- Keep default automated coverage offline and deterministic whenever possible.
 - If a change touches retrieval, reranking, generation post-processing, or TREC validation logic, include regression coverage or explain clearly in the pull request why coverage was not practical.
 
 ## Documentation Expectations
@@ -46,11 +55,13 @@ python -m unittest discover -s test
 - Update `README.md` when install steps, public entrypoints, or common workflows change.
 - Update files in `docs/` when track-specific execution or validation behavior changes.
 - Call out output-format changes explicitly. Downstream scripts depend on stable field names and submission formats.
+- Add or update a file in `docs/release-notes/` for user-visible changes.
+- If a pull request changes CLI flags/defaults, output schemas, or validator behavior, document the migration path in the release note as well as in the pull request description.
 
 ## Artifact and API Safety
 
 - Do not silently change JSON, JSONL, or TREC run-file schemas consumed by downstream tooling.
-- Preserve existing command-line flags when possible. If you must change a flag or default, document the migration path in the pull request.
+- Preserve existing command-line flags when possible. If you must change a flag or default, document the migration path in the pull request and release notes.
 - Never hardcode provider credentials. Use environment variables for OpenAI, Azure OpenAI, Cohere, or other external services.
 - Avoid introducing heavyweight dependencies unless they are necessary and justified in the pull request description.
 

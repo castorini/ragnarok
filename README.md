@@ -9,6 +9,11 @@
 
 Ragnarök is a battleground for the best retrieval-augmented generation (RAG) models!
 
+## Releases
+
+- Current version: `0.0.1`
+- Release notes: [docs/release-notes/release-notes-v0.0.1.md](docs/release-notes/release-notes-v0.0.1.md)
+
 
 ## 📟 Instructions
 
@@ -172,6 +177,26 @@ For an opt-in live smoke test that exercises the packaged CLI against a real
 OpenAI-compatible backend, run:
 
 ```bash
+RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run python -m unittest discover -s test -p 'test_live_openai_smoke.py'
+```
+
+## Testing Tiers
+
+Ragnarök keeps regression coverage in three layers:
+
+- `core`: fast deterministic unit and CLI tests that always run in PR CI
+- `integration`: deterministic offline CLI regressions backed by frozen fixtures
+- `live`: provider-backed smoke tests gated behind explicit environment variables
+
+Typical local commands:
+
+```bash
+uv run python -m unittest \
+  test.test_cli_main \
+  test.analysis.test_reasoning_support \
+  test.evaluation.test_check_trec_rag24_gen \
+  test.retrieve.test_PyseriniRetriever
+uv run python -m unittest discover -s test/integration -p 'integration_*.py'
 RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run python -m unittest discover -s test -p 'test_live_openai_smoke.py'
 ```
 

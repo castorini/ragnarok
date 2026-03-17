@@ -48,12 +48,15 @@
   - `flake8` (currently configured to ignore `E501` and select `F401`).
 
 ## Testing
-- Default test command (also reflected in `pr-format.yml`):
-  - `uv run python -m unittest discover -s test`
+- Test tiers:
+  - `core`: `uv run python -m unittest test.test_cli_main test.analysis.test_reasoning_support test.evaluation.test_check_trec_rag24_gen test.retrieve.test_PyseriniRetriever`
+  - `integration`: `uv run python -m unittest discover -s test/integration -p 'integration_*.py'`
+  - `live`: opt-in smoke tests such as `RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run python -m unittest discover -s test -p 'test_live_openai_smoke.py'`
 - Quick example validation:
   - `uv run python examples/rag_demo.py --help`
   - `uv run python examples/sync_rag_demo.py --help`
 - Prefer adding/maintaining `unittest` tests in `test/**` to match current style.
+- Keep `core` and `integration` coverage offline and deterministic; provider-backed checks belong in the `live` tier.
 - Some tests depend on optional/external packages or data paths; ensure required deps are installed in the active environment before claiming failures/regressions.
 
 ## Running Main Pipelines
@@ -88,6 +91,7 @@
 - For code changes:
   - Update docs when behavior/CLI/output changes.
   - Add or update tests for non-trivial behavior changes.
+  - Add or update `docs/release-notes/` entries for user-visible changes.
   - Run formatting/lint + test commands locally before PR.
 - Keep PRs scoped and explicit about:
   - Behavior change
@@ -98,4 +102,5 @@
 - Do not silently change output schemas used by TREC submission/eval scripts.
 - Avoid introducing new heavyweight dependencies unless necessary and justified.
 - Preserve CLI backward compatibility for existing script flags when possible.
+- If CLI flags/defaults, output schemas, or validator behavior change, document the migration path in the release note.
 - When adjusting retrieval/rerank/generation flow, verify downstream scripts still consume outputs correctly.
