@@ -30,14 +30,16 @@ def _normalize_candidate(candidate_payload: Any, index: int) -> Any:
                 doc={"segment": candidate_payload["text"]},
             )
         doc = candidate_payload.get("doc")
-        if isinstance(doc, dict) and isinstance(doc.get("segment"), str):
-            return Candidate(
-                docid=candidate_payload.get("docid", f"d{index}"),
-                score=float(candidate_payload.get("score", 0.0)),
-                doc={"segment": doc["segment"]},
-            )
+        if isinstance(doc, dict):
+            segment = doc.get("segment") or doc.get("contents")
+            if isinstance(segment, str):
+                return Candidate(
+                    docid=candidate_payload.get("docid", f"d{index}"),
+                    score=float(candidate_payload.get("score", 0.0)),
+                    doc={"segment": segment},
+                )
     raise ValueError(
-        "each candidate must be a string, {text: ...}, or {doc: {segment: ...}}"
+        "each candidate must be a string, {text: ...}, or {doc: {segment|contents: ...}}"
     )
 
 
