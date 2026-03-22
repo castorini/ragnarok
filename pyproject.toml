@@ -39,9 +39,10 @@ local = [
     "vllm>=0.4.3",
 ]
 api = [
-    "flask>=3.0.0",
+    "fastapi>=0.115.0",
     "gradio==4.26.0",
     "pandas>=2.2.2",
+    "uvicorn>=0.30.0",
 ]
 pyserini = [
     "pyserini>=0.44.0",
@@ -58,10 +59,11 @@ all = [
     "torchvision",
     "transformers>=4.40.1",
     "vllm>=0.4.3",
-    "flask>=3.0.0",
+    "fastapi>=0.115.0",
     "gradio==4.26.0",
     "pandas>=2.2.2",
     "pyserini>=0.44.0",
+    "uvicorn>=0.30.0",
 ]
 
 [dependency-groups]

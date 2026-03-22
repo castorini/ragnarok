@@ -9,6 +9,7 @@ EXIT_CODES = {
 
 KNOWN_COMMANDS = (
     "generate",
+    "serve",
     "validate",
     "convert",
     "view",
@@ -27,6 +28,7 @@ TOP_LEVEL_EXAMPLES = (
         "ragnarok generate --model gpt-4o --input-json "
         '\'{"query":"q","candidates":["p"]}\' --output json'
     ),
+    "ragnarok serve --model gpt-4o --prompt-mode chatqa --port 8084",
     "ragnarok prompt show --prompt-mode chatqa",
     "ragnarok doctor --output json",
 )

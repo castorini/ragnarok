@@ -82,6 +82,7 @@ activated environment, run `ragnarok ...`; otherwise use `uv run ragnarok ...`.
 
 - `ragnarok generate`: run dataset-backed generation, batch request-file
   generation, or direct single-request generation
+- `ragnarok serve`: start a FastAPI server for direct single-request generation
 - `ragnarok validate`: validate request payloads or TREC output artifacts
 - `ragnarok convert trec25-format`: convert older generation outputs into the
   newer TREC 2025 format
@@ -120,6 +121,19 @@ ragnarok schema generate-direct-input --output json
 ragnarok validate generate --input-json '{"query":"q","candidates":["p"]}' --output json
 ragnarok doctor --output json
 ragnarok view results.jsonl --records 1
+```
+
+Serve the direct generation API:
+
+```bash
+ragnarok serve \
+  --model gpt-4o \
+  --prompt-mode chatqa \
+  --port 8084
+
+curl -X POST http://127.0.0.1:8084/v1/generate \
+  -H 'content-type: application/json' \
+  -d '{"query":"q","candidates":["p"]}'
 ```
 
 For TREC RAG 2025 output validation, `ragnarok validate rag25-output ...` is

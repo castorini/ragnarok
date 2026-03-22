@@ -5,6 +5,7 @@ Initial release-note scaffold for the packaged CLI era.
 ## Included In This Baseline
 
 - Packaged `ragnarok` CLI with generation, validation, conversion, prompt inspection, doctor, and view commands.
+- FastAPI `ragnarok serve` command exposing `GET /healthz` and `POST /v1/generate` on port `8084` by default.
 - Offline-first contributor workflow built around `uv`.
 - Track validators and format-conversion utilities for TREC RAG workflows.
 

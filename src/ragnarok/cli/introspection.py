@@ -29,6 +29,19 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
         ],
         "input_modes": ["dataset", "input-file", "stdin", "input-json"],
     },
+    "serve": {
+        "summary": ("Start a FastAPI server for direct Ragnarok generation requests."),
+        "inspection_safe": True,
+        "examples": [
+            "ragnarok serve --model gpt-4o --prompt-mode chatqa --port 8084",
+            (
+                "curl -X POST http://127.0.0.1:8084/v1/generate "
+                "-H 'content-type: application/json' "
+                '-d \'{"query":"q","candidates":["p"]}\''
+            ),
+        ],
+        "routes": ["GET /healthz", "POST /v1/generate"],
+    },
     "validate": {
         "summary": "Validate generate requests or TREC output artifacts without running models.",
         "targets": ["generate", "rag24-output", "rag25-output"],
@@ -230,6 +243,8 @@ def doctor_report() -> dict[str, Any]:
     openai_dep_ready = importlib.util.find_spec("openai") is not None
     cohere_dep_ready = importlib.util.find_spec("cohere") is not None
     pyserini_dep_ready = importlib.util.find_spec("pyserini") is not None
+    fastapi_dep_ready = importlib.util.find_spec("fastapi") is not None
+    uvicorn_dep_ready = importlib.util.find_spec("uvicorn") is not None
 
     def status(
         *,
@@ -282,6 +297,17 @@ def doctor_report() -> dict[str, Any]:
     }
     command_readiness = {
         "generate": status(ready=python_ok),
+        "serve": status(
+            ready=python_ok and fastapi_dep_ready and uvicorn_dep_ready,
+            missing_deps=[
+                dependency
+                for dependency, available in (
+                    ("fastapi", fastapi_dep_ready),
+                    ("uvicorn", uvicorn_dep_ready),
+                )
+                if not available
+            ],
+        ),
         "validate": status(ready=python_ok),
         "convert": status(ready=python_ok),
         "view": status(ready=python_ok),
@@ -304,6 +330,8 @@ def doctor_report() -> dict[str, Any]:
             "cohere": cohere_dep_ready,
             "openai": openai_dep_ready,
             "pyserini": pyserini_dep_ready,
+            "fastapi": fastapi_dep_ready,
+            "uvicorn": uvicorn_dep_ready,
         },
         "java_home_present": bool(os.getenv("JAVA_HOME")),
         "backend_readiness": backend_readiness,

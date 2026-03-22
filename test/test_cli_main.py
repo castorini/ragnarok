@@ -581,7 +581,7 @@ class TestRagnarokCLI(unittest.TestCase):
         fake_agent = FakeAgent()
         sys.modules.setdefault("openai", types.ModuleType("openai"))
         sys.modules.setdefault("tiktoken", types.ModuleType("tiktoken"))
-        import ragnarok.generate.gpt  # ensure submodule is loaded for patching
+        __import__("ragnarok.generate.gpt")  # ensure submodule is loaded for patching
 
         with (
             redirect_stdout(stdout),
@@ -1005,7 +1005,7 @@ class TestRagnarokCLI(unittest.TestCase):
         )
         self.assertTrue(
             any(
-                "generate, validate, convert, view, prompt, describe, schema, doctor"
+                "generate, serve, validate, convert, view, prompt, describe, schema, doctor"
                 in call.args[0]
                 for call in stderr_write.call_args_list
             )
@@ -1141,6 +1141,92 @@ class TestRagnarokCLI(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             output = json.loads(stdout.getvalue())
             self.assertEqual(output["command"], expected_command)
+
+    def test_serve_command_starts_uvicorn(self):
+        pytest.importorskip("fastapi")
+        with patch("uvicorn.run") as uvicorn_run:
+            exit_code = main(
+                [
+                    "serve",
+                    "--model",
+                    "gpt-4o",
+                    "--prompt-mode",
+                    "chatqa",
+                    "--port",
+                    "8084",
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        uvicorn_run.assert_called_once()
+        self.assertEqual(uvicorn_run.call_args.kwargs["host"], "0.0.0.0")
+        self.assertEqual(uvicorn_run.call_args.kwargs["port"], 8084)
+
+    def test_serve_app_exposes_health_and_generate(self):
+        pytest.importorskip("fastapi")
+        from fastapi.testclient import TestClient
+
+        from ragnarok.api.app import create_app
+        from ragnarok.api.runtime import ServerConfig
+
+        fake_records = [
+            {
+                "topic_id": "q0",
+                "topic": "q",
+                "references": ["d0"],
+                "response_length": 8,
+                "answer": [{"text": "answer", "citations": [0]}],
+            }
+        ]
+
+        with patch(
+            "ragnarok.api.runtime.run_request_generation",
+            return_value=(fake_records, {"request_count": 1}),
+        ):
+            client = TestClient(
+                create_app(
+                    ServerConfig(
+                        host="127.0.0.1",
+                        port=8084,
+                        model="gpt-4o",
+                        prompt_mode="chatqa",
+                    )
+                )
+            )
+            health_response = client.get("/healthz")
+            generate_response = client.post(
+                "/v1/generate",
+                json={"query": "q", "candidates": ["passage"]},
+            )
+
+        self.assertEqual(health_response.status_code, 200)
+        self.assertEqual(health_response.json(), {"status": "ok"})
+        self.assertEqual(generate_response.status_code, 200)
+        envelope = generate_response.json()
+        self.assertEqual(envelope["schema_version"], "castorini.cli.v1")
+        self.assertEqual(envelope["command"], "generate")
+        self.assertEqual(envelope["artifacts"][0]["name"], "generation-results")
+
+    def test_serve_app_rejects_invalid_payload(self):
+        pytest.importorskip("fastapi")
+        from fastapi.testclient import TestClient
+
+        from ragnarok.api.app import create_app
+        from ragnarok.api.runtime import ServerConfig
+
+        client = TestClient(
+            create_app(
+                ServerConfig(
+                    host="127.0.0.1",
+                    port=8084,
+                    model="gpt-4o",
+                    prompt_mode="chatqa",
+                )
+            )
+        )
+
+        response = client.post("/v1/generate", json={"query": 1, "candidates": []})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["status"], "validation_error")
 
     def test_missing_input_file_returns_json_error(self):
         exit_code = main(

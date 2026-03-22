@@ -13,6 +13,8 @@ try:
 except ModuleNotFoundError:  # optional dev dependency
     shtab = None  # type: ignore[assignment]
 
+from ragnarok.api.runtime import ServerConfig, execute_direct_generate
+
 from .adapters import make_data_artifact, make_file_artifact
 from .config import load_config
 from .introspection import (
@@ -270,6 +272,7 @@ def build_parser() -> CLIArgumentParser:
             "Common patterns:\n"
             "  ragnarok generate --model gpt-4o --input-json "
             '\'{"query":"q","candidates":["p"]}\' --prompt-mode chatqa --output json\n'
+            "  ragnarok serve --model gpt-4o --prompt-mode chatqa --port 8084\n"
             "  ragnarok prompt show --prompt-mode chatqa\n"
             "  ragnarok validate generate --input-json "
             '\'{"query":"q","candidates":["p"]}\' --output json\n'
@@ -482,6 +485,70 @@ def build_parser() -> CLIArgumentParser:
         help="Write the final JSON envelope to a manifest file.",
     )
     generate_parser.add_argument(
+        "--log-level",
+        type=int,
+        default=0,
+        choices=[0, 1, 2],
+        help="Logging verbosity: 0=warnings, 1=info, 2=debug.",
+    )
+
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Start a FastAPI server for direct Ragnarok generation requests.",
+        description=(
+            "Start a FastAPI server that exposes direct-input Ragnarok generation "
+            "over HTTP."
+        ),
+    )
+    serve_parser.add_argument("--host", type=str, default="0.0.0.0")
+    serve_parser.add_argument("--port", type=int, default=8084)
+    serve_parser.add_argument(
+        "--model",
+        type=str,
+        required=True,
+        help="Model or deployment identifier to use for generation.",
+    )
+    serve_parser.add_argument(
+        "--prompt-mode",
+        required=True,
+        help="Prompt template mode such as chatqa or cohere.",
+    )
+    serve_parser.add_argument(
+        "--use-azure-openai",
+        action="store_true",
+        help="Use Azure OpenAI environment settings for OpenAI-compatible generation.",
+    )
+    serve_parser.add_argument(
+        "--use-openrouter",
+        action="store_true",
+        help="Use OpenRouter for OpenAI-compatible generation.",
+    )
+    serve_parser.add_argument("--context-size", type=int, default=8192)
+    serve_parser.add_argument(
+        "--topk",
+        type=parse_topk,
+        default=[20],
+        help="Comma-separated candidate depths used for direct request generation.",
+    )
+    serve_parser.add_argument("--num-gpus", type=int, default=1)
+    serve_parser.add_argument("--shuffle-candidates", action="store_true")
+    serve_parser.add_argument("--print-prompts-responses", action="store_true")
+    serve_parser.add_argument("--num-few-shot-examples", type=int, default=0)
+    serve_parser.add_argument("--max-output-tokens", type=int, default=1500)
+    serve_parser.add_argument("--run-id", type=str, default="ragnarok")
+    serve_parser.add_argument("--vllm-batched", action="store_true")
+    serve_parser.add_argument(
+        "--execution-mode", choices=["sync", "async"], default="sync"
+    )
+    serve_parser.add_argument("--max-concurrency", type=int, default=8)
+    serve_parser.add_argument("--include-reasoning", action="store_true")
+    serve_parser.add_argument("--include-trace", action="store_true")
+    serve_parser.add_argument("--redact-prompts", action="store_true")
+    serve_parser.add_argument(
+        "--reasoning-effort",
+        choices=["none", "minimal", "low", "medium", "high", "xhigh"],
+    )
+    serve_parser.add_argument(
         "--log-level",
         type=int,
         default=0,
@@ -853,16 +920,56 @@ def _run_generate_command(args: argparse.Namespace) -> CommandResponse:
             )
         )
         return response
-    logger = setup_logging(args.log_level, quiet=getattr(args, "quiet", False))
-    if args.execution_mode == "async":
-        records, metrics = asyncio.run(
-            async_run_request_generation([request], args, logger)
+    return execute_direct_generate(payload, args=args)
+
+
+def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
+    try:
+        import uvicorn
+
+        from ragnarok.api.app import create_app
+    except ModuleNotFoundError as error:
+        raise CLIError(
+            "serve requires FastAPI dependencies; install the `api` extra",
+            exit_code=EXIT_CODES["missing_resource"],
+            status="validation_error",
+            error_code="missing_api_dependencies",
+            command="serve",
+            details={"missing_dependencies": ["fastapi", "uvicorn"]},
+        ) from error
+
+    app = create_app(
+        ServerConfig(
+            host=args.host,
+            port=args.port,
+            model=args.model,
+            prompt_mode=args.prompt_mode,
+            use_azure_openai=args.use_azure_openai,
+            use_openrouter=args.use_openrouter,
+            context_size=args.context_size,
+            topk=args.topk,
+            num_gpus=args.num_gpus,
+            execution_mode=args.execution_mode,
+            max_concurrency=args.max_concurrency,
+            shuffle_candidates=args.shuffle_candidates,
+            print_prompts_responses=args.print_prompts_responses,
+            num_few_shot_examples=args.num_few_shot_examples,
+            max_output_tokens=args.max_output_tokens,
+            run_id=args.run_id,
+            vllm_batched=args.vllm_batched,
+            include_reasoning=args.include_reasoning,
+            include_trace=args.include_trace,
+            redact_prompts=args.redact_prompts,
+            reasoning_effort=args.reasoning_effort,
+            log_level=args.log_level,
+            quiet=getattr(args, "quiet", False),
         )
-    else:
-        records, metrics = run_request_generation([request], args, logger)
-    response.metrics = metrics
-    response.artifacts.append(make_data_artifact("generation-results", records))
-    return response
+    )
+    uvicorn.run(app, host=args.host, port=args.port)
+    return CommandResponse(
+        command="serve",
+        resolved={"host": args.host, "port": args.port},
+    )
 
 
 def _run_validate_command(args: argparse.Namespace) -> CommandResponse:
@@ -1083,6 +1190,8 @@ def _format_text_response(response: CommandResponse) -> str:
         return render_prompt_mode_text(
             cast(dict[str, Any], response.artifacts[0]["data"])
         )
+    if response.command == "serve":
+        return ""
     return json.dumps(response.to_envelope(), indent=2)
 
 
@@ -1100,6 +1209,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 setattr(args, key, value)
         if args.command == "generate":
             response = _run_generate_command(args)
+        elif args.command == "serve":
+            response = _run_serve_command(args)
         elif args.command == "validate":
             response = _run_validate_command(args)
         elif args.command == "convert":
