@@ -26,6 +26,11 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
                 "ragnarok generate --model gpt-4o --input-json "
                 '\'{"query":"q","candidates":["p"]}\' --output json'
             ),
+            (
+                'curl -s "http://127.0.0.1:8081/v1/msmarco-v1-passage/search?query=q" '
+                "| curl -s -X POST http://127.0.0.1:8084/v1/generate "
+                '-H "content-type: application/json" --data-binary @- | jq'
+            ),
         ],
         "input_modes": ["dataset", "input-file", "stdin", "input-json"],
     },
@@ -38,6 +43,11 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
                 "curl -X POST http://127.0.0.1:8084/v1/generate "
                 "-H 'content-type: application/json' "
                 '-d \'{"query":"q","candidates":["p"]}\''
+            ),
+            (
+                'curl -s "http://127.0.0.1:8081/v1/msmarco-v1-passage/search?query=q" '
+                "| curl -s -X POST http://127.0.0.1:8084/v1/generate "
+                '-H "content-type: application/json" --data-binary @- | jq'
             ),
         ],
         "routes": ["GET /healthz", "POST /v1/generate"],
@@ -126,9 +136,16 @@ SCHEMAS: dict[str, dict[str, Any]] = {
                                 "docid": {"type": ["string", "integer"]},
                                 "score": {"type": "number"},
                                 "doc": {
-                                    "type": "object",
-                                    "required": ["segment"],
-                                    "properties": {"segment": {"type": "string"}},
+                                    "oneOf": [
+                                        {"type": "string"},
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "segment": {"type": "string"},
+                                                "contents": {"type": "string"},
+                                            },
+                                        },
+                                    ]
                                 },
                             },
                         },

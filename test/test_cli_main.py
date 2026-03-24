@@ -407,6 +407,66 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertEqual(output["artifacts"][0]["name"], "generation-results")
         self.assertEqual(output["artifacts"][0]["data"][0]["topic"], "what is python")
 
+    def test_generate_direct_accepts_anserini_rest_payload(self):
+        class AssertingAgent(FakeAgent):
+            def answer_batch(
+                self,
+                requests,
+                topk,
+                shuffle_candidates=False,
+                logging=False,
+                vllm=False,
+            ):
+                del topk, shuffle_candidates, logging, vllm
+                assert requests[0].query.text == "what is python"
+                assert requests[0].query.qid == "q0"
+                assert requests[0].candidates[0].docid == "1737459"
+                assert (
+                    requests[0].candidates[0].doc["segment"]
+                    == "Python is widely used for web development."
+                )
+                return super().answer_batch(requests, 5)
+
+        stdout = StringIO()
+        with (
+            redirect_stdout(stdout),
+            patch(
+                "ragnarok.cli.operations.create_generation_agent",
+                return_value=AssertingAgent(),
+            ),
+        ):
+            exit_code = main(
+                [
+                    "generate",
+                    "--model",
+                    "gpt-4o",
+                    "--input-json",
+                    json.dumps(
+                        {
+                            "api": "v1",
+                            "index": "msmarco-v1-passage",
+                            "query": {"text": "what is python"},
+                            "candidates": [
+                                {
+                                    "docid": "1737459",
+                                    "score": 10.58,
+                                    "rank": 1,
+                                    "doc": "Python is widely used for web development.",
+                                }
+                            ],
+                        }
+                    ),
+                    "--prompt-mode",
+                    "chatqa",
+                    "--output",
+                    "json",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(stdout.getvalue())
+        self.assertEqual(output["status"], "success")
+
     def test_generate_direct_via_stdin(self):
         stdout = StringIO()
         with (
@@ -1195,7 +1255,19 @@ class TestRagnarokCLI(unittest.TestCase):
             health_response = client.get("/healthz")
             generate_response = client.post(
                 "/v1/generate",
-                json={"query": "q", "candidates": ["passage"]},
+                json={
+                    "api": "v1",
+                    "index": "msmarco-v1-passage",
+                    "query": {"text": "q"},
+                    "candidates": [
+                        {
+                            "docid": "d0",
+                            "score": 1.0,
+                            "rank": 1,
+                            "doc": "passage",
+                        }
+                    ],
+                },
             )
 
         self.assertEqual(health_response.status_code, 200)

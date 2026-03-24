@@ -6,6 +6,7 @@ Initial release-note scaffold for the packaged CLI era.
 
 - Packaged `ragnarok` CLI with generation, validation, conversion, prompt inspection, doctor, and view commands.
 - FastAPI `ragnarok serve` command exposing `GET /healthz` and `POST /v1/generate` on port `8084` by default.
+- Direct `generate` input now also accepts Anserini REST candidates where `candidates[].doc` is a plain string, so Anserini search results can be piped directly into `POST /v1/generate` without a `jq` reshape step.
 - Offline-first contributor workflow built around `uv`.
 - Track validators and format-conversion utilities for TREC RAG workflows.
 

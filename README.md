@@ -134,6 +134,12 @@ ragnarok serve \
 curl -X POST http://127.0.0.1:8084/v1/generate \
   -H 'content-type: application/json' \
   -d '{"query":"q","candidates":["p"]}'
+
+curl -s "http://127.0.0.1:8081/v1/msmarco-v1-passage/search?query=what%20is%20python%20commonly%20used%20for" \
+  | curl -s -X POST http://127.0.0.1:8084/v1/generate \
+      -H 'content-type: application/json' \
+      --data-binary @- \
+  | jq
 ```
 
 For TREC RAG 2025 output validation, `ragnarok validate rag25-output ...` is
