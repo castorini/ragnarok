@@ -41,7 +41,8 @@ uv sync --group dev
 ```
 
 If you prefer not to activate the virtual environment, use `uv run`, for example
-`uv run ragnarok --help` or `uv run python examples/rag_demo.py --help`.
+`uv run ragnarok --help`, `uv run pre-commit run --all-files`, or
+`uv run python examples/rag_demo.py --help`.
 
 Install optional stacks only when you need them:
 

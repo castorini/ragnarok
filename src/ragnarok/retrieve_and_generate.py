@@ -89,7 +89,6 @@ def retrieve_and_generate(
     """
 
     # Construct Generation Agent
-    model_full_path = ""
     lowered_generator_path = generator_path.lower()
     if "command-r" in generator_path:
         try:
@@ -127,7 +126,6 @@ def retrieve_and_generate(
             from ragnarok.generate.gpt import SafeOpenai
         except ImportError as exc:
             raise _missing_extra("cloud", "openai,tiktoken") from exc
-        openai_keys = get_openai_api_key()
         agent = SafeOpenai(
             model=generator_path,
             context_size=context_size,

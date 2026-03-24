@@ -54,9 +54,9 @@ def get_azure_openai_args() -> Dict[str, str]:
     }
 
     # Sanity check
-    assert all(
-        list(azure_args.values())
-    ), "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
+    assert all(list(azure_args.values())), (
+        "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
+    )
     return azure_args
 
 

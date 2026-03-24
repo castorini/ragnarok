@@ -140,9 +140,10 @@ def convert_jsonl_file(
     error_count = 0
 
     try:
-        with open(input_file, "r", encoding="utf-8") as infile, open(
-            output_file, "w", encoding="utf-8"
-        ) as outfile:
+        with (
+            open(input_file, "r", encoding="utf-8") as infile,
+            open(output_file, "w", encoding="utf-8") as outfile,
+        ):
             for line_num, line in enumerate(infile, 1):
                 line = line.strip()
                 if not line:
@@ -184,7 +185,7 @@ def convert_jsonl_file(
         print(f"Error processing files: {e}")
         sys.exit(1)
 
-    print(f"Conversion completed!")
+    print("Conversion completed!")
     print(f"Successfully converted: {converted_count} records")
     if error_count > 0:
         print(f"Errors encountered: {error_count} records")
@@ -239,7 +240,7 @@ def main():
 
     args = parse_arguments()
 
-    print(f"Converting JSONL format...")
+    print("Converting JSONL format...")
     print(f"Input file: {args.input_file}")
     print(f"Output file: {args.output_file}")
     if args.prompt_file:

@@ -282,9 +282,7 @@ class SafeOpenai(LLM):
                 elif completion_mode == self.CompletionMode.TEXT:
                     completion = openai.Completion.create(*args, **kwargs)
                 else:
-                    raise ValueError(
-                        "Unsupported completion mode: %V" % completion_mode
-                    )
+                    raise ValueError(f"Unsupported completion mode: {completion_mode}")
                 break
             except Exception as e:
                 print(str(e))
@@ -350,9 +348,9 @@ class SafeOpenai(LLM):
         if reasoning is None:
             reasoning = tagged_reasoning
         try:
-            encoding = tiktoken.get_encoding(self._model)
-        except:
-            encoding = tiktoken.get_encoding("cl100k_base")
+            tiktoken.get_encoding(self._model)
+        except Exception:
+            tiktoken.get_encoding("cl100k_base")
         if logging:
             print(f"Response: {cleaned_response}")
         answers, rag_exec_response = self._post_processor(cleaned_response)
@@ -387,9 +385,7 @@ class SafeOpenai(LLM):
                 elif completion_mode == self.CompletionMode.TEXT:
                     completion = await client.completions.create(*args, **kwargs)
                 else:
-                    raise ValueError(
-                        "Unsupported completion mode: %V" % completion_mode
-                    )
+                    raise ValueError(f"Unsupported completion mode: {completion_mode}")
                 break
             except Exception as e:
                 print(str(e))
@@ -441,9 +437,9 @@ class SafeOpenai(LLM):
         if reasoning is None:
             reasoning = tagged_reasoning
         try:
-            encoding = tiktoken.get_encoding(self._model)
-        except:
-            encoding = tiktoken.get_encoding("cl100k_base")
+            tiktoken.get_encoding(self._model)
+        except Exception:
+            tiktoken.get_encoding("cl100k_base")
         if logging:
             print(f"Response: {cleaned_response}")
         answers, rag_exec_response = self._post_processor(cleaned_response)
@@ -517,7 +513,7 @@ class SafeOpenai(LLM):
 
         try:
             encoding = tiktoken.get_encoding(self._model)
-        except:
+        except Exception:
             encoding = tiktoken.get_encoding("cl100k_base")
 
         num_tokens = 0

@@ -53,7 +53,6 @@ class Errlog:
 
 def check_rag_gen_run(args, log):
     MARCODOC = re.compile(r"^msmarco_v2\.1_doc_\d+_\d+#\d+_\d+$")
-    TOPICNO = re.compile(r"^2024-\d+$")
 
     def fix_rag_answer(obj, current_length, count):
         log.warn(count, f"Attempting to fix RAG answer of length {current_length}")
@@ -103,23 +102,23 @@ def check_rag_gen_run(args, log):
                 continue
 
             # Check that all fields are present
-            if not "run_id" in obj:
+            if "run_id" not in obj:
                 log.error(count, 'Entry is missing "run_id" field.')
                 continue
-            if not "topic_id" in obj:
+            if "topic_id" not in obj:
                 log.error(count, 'Entry is missing "topic_id" field.')
                 continue
 
-            if not "topic" in obj:
+            if "topic" not in obj:
                 log.error(count, 'Entry is missing "topic" field.')
                 continue
-            if not "references" in obj:
+            if "references" not in obj:
                 log.error(count, 'Entry is missing "references" field.')
                 continue
-            if not "response_length" in obj:
+            if "response_length" not in obj:
                 log.error(count, 'Entry is missing "response_length" field.')
                 continue
-            if not "answer" in obj:
+            if "answer" not in obj:
                 log.error(count, 'Entry is missing "answer" field.')
                 continue
 
@@ -162,7 +161,7 @@ def check_rag_gen_run(args, log):
 
             # Check response length
             if obj["response_length"] > 400:
-                log.warn(count, f"Reported response_length is too long")
+                log.warn(count, "Reported response_length is too long")
 
             # Check answer sentences
             length = 0
@@ -204,7 +203,7 @@ def check_rag_gen_run(args, log):
             if length != obj["response_length"]:
                 log.warn(
                     count,
-                    f'Reported RAG answer ({obj["response_length"]}) is not equal to actual response length ({length}), maybe you did not NFCK normalize the text or strip characters?',
+                    f"Reported RAG answer ({obj['response_length']}) is not equal to actual response length ({length}), maybe you did not NFCK normalize the text or strip characters?",
                 )
                 obj["response_length"] = length
             topics[topic_id] += 1

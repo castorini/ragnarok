@@ -9,7 +9,7 @@ try:
     from vllm import LLM as VLLM
     from vllm import SamplingParams
 except Exception:
-    LLM = None
+    VLLM = None
     SamplingParams = None
 from transformers.generation import GenerationConfig
 
@@ -157,7 +157,10 @@ class OSLLM(LLM):
             answer, rag_exec_info = answer_rag_exec_info_list[0]
             return answer, rag_exec_info
         except Exception:
-            inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
+            tokenized_inputs = self._tokenizer(prompt, return_tensors="pt")
+            inputs = {
+                k: torch.tensor(v).to(self._device) for k, v in tokenized_inputs.items()
+            }
             gen_cfg = GenerationConfig.from_model_config(self._llm.config)
             gen_cfg.max_new_tokens = self.num_output_tokens()
             # gen_cfg.temperature = 0

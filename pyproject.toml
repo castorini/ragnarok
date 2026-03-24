@@ -68,9 +68,13 @@ all = [
 
 [dependency-groups]
 dev = [
+    "fastapi>=0.115.0",
+    "mypy>=1.11.2",
     "pre-commit>=3.8.0",
     "pytest>=8.4.2",
+    "ruff>=0.12.0",
     "shtab>=1.7.0",
+    "uvicorn>=0.30.0",
 ]
 
 [project.urls]
@@ -95,6 +99,16 @@ push = false
     "{version}",
 ]
 
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/ragnarok/demo/*.py" = ["E402"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = [
@@ -115,6 +129,72 @@ namespaces = false
 
 [tool.setuptools]
 provides = ["ragnarok"]
+
+[tool.mypy]
+files = ["src", "test"]
+explicit_package_bases = true
+mypy_path = "src"
+check_untyped_defs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+no_implicit_optional = false
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = false
+cache_dir = ".mypy_cache"
+incremental = true
+
+[[tool.mypy.overrides]]
+module = [
+    "cohere",
+    "dacite",
+    "dotenv",
+    "dotenv.*",
+    "fastapi",
+    "fastapi.*",
+    "fastchat",
+    "fastchat.*",
+    "ftfy",
+    "gradio",
+    "gradio.*",
+    "openai",
+    "openai.*",
+    "pandas",
+    "pandas.*",
+    "pyserini",
+    "pyserini.*",
+    "rank_llm",
+    "rank_llm.*",
+    "requests",
+    "spacy",
+    "spacy.*",
+    "stanza",
+    "stanza.*",
+    "tiktoken",
+    "torch",
+    "torch.*",
+    "transformers",
+    "transformers.*",
+    "tqdm",
+    "yaml",
+    "uvicorn",
+    "vllm",
+    "vllm.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "ragnarok.data",
+    "ragnarok.demo.*",
+    "ragnarok.generate.*",
+    "ragnarok.retrieve_and_generate",
+    "ragnarok.retrieve_and_rerank.*",
+    "test.analysis.test_reasoning_support",
+    "test.test_live_openai_smoke",
+]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["test"]

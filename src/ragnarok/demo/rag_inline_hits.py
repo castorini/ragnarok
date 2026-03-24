@@ -91,5 +91,5 @@ for result in rag_gpt4_results:
 
 # write rerank results
 writer = DataWriter(rag_cohere_results)
-Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
-writer.write_in_json_format(f"demo_outputs/rag_results.json")
+Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
+writer.write_in_json_format("demo_outputs/rag_results.json")

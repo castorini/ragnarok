@@ -108,10 +108,10 @@ def read_requests_from_file(file_path: str) -> List[Request]:
     if extension == "jsonl":
         requests = []
         with open(file_path, "r") as f:
-            for l in f:
-                if not l.strip():
+            for line in f:
+                if not line.strip():
                     continue
-                requests.append(from_dict(data_class=Request, data=json.loads(l)))
+                requests.append(from_dict(data_class=Request, data=json.loads(line)))
         return requests
     elif extension == "json":
         with open(file_path, "r") as f:
@@ -129,10 +129,10 @@ def read_results_from_file(file_path: str) -> List[Result]:
     if extension == "jsonl":
         results = []
         with open(file_path, "r") as f:
-            for l in f:
-                if not l.strip():
+            for line in f:
+                if not line.strip():
                     continue
-                result_dict = json.loads(l)
+                result_dict = json.loads(line)
                 result = Result(
                     query=Query(text=result_dict["topic"], qid=result_dict["topic_id"]),
                     references=result_dict["references"],

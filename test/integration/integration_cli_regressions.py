@@ -79,7 +79,9 @@ class RagnarokCLIIntegrationRegressions(unittest.TestCase):
             self.assertEqual(len(converted_records), 1)
             self.assertEqual(converted_records[0]["metadata"]["run_id"], "demo-run")
             self.assertIn("narrative_id", converted_records[0]["metadata"])
-            self.assertIn("Successfully converted: 1 records", convert_stdout.getvalue())
+            self.assertIn(
+                "Successfully converted: 1 records", convert_stdout.getvalue()
+            )
 
             validate_stdout = StringIO()
             with redirect_stdout(validate_stdout):

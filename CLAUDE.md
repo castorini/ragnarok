@@ -41,13 +41,13 @@
 ## Formatting and Linting
 - Pre-commit is the canonical formatter/lint entrypoint.
 - Install hooks once per clone: `pre-commit install`.
-- Run all checks before PR: `pre-commit run --all-files`.
+- Run all checks before PR: `uv run pre-commit run --all-files`.
 - `pytest` is the canonical test runner, even though much of the existing suite
   still uses `unittest.TestCase` style.
 - Configured tools in `.pre-commit-config.yaml`:
-  - `black` (Python 3.11)
-  - `isort --profile=black` (Python 3.11)
-  - `flake8` (currently configured to ignore `E501` and select `F401`).
+  - `ruff-check --fix`
+  - `ruff-format`
+  - `mypy` (repo-local config in `pyproject.toml`, checking `src` and `test`)
 
 ## Testing
 - Test tiers:

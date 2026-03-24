@@ -110,16 +110,6 @@ class LLM(ABC):
         """
         pass
 
-    @abstractmethod
-    def num_output_tokens(self) -> int:
-        """
-        Abstract method to estimate the number of tokens in the model's output, constrained by max tokens for the target language model.
-
-        Returns:
-            int: The estimated number of output tokens.
-        """
-        pass
-
     def answer(
         self,
         request: Request,

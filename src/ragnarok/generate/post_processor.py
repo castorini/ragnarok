@@ -205,7 +205,7 @@ class GPTPostProcessor:
                         if citation in citation_range:
                             citations.append(citation)
                             sentence = sentence.replace(match, "")
-                except:
+                except Exception:
                     print(f"Not a valid citation: {match}")
 
         sentence = re.sub(" +", " ", sentence)

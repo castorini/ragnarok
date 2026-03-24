@@ -140,7 +140,7 @@ class Retriever:
                     print()
                     if not candidates_file.is_file():
                         raise ValueError(f"File not found: {candidates_file}")
-                except ValueError as e:
+                except ValueError:
                     print(f"Failed to load JSON file: {candidates_file}")
             if candidates_file.is_file():
                 if cache_input_format == CacheInputFormat.JSON:
@@ -148,7 +148,7 @@ class Retriever:
                         loaded_results = json.load(f)
                 elif cache_input_format == CacheInputFormat.JSONL:
                     with open(candidates_file, "r") as f:
-                        loaded_results = [json.loads(l) for l in f]
+                        loaded_results = [json.loads(line) for line in f]
                 retrieved_results = [
                     from_dict(data_class=Request, data=r) for r in loaded_results
                 ]
