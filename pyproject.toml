@@ -134,14 +134,14 @@ provides = ["ragnarok"]
 files = ["src", "test"]
 explicit_package_bases = true
 mypy_path = "src"
-check_untyped_defs = false
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-no_implicit_optional = false
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
 strict_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
-warn_return_any = false
+warn_return_any = true
 cache_dir = ".mypy_cache"
 incremental = true
 
@@ -186,11 +186,21 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
+    "ragnarok.api.blocks.*",
+    "ragnarok.api.elo",
+    "ragnarok.api.populate_sql",
     "ragnarok.data",
     "ragnarok.demo.*",
     "ragnarok.generate.*",
     "ragnarok.retrieve_and_generate",
     "ragnarok.retrieve_and_rerank.*",
+    "ragnarok.scripts.check_trec_rag24_gen",
+    "ragnarok.scripts.convert_to_trec25_format",
+    "ragnarok.scripts.query_cache",
+    "ragnarok.scripts.validate_trec_rag25_gen",
+    "test.evaluation.test_check_trec_rag24_gen",
+    "test.retrieve.test_PyseriniRetriever",
+    "test.test_cli_main",
     "test.analysis.test_reasoning_support",
     "test.test_live_openai_smoke",
 ]
