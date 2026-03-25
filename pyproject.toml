@@ -103,7 +103,7 @@ push = false
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F"]
+select = ["E", "F", "I", "UP", "B"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]

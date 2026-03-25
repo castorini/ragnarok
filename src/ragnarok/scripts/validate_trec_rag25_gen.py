@@ -14,7 +14,7 @@ CITATION_LIMIT = 100
 
 def load_topic_ids(path):
     topic_ids = {}
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             try:
                 topic = json.loads(line)

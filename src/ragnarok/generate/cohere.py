@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any
 
 import cohere
 from ftfy import fix_text
@@ -67,9 +67,9 @@ class Cohere(LLM):
 
     def run_llm(
         self,
-        prompt: Union[str, List[Dict[str, Any]]],
+        prompt: str | list[dict[str, Any]],
         logging: bool = False,
-    ) -> Tuple[Any, RAGExecInfo]:
+    ) -> tuple[Any, RAGExecInfo]:
         query, top_k_docs = prompt[0]["query"], prompt[0]["context"]
         if logging:
             print(f"Query: {query}")
@@ -113,7 +113,7 @@ class Cohere(LLM):
 
     def create_prompt(
         self, request: Request, topk: int
-    ) -> Tuple[List[Dict[str, Any]], int]:
+    ) -> tuple[list[dict[str, Any]], int]:
         query = request.query.text
         max_length = (self._context_size - 200) // topk
         self._prompt_mode = PromptMode.COHERE
@@ -137,7 +137,7 @@ class Cohere(LLM):
                 )
         return messages, self.get_num_tokens(messages)
 
-    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+    def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""
         # TODO(ronak): Add support
         return -1
@@ -147,7 +147,7 @@ class Cohere(LLM):
         return -1
 
     def convert_doc_to_prompt_content(
-        self, doc: Dict[str, Any], max_length: int
+        self, doc: dict[str, Any], max_length: int
     ) -> str:
         if "text" in doc:
             content = doc["text"]

@@ -5,12 +5,12 @@ Template loader for YAML-based prompts
 from dataclasses import dataclass
 from pathlib import Path
 from string import Formatter
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 
 # template cache to avoid reloading files
-_template_cache: Dict[str, Dict[str, Any]] = {}
+_template_cache: dict[str, dict[str, Any]] = {}
 
 # prompt modes that have YAML templates (excludes UNSPECIFIED and COHERE)
 _TEMPLATE_MODES = (
@@ -48,7 +48,7 @@ class PromptTemplate:
             if field_name is not None
         )
 
-    def metadata(self) -> Dict[str, Any]:
+    def metadata(self) -> dict[str, Any]:
         return {
             "method": self.method,
             "system_message": self.system_message,
@@ -61,7 +61,7 @@ class PromptTemplate:
         }
 
 
-def _load_raw(template_name: str) -> Dict[str, Any]:
+def _load_raw(template_name: str) -> dict[str, Any]:
     """
     Load a YAML template from prompt_templates directory (cached)
     """
@@ -74,7 +74,7 @@ def _load_raw(template_name: str) -> Dict[str, Any]:
                 f"Template {template_name} not found at {template_path}"
             )
 
-        with open(template_path, "r", encoding="utf-8") as f:
+        with open(template_path, encoding="utf-8") as f:
             _template_cache[template_name] = yaml.safe_load(f)
 
     return _template_cache[template_name]

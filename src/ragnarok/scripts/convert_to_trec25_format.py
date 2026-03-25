@@ -6,10 +6,10 @@ Script to convert JSONL format from old structure to new structure.
 import argparse
 import json
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 
-def load_prompts_from_file(prompt_file: str) -> Dict[str, str]:
+def load_prompts_from_file(prompt_file: str) -> dict[str, str]:
     """
     Load prompts from a separate JSONL file and create a mapping from qid to prompt.
 
@@ -22,7 +22,7 @@ def load_prompts_from_file(prompt_file: str) -> Dict[str, str]:
     prompts = {}
 
     try:
-        with open(prompt_file, "r", encoding="utf-8") as f:
+        with open(prompt_file, encoding="utf-8") as f:
             for line_num, line in enumerate(f, 1):
                 line = line.strip()
                 if not line:
@@ -59,8 +59,8 @@ def load_prompts_from_file(prompt_file: str) -> Dict[str, str]:
 
 
 def convert_record(
-    old_record: Dict[str, Any], prompts: Optional[Dict[str, str]] = None
-) -> Dict[str, Any]:
+    old_record: dict[str, Any], prompts: dict[str, str] | None = None
+) -> dict[str, Any]:
     """
     Convert a single record from old format to new format.
 
@@ -118,7 +118,7 @@ def convert_record(
 def convert_jsonl_file(
     input_file: str,
     output_file: str,
-    prompt_file: Optional[str] = None,
+    prompt_file: str | None = None,
     verbose: bool = False,
 ):
     """
@@ -141,7 +141,7 @@ def convert_jsonl_file(
 
     try:
         with (
-            open(input_file, "r", encoding="utf-8") as infile,
+            open(input_file, encoding="utf-8") as infile,
             open(output_file, "w", encoding="utf-8") as outfile,
         ):
             for line_num, line in enumerate(infile, 1):

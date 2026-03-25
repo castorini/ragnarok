@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from ragnarok.data import Query, Request
 
@@ -25,13 +25,10 @@ def _missing_extra(extra_name: str, package_hint: str) -> ImportError:
 
 def retrieve_and_generate(
     generator_path: str,
-    dataset: Union[str, List[str], List[Dict[str, Any]]],
+    dataset: str | list[str] | list[dict[str, Any]],
     retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
-    retrieval_method: List[RetrievalMethod] = [
-        RetrievalMethod.BM25,
-        RetrievalMethod.RANK_ZEPHYR_RHO,
-    ],
-    k: List[int] = [100, 20],
+    retrieval_method: list[RetrievalMethod] | None = None,
+    k: list[int] | None = None,
     context_size: int = 8192,
     max_output_tokens: int = 1500,
     device: str = "cuda",
@@ -87,6 +84,12 @@ def retrieve_and_generate(
     Returns:
         dict: The generation results in JSON format specified by the TREC 2024 RAG Track.
     """
+    retrieval_method = (
+        [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR_RHO]
+        if retrieval_method is None
+        else retrieval_method
+    )
+    k = [100, 20] if k is None else k
 
     # Construct Generation Agent
     lowered_generator_path = generator_path.lower()

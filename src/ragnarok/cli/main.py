@@ -5,8 +5,9 @@ import asyncio
 import importlib.metadata
 import json
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, NoReturn, Sequence, cast
+from typing import Any, NoReturn, cast
 
 from ragnarok.api.runtime import ServerConfig, execute_direct_generate
 

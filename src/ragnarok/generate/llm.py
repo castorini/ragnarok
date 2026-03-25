@@ -3,7 +3,7 @@ import random
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from ftfy import fix_text
 
@@ -54,8 +54,8 @@ class LLM(ABC):
 
     @abstractmethod
     def run_llm(
-        self, prompt: Union[str, List[Dict[str, Any]]], logging: bool = False
-    ) -> Tuple[Any, int]:
+        self, prompt: str | list[dict[str, Any]], logging: bool = False
+    ) -> tuple[Any, int]:
         """
         Abstract method to run the target language model with a passed in prompt.
 
@@ -71,7 +71,7 @@ class LLM(ABC):
     @abstractmethod
     def create_prompt(
         self, request: Request, topk: int
-    ) -> Tuple[Union[str, List[Dict[str, str]]], int]:
+    ) -> tuple[str | list[dict[str, str]], int]:
         """
         Abstract method to create a prompt based on the request and given topk.
 
@@ -85,7 +85,7 @@ class LLM(ABC):
         pass
 
     @abstractmethod
-    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+    def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """
         Abstract method to calculate the number of tokens contained in the given prompt.
 
@@ -138,12 +138,12 @@ class LLM(ABC):
 
     def answer_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         topk: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         vllm: bool = False,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Answer a list of requests using the target language model.
 
@@ -175,7 +175,7 @@ class LLM(ABC):
                 rag_exec_info for _, rag_exec_info in answer_rag_exec_info_list
             ]
             for request, answer, rag_exec_info in zip(
-                requests, answers, rag_exec_summary
+                requests, answers, rag_exec_summary, strict=True
             ):
                 result = Result(
                     query=request.query,
@@ -204,8 +204,8 @@ class LLM(ABC):
         return results
 
     async def async_run_llm(
-        self, prompt: Union[str, List[Dict[str, Any]]], logging: bool = False
-    ) -> Tuple[Any, int]:
+        self, prompt: str | list[dict[str, Any]], logging: bool = False
+    ) -> tuple[Any, int]:
         return await asyncio.to_thread(self.run_llm, prompt, logging)
 
     async def async_answer(
@@ -226,13 +226,13 @@ class LLM(ABC):
 
     async def async_answer_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         topk: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         vllm: bool = False,
         max_concurrency: int = 8,
-    ) -> List[Result]:
+    ) -> list[Result]:
         if vllm:
             return await asyncio.to_thread(
                 self.answer_batch,
@@ -272,7 +272,7 @@ class LLM(ABC):
     def num_output_tokens(self) -> int:
         return self._output_token_estimate
 
-    def _extract_reasoning_from_message(self, message: Any) -> Optional[str]:
+    def _extract_reasoning_from_message(self, message: Any) -> str | None:
         if not self._store_reasoning or message is None:
             return None
         if hasattr(message, "reasoning") and message.reasoning:
@@ -294,21 +294,21 @@ class LLM(ABC):
 
     def _extract_reasoning_from_responses_output(
         self, response: Any, prefer_direct_reasoning: bool = False
-    ) -> Optional[str]:
+    ) -> str | None:
         if not self._store_reasoning or response is None:
             return None
-        reasoning_parts: List[str] = []
+        reasoning_parts: list[str] = []
         for item in getattr(response, "output", []):
             item_type = getattr(item, "type", None)
             if item_type is None and isinstance(item, dict):
                 item_type = item.get("type")
             if item_type != "reasoning":
                 continue
-            direct_parts: List[str] = []
+            direct_parts: list[str] = []
             summaries = getattr(item, "summary", None)
             if summaries is None and isinstance(item, dict):
                 summaries = item.get("summary", [])
-            summary_parts: List[str] = []
+            summary_parts: list[str] = []
             for summary in summaries or []:
                 if isinstance(summary, str):
                     summary_parts.append(summary.strip())
@@ -358,7 +358,7 @@ class LLM(ABC):
         output_text = getattr(response, "output_text", None)
         if output_text:
             return str(output_text)
-        text_parts: List[str] = []
+        text_parts: list[str] = []
         for item in getattr(response, "output", []):
             item_type = getattr(item, "type", None)
             if item_type is None and isinstance(item, dict):
@@ -381,7 +381,7 @@ class LLM(ABC):
                     text_parts.append(str(content_text))
         return "\n".join(text_parts)
 
-    def _extract_reasoning_from_text(self, response: str) -> Tuple[Optional[str], str]:
+    def _extract_reasoning_from_text(self, response: str) -> tuple[str | None, str]:
         if response is None:
             return None, ""
         reasoning_blocks = [
@@ -405,7 +405,7 @@ class LLM(ABC):
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
     def convert_doc_to_prompt_content(
-        self, doc: Dict[str, Any], max_length: int
+        self, doc: dict[str, Any], max_length: int
     ) -> str:
         if "text" in doc:
             content = doc["text"]

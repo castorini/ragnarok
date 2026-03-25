@@ -1,6 +1,5 @@
 import sqlite3
 from enum import Enum
-from typing import List, Tuple
 
 import gradio as gr
 import pandas as pd
@@ -122,7 +121,7 @@ def get_score(name: str, leaderboard: str, elo_type: str):
         conn.close()
 
 
-def get_score_pair(names: Tuple[str, str], leaderboard: str, elo_type: str):
+def get_score_pair(names: tuple[str, str], leaderboard: str, elo_type: str):
     return (
         get_score(names[0], leaderboard, elo_type),
         get_score(names[1], leaderboard, elo_type),
@@ -150,7 +149,7 @@ def insert_score(name: str, new_elo: int, leaderboard: str, elo_type: str):
 
 
 def insert_score_pair(
-    names: Tuple[str, str], new_elos: Tuple[int, int], leaderboard: str, elo_type: str
+    names: tuple[str, str], new_elos: tuple[int, int], leaderboard: str, elo_type: str
 ):
     return (
         insert_score(names[0], new_elos[0], leaderboard, elo_type),
@@ -178,7 +177,7 @@ def handle_battle(result: BattleResult, info: BattleInfo):
     ):
         return ()  # don't change elo since pipelines are the same
 
-    valid_leaderboards: List[Leaderboards] = get_leaderboards(info)
+    valid_leaderboards: list[Leaderboards] = get_leaderboards(info)
     if Leaderboards.retrieve in valid_leaderboards and result.is_answer():
         return ()  # not allowed to evaluate answer elo for retriever leaderboard
     elo_type = EloType.answer if result.is_answer() else EloType.evidence

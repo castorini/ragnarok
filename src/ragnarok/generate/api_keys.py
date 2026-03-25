@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -32,7 +32,7 @@ def uses_openrouter(model_name: str, use_openrouter: bool = False) -> bool:
 
 def get_openai_compatible_args(
     model_name: str, use_azure_openai: bool = False, use_openrouter: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if use_azure_openai:
         args = get_azure_openai_args()
         args["keys"] = get_public_openai_api_key()
@@ -46,7 +46,7 @@ def get_openai_compatible_args(
     return {"keys": get_public_openai_api_key()}
 
 
-def get_azure_openai_args() -> Dict[str, str]:
+def get_azure_openai_args() -> dict[str, str]:
     azure_args = {
         "api_type": "azure",
         "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),

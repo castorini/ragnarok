@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, List
+from typing import Any
 
 from ftfy import fix_text
 
@@ -105,7 +105,7 @@ class RagnarokTemplates:
             for name in ("command-r", "chatqa", "llama", "mistral", "qwen")
         )
 
-    def render(self, query: str, context: List[str], model: str) -> RenderedPrompt:
+    def render(self, query: str, context: list[str], model: str) -> RenderedPrompt:
         sep = self.sep
         if not (self._uses_chat_message_format(model) or "chatqa" in model.lower()):
             sep = "\n"
@@ -231,7 +231,7 @@ class RagnarokTemplates:
             instruction=instruction,
         )
 
-    def __call__(self, query: str, context: List[str], model: str) -> Any:
+    def __call__(self, query: str, context: list[str], model: str) -> Any:
         return self.render(query, context, model).runtime_prompt()
 
     def get_instruction(self) -> str:

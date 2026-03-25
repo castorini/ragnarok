@@ -1,7 +1,7 @@
 import asyncio
 import time
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any
 
 import openai
 import tiktoken
@@ -124,7 +124,7 @@ class SafeOpenai(LLM):
             openai.api_base = api_base
             self.use_azure_ai = True
 
-    def _build_reasoning_params(self) -> Dict[str, Any]:
+    def _build_reasoning_params(self) -> dict[str, Any]:
         if self._reasoning_effort is None:
             return {}
         if self._api_base and "openrouter.ai" in self._api_base:
@@ -150,8 +150,8 @@ class SafeOpenai(LLM):
         return self._reasoning_effort is not None and self._uses_reasoning_style_api()
 
     def _normalize_messages(
-        self, messages: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
+        self, messages: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
         if "o1" in self._model or "o3" in self._model or "o4" in self._model:
             normalized_messages = [message.copy() for message in messages[1:]]
             normalized_messages[0]["content"] = (
@@ -160,7 +160,7 @@ class SafeOpenai(LLM):
             return normalized_messages
         return messages
 
-    def _build_responses_params(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
+    def _build_responses_params(self, messages: list[dict[str, str]]) -> dict[str, Any]:
         return {
             "model": self._model,
             "input": [
@@ -202,7 +202,7 @@ class SafeOpenai(LLM):
             from openai import OpenAI
 
             client_cls = OpenAI
-        client_kwargs: Dict[str, Any] = {"api_key": api_key}
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
         if self._api_base:
             client_kwargs["base_url"] = self._api_base
         return client_cls(**client_kwargs)
@@ -238,7 +238,7 @@ class SafeOpenai(LLM):
             from openai import AsyncOpenAI
 
             client_cls = AsyncOpenAI
-        client_kwargs: Dict[str, Any] = {"api_key": api_key}
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
         if self._api_base:
             client_kwargs["base_url"] = self._api_base
         return client_cls(**client_kwargs)
@@ -315,13 +315,13 @@ class SafeOpenai(LLM):
 
     def run_llm(
         self,
-        prompt: Union[str, List[Dict[str, str]]],
+        prompt: str | list[dict[str, str]],
         logging: bool = False,
-    ) -> Tuple[str, RAGExecInfo]:
+    ) -> tuple[str, RAGExecInfo]:
         if logging:
             print(f"Prompt: {prompt}")
         normalized_prompt = self._normalize_messages(prompt)
-        completion_params: Dict[str, Any] = {
+        completion_params: dict[str, Any] = {
             "messages": normalized_prompt,
             "temperature": 0.1,
             "completion_mode": SafeOpenai.CompletionMode.CHAT,
@@ -401,13 +401,13 @@ class SafeOpenai(LLM):
 
     async def async_run_llm(
         self,
-        prompt: Union[str, List[Dict[str, str]]],
+        prompt: str | list[dict[str, str]],
         logging: bool = False,
-    ) -> Tuple[str, RAGExecInfo]:
+    ) -> tuple[str, RAGExecInfo]:
         if logging:
             print(f"Prompt: {prompt}")
         normalized_prompt = self._normalize_messages(prompt)
-        completion_params: Dict[str, Any] = {
+        completion_params: dict[str, Any] = {
             "messages": normalized_prompt,
             "temperature": 0.1,
             "completion_mode": SafeOpenai.CompletionMode.CHAT,
@@ -459,7 +459,7 @@ class SafeOpenai(LLM):
 
     def create_prompt(
         self, request: Request, topk: int
-    ) -> Tuple[List[Dict[str, str]], int]:
+    ) -> tuple[list[dict[str, str]], int]:
         query = request.query.text
         max_length = (self._context_size - 200) // topk
         while True:
@@ -498,7 +498,7 @@ class SafeOpenai(LLM):
                 )
         return messages, self.get_num_tokens(messages)
 
-    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+    def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""
         if self._model in ["gpt-3.5-turbo-0301", "gpt-3.5-turbo"]:
             tokens_per_message = (

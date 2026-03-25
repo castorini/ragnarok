@@ -1,4 +1,3 @@
-from typing import List
 from urllib import parse
 
 import requests
@@ -11,10 +10,7 @@ class Restriever:
     def __init__(
         self,
         retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
-        retrieval_method: List[RetrievalMethod] = [
-            RetrievalMethod.BM25,
-            RetrievalMethod.RANK_ZEPHYR,
-        ],
+        retrieval_method: list[RetrievalMethod] | None = None,
     ) -> None:
         """
         Creates a Restriever instance with a specified retrieval method and mode.
@@ -26,6 +22,11 @@ class Restriever:
         Raises:
             ValueError: If retrieval mode or retrieval method is invalid or missing.
         """
+        retrieval_method = (
+            [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR]
+            if retrieval_method is None
+            else retrieval_method
+        )
         self._retrieval_mode = retrieval_mode
         self._retrieval_method = retrieval_method
 
@@ -45,12 +46,9 @@ class Restriever:
         dataset_name: str,
         host_reranker: str,
         host_retriever: str,
-        retrieval_method: List[RetrievalMethod] = [
-            RetrievalMethod.BM25,
-            RetrievalMethod.RANK_ZEPHYR,
-        ],
-        k: List[int] = [100, 100],
-        request: Request = None,
+        retrieval_method: list[RetrievalMethod] | None = None,
+        k: list[int] | None = None,
+        request: Request | None = None,
         num_passes: int = 1,
     ):
         """
@@ -67,6 +65,12 @@ class Restriever:
         Raises:
             ValueError: If dataset name or retrieval method is invalid or missing.
         """
+        retrieval_method = (
+            [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR]
+            if retrieval_method is None
+            else retrieval_method
+        )
+        k = [100, 100] if k is None else k
         if not dataset_name:
             raise ValueError("Please provide name of the dataset.")
         if not isinstance(dataset_name, str):
@@ -93,7 +97,7 @@ class Restriever:
         request: Request,
         host_reranker: str = "8082",
         host_retriever: str = "8081",
-        k: List[int] = [20, 10],
+        k: list[int] | None = None,
         num_passes: int = 1,
     ) -> Request:
         """
@@ -112,7 +116,7 @@ class Restriever:
         Raises:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
-
+        k = [20, 10] if k is None else k
         parsed_query = parse.quote(request.query.text)
         (retrieval_method, rerank_method) = self._retrieval_method
 

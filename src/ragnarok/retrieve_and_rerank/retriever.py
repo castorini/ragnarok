@@ -1,7 +1,7 @@
 import json
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from dacite import from_dict
 
@@ -50,13 +50,12 @@ class Retriever:
     def __init__(
         self,
         retrieval_mode: RetrievalMode,
-        dataset: Union[str, List[str], List[Dict[str, Any]]],
-        retrieval_method: Union[
-            RetrievalMethod, List[RetrievalMethod]
-        ] = RetrievalMethod.UNSPECIFIED,
-        query: str = None,
-        index_path: str = None,
-        topics_path: str = None,
+        dataset: str | list[str] | list[dict[str, Any]],
+        retrieval_method: RetrievalMethod
+        | list[RetrievalMethod] = RetrievalMethod.UNSPECIFIED,
+        query: str | None = None,
+        index_path: str | None = None,
+        topics_path: str | None = None,
     ) -> None:
         self._retrieval_mode = retrieval_mode
         self._dataset = dataset
@@ -72,11 +71,10 @@ class Retriever:
     @staticmethod
     def from_dataset_with_prebuilt_index(
         dataset_name: str,
-        retrieval_method: Union[
-            RetrievalMethod, List[RetrievalMethod]
-        ] = RetrievalMethod.BM25,
+        retrieval_method: RetrievalMethod
+        | list[RetrievalMethod] = RetrievalMethod.BM25,
         cache_input_format: CacheInputFormat = CacheInputFormat.JSONL,
-        k: List[int] = [100, 20],
+        k: list[int] | None = None,
     ):
         """
         Creates a Retriever instance for a dataset with a prebuilt index.
@@ -92,6 +90,7 @@ class Retriever:
         Raises:
             ValueError: If dataset name or retrieval method is invalid or missing.
         """
+        k = [100, 20] if k is None else k
         if not dataset_name:
             raise ValueError("Please provide name of the dataset.")
         if not isinstance(dataset_name, str):
@@ -115,8 +114,8 @@ class Retriever:
         self,
         retrieve_results_dirname: str = "retrieve_results",
         cache_input_format: CacheInputFormat = CacheInputFormat.JSONL,
-        k: List[int] = [100, 20],
-    ) -> List[Request]:
+        k: list[int] | None = None,
+    ) -> list[Request]:
         """
         Executes the retrieval process based on the configuration provided with the Retriever instance.
 
@@ -126,6 +125,7 @@ class Retriever:
         Raises:
             ValueError: If the retrieval mode is invalid or the format is not as expected.
         """
+        k = [100, 20] if k is None else k
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method[-1].name}/retrieve_results_{self._dataset}_top{k[-1]}.{cache_input_format}"
@@ -144,10 +144,10 @@ class Retriever:
                     print(f"Failed to load JSON file: {candidates_file}")
             if candidates_file.is_file():
                 if cache_input_format == CacheInputFormat.JSON:
-                    with open(candidates_file, "r") as f:
+                    with open(candidates_file) as f:
                         loaded_results = json.load(f)
                 elif cache_input_format == CacheInputFormat.JSONL:
-                    with open(candidates_file, "r") as f:
+                    with open(candidates_file) as f:
                         loaded_results = [json.loads(line) for line in f]
                 retrieved_results = [
                     from_dict(data_class=Request, data=r) for r in loaded_results

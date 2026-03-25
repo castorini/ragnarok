@@ -1,6 +1,5 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple
 
 import torch
 from fastchat.model import load_model
@@ -105,8 +104,8 @@ class OSLLM(LLM):
             pass
 
     def run_llm_batched(
-        self, prompts: List[str], logging: bool = False, vllm: bool = True
-    ) -> List[Tuple[str, int]]:
+        self, prompts: list[str], logging: bool = False, vllm: bool = True
+    ) -> list[tuple[str, int]]:
         if logging:
             for i, prompt in enumerate(prompts):
                 print(f"Prompt {i}: {prompt}")
@@ -131,7 +130,9 @@ class OSLLM(LLM):
                 for response in responses:
                     print(f"Response: {response}")
             answer_rag_exec_info_list = []
-            for prompt, response, reasoning in zip(prompts, responses, reasonings):
+            for prompt, response, reasoning in zip(
+                prompts, responses, reasonings, strict=True
+            ):
                 answer, rag_exec_response = self._post_processor(response)
                 rag_exec_info = RAGExecInfo(
                     prompt=prompt,
@@ -149,7 +150,7 @@ class OSLLM(LLM):
 
     def run_llm(
         self, prompt: str, logging: bool = False, vllm: bool = True
-    ) -> Tuple[str, int]:
+    ) -> tuple[str, int]:
         if logging:
             print(f"Prompt: {prompt}")
         try:
@@ -178,7 +179,7 @@ class OSLLM(LLM):
             )
             return outputs, output_ids.size(0)
 
-    def create_prompt(self, request: Request, topk: int) -> Tuple[str, int]:
+    def create_prompt(self, request: Request, topk: int) -> tuple[str, int]:
         query = request.query.text
         max_length = (self._context_size - 400) // topk
         while True:
@@ -225,10 +226,10 @@ class OSLLM(LLM):
 
     def create_prompt_batched(
         self,
-        requests: List[Request],
+        requests: list[Request],
         topk: int,
         batch_size: int = 32,
-    ) -> List[Tuple[str, int]]:
+    ) -> list[tuple[str, int]]:
         """
         Creates prompts in batches for a list of results, processing them in parallel using a thread pool executor.
 

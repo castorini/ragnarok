@@ -80,14 +80,14 @@ def check_rag_gen_run(args, log):
             if not topicfile.exists():
                 raise FileNotFoundError(f"{args.topicfile} not found")
 
-        with open(topicfile, "r") as fp:
+        with open(topicfile) as fp:
             print("Reading topics from", topicfile)
             for line in fp:
                 t, q = line.strip().split("\t")
                 topics[t] = 0
                 queries[t] = q
     write_fixed_file = args.runfile + ".fixed"
-    with open(args.runfile, "r") as run, open(write_fixed_file, "w") as fixed_run:
+    with open(args.runfile) as run, open(write_fixed_file, "w") as fixed_run:
         print("Reading run from", args.runfile)
         count = 0
         for line in run:

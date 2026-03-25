@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from dacite import from_dict
 import pytest
+from dacite import from_dict
 
 try:
     from rank_llm.data import Request

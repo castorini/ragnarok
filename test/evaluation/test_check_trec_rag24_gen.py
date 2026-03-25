@@ -93,7 +93,7 @@ class TestCheckRagGenRun(unittest.TestCase):
 
         # Read the error log file
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             # Check if Unkown topic error is present
             self.assertIn("ERROR Line 1: Unknown topic (2024-002)\n", error_log)
@@ -132,7 +132,7 @@ class TestCheckRagGenRun(unittest.TestCase):
         self.assertEqual(log.error_count, 1)
 
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             self.assertIn('ERROR Line 1: Entry is missing "topic" field.\n', error_log)
 
@@ -166,7 +166,7 @@ class TestCheckRagGenRun(unittest.TestCase):
         self.assertEqual(log.error_count, 2)
 
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             self.assertIn(
                 "ERROR Line 1: Invalid reference docno invalid_reference_1\n", error_log
@@ -205,7 +205,7 @@ class TestCheckRagGenRun(unittest.TestCase):
             check_rag_gen_run(args, log)
 
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             self.assertIn(
                 "WARNING Line 1: Reported RAG answer (5) is not equal to actual response length (6), maybe you did not NFCK normalize the text or strip characters?\n",
@@ -242,7 +242,7 @@ class TestCheckRagGenRun(unittest.TestCase):
         self.assertEqual(log.error_count, 21)
 
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             self.assertIn(
                 "ERROR Line 1: Duplicate document msmarco_v2.1_doc_1_1#1_1 in references\n",
@@ -280,7 +280,7 @@ class TestCheckRagGenRun(unittest.TestCase):
 
         # Check the fixed file
         fixed_file = run_file + ".fixed"
-        with open(fixed_file, "r") as f:
+        with open(fixed_file) as f:
             fixed_content = json.loads(f.read())
             self.assertLess(fixed_content["response_length"], 401)
             self.assertLess(
@@ -292,7 +292,7 @@ class TestCheckRagGenRun(unittest.TestCase):
 
         # Check the error log
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             self.assertIn(
                 "WARNING Line 1: Reported response_length is too long\n", error_log
@@ -334,13 +334,13 @@ class TestCheckRagGenRun(unittest.TestCase):
 
         # Check the fixed file
         fixed_file = run_file + ".fixed"
-        with open(fixed_file, "r") as f:
+        with open(fixed_file) as f:
             fixed_content = json.loads(f.read())
             self.assertEqual(fixed_content["answer"][0]["citations"], [0, 1])
 
         # Check the error log
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             self.assertIn(
                 "WARNING Line 1: Response sentence has duplicate citations\n", error_log
@@ -377,13 +377,13 @@ class TestCheckRagGenRun(unittest.TestCase):
 
         # Check the fixed file
         fixed_file = run_file + ".fixed"
-        with open(fixed_file, "r") as f:
+        with open(fixed_file) as f:
             fixed_content = json.loads(f.read())
             self.assertEqual(fixed_content["answer"][0]["citations"], [0])
 
         # Check the error log
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             self.assertIn(
                 "WARNING Line 1: Response sentence has a citation that is out of bounds\n",
@@ -432,14 +432,14 @@ class TestCheckRagGenRun(unittest.TestCase):
 
         # Check the fixed file
         fixed_file = run_file + ".fixed"
-        with open(fixed_file, "r") as f:
+        with open(fixed_file) as f:
             fixed_content = json.loads(f.read())
             self.assertLess(fixed_content["response_length"], 401)
             self.assertEqual(fixed_content["answer"][0]["citations"], [0, 1])
 
         # Check the error log
         error_log_file = run_file + ".errlog"
-        with open(error_log_file, "r") as f:
+        with open(error_log_file) as f:
             error_log = f.readlines()
             self.assertIn(
                 "WARNING Line 1: Reported response_length is too long\n", error_log
@@ -460,7 +460,7 @@ class TestCheckRagGenRun(unittest.TestCase):
             )
 
         # Test if fixed
-        with open(fixed_file, "r") as f:
+        with open(fixed_file) as f:
             fixed_content = json.loads(f.read())
             self.assertEqual(fixed_content["response_length"], 400)
             self.assertEqual(fixed_content["answer"][0]["citations"], [0, 1])

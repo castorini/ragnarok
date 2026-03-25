@@ -342,7 +342,7 @@ class TestReasoningSupport(unittest.TestCase):
 
             DataWriter(results).write_rag_exec_summary(summary_path)
 
-            with open(summary_path, "r") as handle:
+            with open(summary_path) as handle:
                 lines = [json.loads(line) for line in handle]
 
         self.assertEqual(lines[0]["rag_exec_summary"]["reasoning"], "Model reasoning")

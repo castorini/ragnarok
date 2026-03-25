@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 from tqdm import tqdm
 
@@ -16,12 +15,12 @@ class RAG:
 
     def answer_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         topk: int = 20,
         shuffle_candidates: bool = False,
         logging: bool = False,
         vllm: bool = False,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Generates a list of attributed answers using the Ragnarok agent.
 
@@ -99,13 +98,13 @@ class RAG:
 
     async def async_answer_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         topk: int = 20,
         shuffle_candidates: bool = False,
         logging: bool = False,
         vllm: bool = False,
         max_concurrency: int = 8,
-    ) -> List[Result]:
+    ) -> list[Result]:
         if vllm:
             return await self._agent.async_answer_batch(
                 requests,
@@ -159,7 +158,7 @@ class RAG:
     def write_answer_results(
         self,
         retrieval_method_name: str,
-        results: List[Result],
+        results: list[Result],
         shuffle_candidates: bool = False,
         top_k_candidates: int = 20,
         dataset_name: str = None,

@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from dacite import from_dict
 
@@ -10,22 +10,22 @@ from dacite import from_dict
 @dataclass
 class Query:
     text: str
-    qid: Union[str | int]
+    qid: str | int
 
 
 @dataclass
 class Candidate:
-    docid: Union[str | int]
+    docid: str | int
     score: float
-    doc: Dict[str, Any]
+    doc: dict[str, Any]
 
 
 @dataclass
 class Request:
     query: Query
-    candidates: List[Candidate] = field(default_factory=list)
+    candidates: list[Candidate] = field(default_factory=list)
     # Optional Ranking Exec Summary
-    ranking_exec_summary: List[Dict[str, Any]] = field(default_factory=list)
+    ranking_exec_summary: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -35,20 +35,20 @@ class RAGExecInfo:
     input_token_count: int
     output_token_count: int
     reasoning: str | None = None
-    candidates: List[Candidate] = field(default_factory=list)
+    candidates: list[Candidate] = field(default_factory=list)
 
 
 @dataclass
 class CitedSentence:
     text: str
-    citations: List[int] = field(default_factory=list)
+    citations: list[int] = field(default_factory=list)
 
 
 @dataclass
 class Result:
     query: Query
-    references: List[Union[str | int]] = field(default_factory=list)
-    answer: List[CitedSentence] = field(default_factory=list)
+    references: list[str | int] = field(default_factory=list)
+    answer: list[CitedSentence] = field(default_factory=list)
     rag_exec_summary: RAGExecInfo = None
 
 
@@ -66,7 +66,7 @@ def result_to_dict(
     *,
     include_trace: bool = False,
     redact_prompts: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     record = {
         "run_id": run_id,
         "topic_id": result.query.qid,
@@ -96,25 +96,25 @@ def result_to_dict(
     return record
 
 
-def write_results_jsonl(results: List[Result], filename: str, run_id: str) -> None:
+def write_results_jsonl(results: list[Result], filename: str, run_id: str) -> None:
     with Path(filename).open("w", encoding="utf-8") as file_obj:
         for result in results:
             json.dump(result_to_dict(result, run_id), file_obj)
             file_obj.write("\n")
 
 
-def read_requests_from_file(file_path: str) -> List[Request]:
+def read_requests_from_file(file_path: str) -> list[Request]:
     extension = file_path.split(".")[-1]
     if extension == "jsonl":
         requests = []
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             for line in f:
                 if not line.strip():
                     continue
                 requests.append(from_dict(data_class=Request, data=json.loads(line)))
         return requests
     elif extension == "json":
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             request_dicts = json.load(f)
         return [
             from_dict(data_class=Request, data=request_dict)
@@ -124,11 +124,11 @@ def read_requests_from_file(file_path: str) -> List[Request]:
         raise ValueError(f"Expected json or jsonl file format, got {extension}")
 
 
-def read_results_from_file(file_path: str) -> List[Result]:
+def read_results_from_file(file_path: str) -> list[Result]:
     extension = file_path.split(".")[-1]
     if extension == "jsonl":
         results = []
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             for line in f:
                 if not line.strip():
                     continue
@@ -147,7 +147,7 @@ def read_results_from_file(file_path: str) -> List[Result]:
                 results.append(result)
         return results
     elif extension == "json":
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             result_dicts = json.load(f)
         return [
             Result(
@@ -196,7 +196,7 @@ def remove_unused_references(result: Result, max_per_sentence: int = 3) -> Resul
 class DataWriter:
     def __init__(
         self,
-        data: Union[Request | Result | List[Result] | List[Request]],
+        data: Request | Result | list[Result] | list[Request],
         append: bool = False,
     ):
         if isinstance(data, list):
@@ -217,7 +217,7 @@ class DataWriter:
                 }
                 f.write(json.dumps(exec_summary) + "\n")
 
-    def _convert_result_to_dict(self, result: Result, run_id: str) -> Dict:
+    def _convert_result_to_dict(self, result: Result, run_id: str) -> dict:
         return result_to_dict(result, run_id)
 
     def write_in_json_format(self, filename: str, run_id: str):

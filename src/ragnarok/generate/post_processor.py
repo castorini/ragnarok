@@ -1,7 +1,7 @@
 import os
 import re
 from importlib import import_module
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from ragnarok.data import CitedSentence
 
@@ -9,7 +9,7 @@ from ragnarok.data import CitedSentence
 class RegexTokenizer:
     def tokenize(
         self, text: str, replace_newline: str = " ", sep: str = "\n"
-    ) -> List[str]:
+    ) -> list[str]:
         text = replace_newline.join(
             text.replace("\n", replace_newline).split(replace_newline)
         ).strip()
@@ -33,8 +33,8 @@ class StanzaTokenizer:
         self.pipeline = stanza.Pipeline(lang=lang, processors=processors)
 
     def tokenize(
-        self, text: str, sep: str = "\n", strip: List[str] = ["-"]
-    ) -> List[str]:
+        self, text: str, sep: str = "\n", strip: list[str] | None = None
+    ) -> list[str]:
         """
         Tokenize the input text into sentences.
         Args:
@@ -45,6 +45,7 @@ class StanzaTokenizer:
         Returns:
             List[str]: list of sentences
         """
+        strip = ["-"] if strip is None else strip
         new_sentences = []
         for strip_str in strip:
             text = text.replace(strip_str, "")
@@ -65,7 +66,7 @@ class SpacyTokenizer:
             os.system(f"python -m spacy download {model}")
             self.nlp = spacy.load(model)
 
-    def tokenize(self, text: str, replace_newline: str = " ") -> List[str]:
+    def tokenize(self, text: str, replace_newline: str = " ") -> list[str]:
         """
         Tokenize the input text into sentences.
         Args:
@@ -98,8 +99,8 @@ class CoherePostProcessor:
             return RegexTokenizer()
 
     def _find_sentence_citations(
-        self, text_output: str, sentence: str, cohere_citations: List[Dict[str, Any]]
-    ) -> List[int]:
+        self, text_output: str, sentence: str, cohere_citations: list[dict[str, Any]]
+    ) -> list[int]:
         start_pos = text_output.find(sentence)
         end_pos = start_pos + len(sentence)
         citations = []
@@ -128,7 +129,7 @@ class CoherePostProcessor:
             citations = sorted(citations)
         return citations
 
-    def __call__(self, response) -> Tuple[List[CitedSentence], Dict[str, Any]]:
+    def __call__(self, response) -> tuple[list[CitedSentence], dict[str, Any]]:
         text_output = response.text
         if not response.citations:
             citations = []
@@ -167,9 +168,10 @@ class GPTPostProcessor:
             return RegexTokenizer()
 
     def _find_sentence_citations(
-        self, sentence: str, citation_range: List[int] = list(range(50))
-    ) -> tuple[str, List[int]]:
+        self, sentence: str, citation_range: list[int] | None = None
+    ) -> tuple[str, list[int]]:
         # Regex pattern to find citations
+        citation_range = list(range(50)) if citation_range is None else citation_range
         pattern = re.compile(r"\[\d+\](?:,? ?)")
 
         # Find all citations
@@ -214,7 +216,7 @@ class GPTPostProcessor:
                 sentence = sentence[:-2] + sentence[-1]
         return sentence, citations
 
-    def __call__(self, response) -> List[Dict[str, Any]]:
+    def __call__(self, response) -> list[dict[str, Any]]:
         text_output = response
         # Remove all \nNote: and \nReferences: from the text
         text_output = re.sub(r"\nNote:.*", "", text_output)
