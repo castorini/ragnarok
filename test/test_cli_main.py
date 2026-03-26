@@ -1213,13 +1213,13 @@ class TestRagnarokCLI(unittest.TestCase):
                     "--prompt-mode",
                     "chatqa",
                     "--port",
-                    "8084",
+                    "8083",
                 ]
             )
         self.assertEqual(exit_code, 0)
         uvicorn_run.assert_called_once()
         self.assertEqual(uvicorn_run.call_args.kwargs["host"], "0.0.0.0")
-        self.assertEqual(uvicorn_run.call_args.kwargs["port"], 8084)
+        self.assertEqual(uvicorn_run.call_args.kwargs["port"], 8083)
 
     def test_serve_app_exposes_health_and_generate(self):
         pytest.importorskip("fastapi")
@@ -1246,7 +1246,7 @@ class TestRagnarokCLI(unittest.TestCase):
                 create_app(
                     ServerConfig(
                         host="127.0.0.1",
-                        port=8084,
+                        port=8083,
                         model="gpt-4o",
                         prompt_mode="chatqa",
                     )
@@ -1289,7 +1289,7 @@ class TestRagnarokCLI(unittest.TestCase):
             create_app(
                 ServerConfig(
                     host="127.0.0.1",
-                    port=8084,
+                    port=8083,
                     model="gpt-4o",
                     prompt_mode="chatqa",
                 )
@@ -1326,7 +1326,7 @@ class TestRagnarokCLI(unittest.TestCase):
                 create_app(
                     ServerConfig(
                         host="127.0.0.1",
-                        port=8084,
+                        port=8083,
                         model="gpt-4o",
                         prompt_mode="chatqa",
                     )

@@ -28,7 +28,7 @@ TOP_LEVEL_EXAMPLES = (
         "ragnarok generate --model gpt-4o --input-json "
         '\'{"query":"q","candidates":["p"]}\' --output json'
     ),
-    "ragnarok serve --model gpt-4o --prompt-mode chatqa --port 8084",
+    "ragnarok serve --model gpt-4o --prompt-mode chatqa --port 8083",
     "ragnarok prompt show --prompt-mode chatqa",
     "ragnarok doctor --output json",
 )

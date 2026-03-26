@@ -130,14 +130,14 @@ Serve the direct generation API:
 ragnarok serve \
   --model gpt-4o \
   --prompt-mode chatqa \
-  --port 8084
+  --port 8083
 
-curl -X POST http://127.0.0.1:8084/v1/generate \
+curl -X POST http://127.0.0.1:8083/v1/generate \
   -H 'content-type: application/json' \
   -d '{"query":"q","candidates":["p"]}'
 
 curl -s "http://127.0.0.1:8081/v1/msmarco-v1-passage/search?query=what%20is%20python%20commonly%20used%20for" \
-  | curl -s -X POST http://127.0.0.1:8084/v1/generate \
+  | curl -s -X POST http://127.0.0.1:8083/v1/generate \
       -H 'content-type: application/json' \
       --data-binary @- \
   | jq

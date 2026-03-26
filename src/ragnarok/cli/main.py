@@ -276,7 +276,7 @@ def build_parser() -> CLIArgumentParser:
             "Common patterns:\n"
             "  ragnarok generate --model gpt-4o --input-json "
             '\'{"query":"q","candidates":["p"]}\' --prompt-mode chatqa --output json\n'
-            "  ragnarok serve --model gpt-4o --prompt-mode chatqa --port 8084\n"
+            "  ragnarok serve --model gpt-4o --prompt-mode chatqa --port 8083\n"
             "  ragnarok prompt show --prompt-mode chatqa\n"
             "  ragnarok validate generate --input-json "
             '\'{"query":"q","candidates":["p"]}\' --output json\n'
@@ -505,7 +505,7 @@ def build_parser() -> CLIArgumentParser:
         ),
     )
     serve_parser.add_argument("--host", type=str, default="0.0.0.0")
-    serve_parser.add_argument("--port", type=int, default=8084)
+    serve_parser.add_argument("--port", type=int, default=8083)
     serve_parser.add_argument(
         "--model",
         type=str,
