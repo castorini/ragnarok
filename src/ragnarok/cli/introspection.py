@@ -31,6 +31,13 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
                 "| curl -s -X POST http://127.0.0.1:8084/v1/generate "
                 '-H "content-type: application/json" --data-binary @- | jq'
             ),
+            (
+                'curl -s "http://127.0.0.1:8081/v1/msmarco-v1-passage/search?query=q" '
+                "| curl -s -X POST http://127.0.0.1:8082/v1/rerank "
+                '-H "content-type: application/json" --data-binary @- '
+                "| curl -s -X POST http://127.0.0.1:8084/v1/generate "
+                '-H "content-type: application/json" --data-binary @- | jq'
+            ),
         ],
         "input_modes": ["dataset", "input-file", "stdin", "input-json"],
     },
@@ -46,6 +53,13 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
             ),
             (
                 'curl -s "http://127.0.0.1:8081/v1/msmarco-v1-passage/search?query=q" '
+                "| curl -s -X POST http://127.0.0.1:8084/v1/generate "
+                '-H "content-type: application/json" --data-binary @- | jq'
+            ),
+            (
+                'curl -s "http://127.0.0.1:8081/v1/msmarco-v1-passage/search?query=q" '
+                "| curl -s -X POST http://127.0.0.1:8082/v1/rerank "
+                '-H "content-type: application/json" --data-binary @- '
                 "| curl -s -X POST http://127.0.0.1:8084/v1/generate "
                 '-H "content-type: application/json" --data-binary @- | jq'
             ),

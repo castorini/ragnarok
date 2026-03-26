@@ -1300,6 +1300,68 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["status"], "validation_error")
 
+    def test_serve_app_accepts_rank_llm_envelope_payload(self):
+        pytest.importorskip("fastapi")
+        from fastapi.testclient import TestClient
+
+        from ragnarok.api.app import create_app
+        from ragnarok.api.runtime import ServerConfig
+
+        fake_records = [
+            {
+                "run_id": "ragnarok",
+                "topic_id": "q0",
+                "topic": "q",
+                "references": ["d0"],
+                "response_length": 1,
+                "answer": [{"text": "answer", "citations": [0]}],
+            }
+        ]
+
+        with patch(
+            "ragnarok.api.runtime.run_request_generation",
+            return_value=(fake_records, {"request_count": 1}),
+        ):
+            client = TestClient(
+                create_app(
+                    ServerConfig(
+                        host="127.0.0.1",
+                        port=8084,
+                        model="gpt-4o",
+                        prompt_mode="chatqa",
+                    )
+                )
+            )
+            response = client.post(
+                "/v1/generate",
+                json={
+                    "schema_version": "castorini.cli.v1",
+                    "repo": "rank_llm",
+                    "command": "rerank",
+                    "artifacts": [
+                        {
+                            "name": "rerank-results",
+                            "kind": "data",
+                            "value": [
+                                {
+                                    "query": {"text": "q", "qid": ""},
+                                    "candidates": [
+                                        {
+                                            "docid": "d0",
+                                            "score": 1.0,
+                                            "doc": {"contents": "passage"},
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["artifacts"][0]["name"], "generation-results")
+
     def test_missing_input_file_returns_json_error(self):
         exit_code = main(
             [

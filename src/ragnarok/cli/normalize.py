@@ -3,6 +3,40 @@ from __future__ import annotations
 from typing import Any, cast
 
 
+def _unwrap_castorini_envelope(payload: dict[str, Any]) -> dict[str, Any]:
+    schema_version = payload.get("schema_version")
+    artifacts = payload.get("artifacts")
+    if schema_version != "castorini.cli.v1" or not isinstance(artifacts, list):
+        return payload
+
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            continue
+        artifact_payload = artifact.get("data", artifact.get("value"))
+        if (
+            isinstance(artifact_payload, dict)
+            and {
+                "query",
+                "candidates",
+            }
+            <= artifact_payload.keys()
+        ):
+            return artifact_payload
+        if isinstance(artifact_payload, list):
+            if len(artifact_payload) != 1:
+                raise ValueError(
+                    "direct generate envelope input requires exactly one record"
+                )
+            record = artifact_payload[0]
+            if isinstance(record, dict) and {"query", "candidates"} <= record.keys():
+                return record
+
+    raise ValueError(
+        "direct generate envelope input must contain a single artifact record "
+        "with query and candidates"
+    )
+
+
 def _normalize_query(query_payload: Any) -> Any:
     from ragnarok.data import Query
 
@@ -53,6 +87,7 @@ def _normalize_candidate(candidate_payload: Any, index: int) -> Any:
 def normalize_direct_generate_input(payload: dict[str, Any]) -> Any:
     from ragnarok.data import Request
 
+    payload = _unwrap_castorini_envelope(payload)
     candidates_payload = payload.get("candidates")
     if not isinstance(candidates_payload, list):
         raise ValueError("candidates must be a list")
