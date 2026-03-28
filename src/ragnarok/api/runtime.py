@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 from ragnarok.cli.adapters import make_data_artifact
 from ragnarok.cli.logging_utils import setup_logging
-from ragnarok.cli.normalize import normalize_direct_generate_input
+from ragnarok.cli.normalize import (
+    normalize_direct_generate_input,
+    unwrap_direct_generate_payload,
+)
 from ragnarok.cli.operations import async_run_request_generation, run_request_generation
 from ragnarok.cli.responses import CommandResponse
 from ragnarok.cli.spec import EXIT_CODES
@@ -38,6 +41,29 @@ class ServerConfig:
     reasoning_effort: str | None = None
     log_level: int = 0
     quiet: bool = False
+
+
+_OVERRIDABLE_FIELDS = {
+    "model",
+    "prompt_mode",
+    "use_azure_openai",
+    "use_openrouter",
+    "context_size",
+    "topk",
+    "num_gpus",
+    "execution_mode",
+    "max_concurrency",
+    "shuffle_candidates",
+    "print_prompts_responses",
+    "num_few_shot_examples",
+    "max_output_tokens",
+    "run_id",
+    "vllm_batched",
+    "include_reasoning",
+    "include_trace",
+    "redact_prompts",
+    "reasoning_effort",
+}
 
 
 def _base_args(config: ServerConfig) -> argparse.Namespace:
@@ -81,6 +107,49 @@ def _base_args(config: ServerConfig) -> argparse.Namespace:
     )
 
 
+def _extract_override_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    override_payload = payload.get("overrides", {})
+    if not isinstance(override_payload, dict):
+        raise ValueError("overrides must be an object when provided")
+    unwrapped_payload = unwrap_direct_generate_payload(payload)
+    unwrapped_override_payload = unwrapped_payload.get("overrides", {})
+    if not isinstance(unwrapped_override_payload, dict):
+        raise ValueError("overrides must be an object when provided")
+    combined = dict(override_payload)
+    combined.update(unwrapped_override_payload)
+    unknown_keys = sorted(set(combined) - _OVERRIDABLE_FIELDS)
+    if unknown_keys:
+        raise ValueError(
+            "unsupported generate override field(s): " + ", ".join(unknown_keys)
+        )
+    if combined.get("use_azure_openai") and combined.get("use_openrouter"):
+        raise ValueError(
+            "use_azure_openai and use_openrouter cannot both be true in overrides"
+        )
+    if "topk" in combined:
+        topk = combined["topk"]
+        if (
+            not isinstance(topk, list)
+            or not topk
+            or not all(isinstance(value, int) for value in topk)
+        ):
+            raise ValueError("overrides.topk must be a non-empty list of integers")
+    return combined
+
+
+def _merge_config_with_payload(
+    payload: dict[str, Any],
+    *,
+    config: ServerConfig,
+) -> ServerConfig:
+    overrides = _extract_override_payload(payload)
+    if not overrides:
+        return config
+    effective_values = asdict(config)
+    effective_values.update(overrides)
+    return replace(config, **effective_values)
+
+
 def execute_direct_generate(
     payload: dict[str, Any],
     *,
@@ -113,7 +182,8 @@ def run_generate_request(
     *,
     config: ServerConfig,
 ) -> CommandResponse:
-    return execute_direct_generate(payload, args=_base_args(config))
+    effective_config = _merge_config_with_payload(payload, config=config)
+    return execute_direct_generate(payload, args=_base_args(effective_config))
 
 
 def validation_error_response(

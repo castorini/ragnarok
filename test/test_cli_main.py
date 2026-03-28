@@ -1202,6 +1202,15 @@ class TestRagnarokCLI(unittest.TestCase):
             output = json.loads(stdout.getvalue())
             self.assertEqual(output["command"], expected_command)
 
+    def test_generate_schema_includes_request_overrides(self):
+        from ragnarok.cli.introspection import SCHEMAS
+
+        overrides = SCHEMAS["generate-direct-input"]["properties"]["overrides"][
+            "properties"
+        ]
+        self.assertIn("model", overrides)
+        self.assertIn("reasoning_effort", overrides)
+
     def test_serve_command_starts_uvicorn(self):
         pytest.importorskip("fastapi")
         with patch("uvicorn.run") as uvicorn_run:
@@ -1297,6 +1306,98 @@ class TestRagnarokCLI(unittest.TestCase):
         )
 
         response = client.post("/v1/generate", json={"query": 1, "candidates": []})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["status"], "validation_error")
+
+    def test_serve_app_applies_request_overrides(self):
+        pytest.importorskip("fastapi")
+        from fastapi.testclient import TestClient
+
+        from ragnarok.api.app import create_app
+        from ragnarok.api.runtime import ServerConfig
+
+        captured: dict[str, object] = {}
+
+        def fake_run_request_generation(requests, args, logger):
+            captured["model"] = args.model
+            captured["reasoning_effort"] = args.reasoning_effort
+            captured["use_openrouter"] = args.use_openrouter
+            return (
+                [
+                    {
+                        "topic_id": "q0",
+                        "topic": "q",
+                        "references": ["d0"],
+                        "response_length": 8,
+                        "answer": [{"text": "answer", "citations": [0]}],
+                    }
+                ],
+                {"request_count": len(requests)},
+            )
+
+        with patch(
+            "ragnarok.api.runtime.run_request_generation",
+            side_effect=fake_run_request_generation,
+        ):
+            client = TestClient(
+                create_app(
+                    ServerConfig(
+                        host="127.0.0.1",
+                        port=8083,
+                        model="gpt-4o",
+                        prompt_mode="chatqa",
+                    )
+                )
+            )
+            response = client.post(
+                "/v1/generate",
+                json={
+                    "query": {"text": "q"},
+                    "candidates": ["passage"],
+                    "overrides": {
+                        "model": "gpt-4.1-mini",
+                        "reasoning_effort": "low",
+                        "use_openrouter": True,
+                    },
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(captured["model"], "gpt-4.1-mini")
+        self.assertEqual(captured["reasoning_effort"], "low")
+        self.assertTrue(captured["use_openrouter"])
+        self.assertEqual(response.json()["resolved"]["model"], "gpt-4.1-mini")
+
+    def test_serve_app_rejects_invalid_override_combinations(self):
+        pytest.importorskip("fastapi")
+        from fastapi.testclient import TestClient
+
+        from ragnarok.api.app import create_app
+        from ragnarok.api.runtime import ServerConfig
+
+        client = TestClient(
+            create_app(
+                ServerConfig(
+                    host="127.0.0.1",
+                    port=8083,
+                    model="gpt-4o",
+                    prompt_mode="chatqa",
+                )
+            )
+        )
+
+        response = client.post(
+            "/v1/generate",
+            json={
+                "query": {"text": "q"},
+                "candidates": ["passage"],
+                "overrides": {
+                    "use_azure_openai": True,
+                    "use_openrouter": True,
+                },
+            },
+        )
+
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["status"], "validation_error")
 
