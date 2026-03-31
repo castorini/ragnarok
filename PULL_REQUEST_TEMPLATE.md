@@ -12,8 +12,8 @@ Reference the GitHub issue this pull request addresses. If none exists, write `N
 
 ## Validation
 
-- [ ] `pre-commit run --all-files`
-- [ ] `python -m unittest discover -s test`
+- [ ] `uv run pre-commit run --all-files`
+- [ ] `uv run ragnarok-quality-gate`
 - [ ] Not run, with justification explained below
 
 List any additional commands, datasets, or manual checks used:

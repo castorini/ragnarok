@@ -29,11 +29,10 @@ Run these commands before opening a pull request:
 
 ```bash
 uv run pre-commit run --all-files
-uv run pytest -q -m core test
-uv run pytest -q -m integration test
+uv run ragnarok-quality-gate
 ```
 
-`pre-commit` is the canonical formatter and lint entrypoint for this repository. The current hooks run `black`, `isort`, and `flake8`.
+`pre-commit` is the canonical formatter and lint entrypoint for this repository. The hook stack now uses Ruff for autofix plus the repo-local `ragnarok-quality-gate` entrypoint, which runs Ruff check, Ruff format check, core tests, integration tests, and MyPy in that order inside the `uv` environment.
 
 ## Testing Expectations
 

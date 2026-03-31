@@ -41,8 +41,8 @@ uv sync --group dev
 ```
 
 If you prefer not to activate the virtual environment, use `uv run`, for example
-`uv run ragnarok --help`, `uv run pre-commit run --all-files`, or
-`uv run python examples/rag_demo.py --help`.
+`uv run ragnarok --help`, `uv run pre-commit run --all-files`,
+`uv run ragnarok-quality-gate`, or `uv run python examples/rag_demo.py --help`.
 
 Install optional stacks only when you need them:
 
@@ -212,6 +212,7 @@ Ragnarök keeps regression coverage in three layers:
 Typical local commands:
 
 ```bash
+uv run ragnarok-quality-gate
 uv run pytest -q -m core test
 uv run pytest -q -m integration test
 RAGNAROK_LIVE_OPENAI_SMOKE=1 uv run pytest -q -m live test

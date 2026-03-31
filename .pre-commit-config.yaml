@@ -11,31 +11,11 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
         stages: [pre-commit]
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
-    hooks:
-      - id: mypy
-        pass_filenames: false
-        args: [src, test]
-        additional_dependencies: [fastapi, pytest, shtab, uvicorn]
-        stages: [pre-commit]
   - repo: local
     hooks:
-      - id: ruff-check-push
-        name: ruff-check (push)
-        entry: uv run ruff check .
+      - id: ragnarok-quality-gate
+        name: ragnarok quality gate
+        entry: uv run ragnarok-quality-gate
         language: system
         pass_filenames: false
-        stages: [pre-push]
-      - id: ruff-format-check-push
-        name: ruff-format (push)
-        entry: uv run ruff format --check .
-        language: system
-        pass_filenames: false
-        stages: [pre-push]
-      - id: mypy-push
-        name: mypy (push)
-        entry: uv run mypy src test
-        language: system
-        pass_filenames: false
-        stages: [pre-push]
+        stages: [pre-commit, pre-push]

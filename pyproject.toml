@@ -83,6 +83,7 @@ Homepage = "https://github.com/castorini/ragnarok"
 
 [project.scripts]
 ragnarok = "ragnarok.cli.main:main"
+ragnarok-quality-gate = "ragnarok.scripts.quality_gate:main"
 
 [tool.bumpver]
 current_version = "0.0.1"
