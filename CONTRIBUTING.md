@@ -13,14 +13,14 @@ Thank you for contributing to Ragnarök. This repository packages retrieval-augm
 Ragnarök uses `uv` and the `dev` dependency group defined in `pyproject.toml`.
 
 ```bash
-uv python install 3.11
-uv venv --python 3.11
+uv python install 3.12
+uv venv --python 3.12
 source .venv/bin/activate
 uv sync --group dev
 pre-commit install
 ```
 
-`.python-version` pins this repository to Python 3.11 for `uv`-aware tooling.
+`.python-version` pins this repository to Python 3.12 for `uv`-aware tooling.
 If you prefer not to activate the virtual environment, run commands through `uv run`.
 `uv.lock` resolves the base dependencies, the default `dev` dependency group,
 and the declared extras, but extras remain opt-in during sync and are only

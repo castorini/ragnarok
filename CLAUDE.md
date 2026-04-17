@@ -7,8 +7,8 @@
 ## Language and Runtime
 - Primary language: Python.
 - Packaging uses `pyproject.toml` + `setuptools` (`src` layout).
-- Required Python version is `>=3.11` (`pyproject.toml`).
-- README examples assume a Python 3.11 `uv` environment, with conda kept as an optional path.
+- Required Python version is `>=3.12` (`pyproject.toml`).
+- README examples assume a Python 3.12 `uv` environment, with conda kept as an optional path.
 
 ## Repository Structure
 - `src/ragnarok/`: core package code.
@@ -22,8 +22,8 @@
 
 ## Install and Setup
 - Canonical contributor setup uses `uv`:
-  - `uv python install 3.11`
-  - `uv venv --python 3.11`
+  - `uv python install 3.12`
+  - `uv venv --python 3.12`
   - `source .venv/bin/activate`
   - `uv sync --group dev`
 - `uv run ...` is the no-activation fallback for docs and CI.

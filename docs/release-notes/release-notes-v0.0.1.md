@@ -4,6 +4,7 @@ Initial release-note scaffold for the packaged CLI era.
 
 ## Included In This Baseline
 
+- The supported interpreter floor is now Python 3.12 across package metadata, `.python-version`, contributor setup docs, and GitHub Actions validation.
 - Packaged `ragnarok` CLI with generation, validation, conversion, prompt inspection, doctor, and view commands.
 - FastAPI `ragnarok serve` command exposing `GET /healthz` and `POST /v1/generate` on port `8083` by default.
 - Direct `generate` input now also accepts Anserini REST candidates where `candidates[].doc` is a plain string, so Anserini search results can be piped directly into `POST /v1/generate` without a `jq` reshape step.
@@ -21,3 +22,4 @@ Document a migration note in this directory whenever a change affects:
 - output JSON, JSONL, or TREC artifact formats
 - validator behavior or auto-fix behavior
 - required dependencies or environment variables
+- supported Python version or default contributor runtime

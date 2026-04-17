@@ -34,9 +34,9 @@ For development from source:
 ```bash
 git clone https://github.com/castorini/ragnarok.git
 cd ragnarok
-# .python-version pins this repo to Python 3.11 for uv-aware tooling.
-uv python install 3.11
-uv venv --python 3.11
+# .python-version pins this repo to Python 3.12 for uv-aware tooling.
+uv python install 3.12
+uv venv --python 3.12
 source .venv/bin/activate
 uv sync --group dev
 ```
@@ -60,11 +60,11 @@ uv sync --group dev --extra pyserini
 uv sync --group dev --extra all
 ```
 
-If you want to keep using conda, create a Python 3.11 environment and install
+If you want to keep using conda, create a Python 3.12 environment and install
 the package from `pyproject.toml`:
 
 ```bash
-conda create -n ragnarok python=3.11 -y
+conda create -n ragnarok python=3.12 -y
 conda activate ragnarok
 pip install -e .
 ```
