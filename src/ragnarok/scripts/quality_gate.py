@@ -24,6 +24,7 @@ def _run_step(step: GateStep) -> None:
 
 def main() -> int:
     steps = (
+        GateStep("uv lock check", ("uv", "lock", "--check")),
         GateStep("ruff check", (sys.executable, "-m", "ruff", "check", ".")),
         GateStep(
             "ruff format",

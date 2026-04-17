@@ -20,7 +20,11 @@ uv sync --group dev
 pre-commit install
 ```
 
+`.python-version` pins this repository to Python 3.11 for `uv`-aware tooling.
 If you prefer not to activate the virtual environment, run commands through `uv run`.
+`uv.lock` resolves the base dependencies, the default `dev` dependency group,
+and the declared extras, but extras remain opt-in during sync and are only
+installed when you pass `--extra ...`.
 If you use GPU-backed models locally, install the PyTorch build appropriate for your environment before installing the optional runtime stack you need, as documented in the README.
 
 ## Local Quality Gate
@@ -28,6 +32,7 @@ If you use GPU-backed models locally, install the PyTorch build appropriate for 
 Run these commands before opening a pull request:
 
 ```bash
+uv lock --check
 uv run pre-commit run --all-files
 uv run ragnarok-quality-gate
 ```

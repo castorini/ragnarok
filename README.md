@@ -34,6 +34,7 @@ For development from source:
 ```bash
 git clone https://github.com/castorini/ragnarok.git
 cd ragnarok
+# .python-version pins this repo to Python 3.11 for uv-aware tooling.
 uv python install 3.11
 uv venv --python 3.11
 source .venv/bin/activate
@@ -43,6 +44,11 @@ uv sync --group dev
 If you prefer not to activate the virtual environment, use `uv run`, for example
 `uv run ragnarok --help`, `uv run pre-commit run --all-files`,
 `uv run ragnarok-quality-gate`, or `uv run python examples/rag_demo.py --help`.
+
+`uv.lock` resolves the base project, the default `dev` dependency group, and the
+declared extras into one reproducible lockfile. Extras remain opt-in at install
+time, so `uv sync --group dev` does not install them unless you add
+`--extra ...`.
 
 Install optional stacks only when you need them:
 
@@ -55,12 +61,11 @@ uv sync --group dev --extra all
 ```
 
 If you want to keep using conda, create a Python 3.11 environment and install
-the same base package dependencies:
+the package from `pyproject.toml`:
 
 ```bash
 conda create -n ragnarok python=3.11 -y
 conda activate ragnarok
-pip install -r requirements.txt
 pip install -e .
 ```
 
@@ -212,6 +217,7 @@ Ragnarök keeps regression coverage in three layers:
 Typical local commands:
 
 ```bash
+uv lock --check
 uv run ragnarok-quality-gate
 uv run pytest -q -m core test
 uv run pytest -q -m integration test

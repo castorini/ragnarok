@@ -34,7 +34,7 @@
   - `uv sync --extra pyserini` for `pyserini`-backed retrieval helpers
 - Keep the optional conda path in the README for contributors who need it.
 - Keep dependency declarations in sync:
-  - Base runtime deps: `requirements.txt` (loaded dynamically by `pyproject.toml`)
+  - Base runtime deps: `[project.dependencies]` in `pyproject.toml`
   - Optional runtime stacks: `[project.optional-dependencies]` in `pyproject.toml`
   - Dev deps: `[dependency-groups].dev` in `pyproject.toml`
 
@@ -45,6 +45,7 @@
 - `pytest` is the canonical test runner, even though much of the existing suite
   still uses `unittest.TestCase` style.
 - Configured tools in `.pre-commit-config.yaml`:
+  - `uv lock --check`
   - `ruff-check --fix`
   - `ruff-format`
   - `mypy` (repo-local config in `pyproject.toml`, checking `src` and `test`)
