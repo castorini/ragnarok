@@ -5,11 +5,31 @@ import importlib.util
 import io
 import logging
 import sys
-from typing import Any
+from typing import Any, Protocol
 
 from tqdm import tqdm
 
 from .io import read_json, read_jsonl
+
+
+class GenerationArgs(Protocol):
+    model_path: str
+    prompt_mode: Any
+    context_size: int
+    max_output_tokens: int
+    num_few_shot_examples: int
+    include_reasoning: bool
+    num_gpus: int
+    reasoning_effort: str | None
+    use_azure_openai: bool
+    run_id: str
+    topk: list[int]
+    shuffle_candidates: bool
+    print_prompts_responses: bool
+    vllm_batched: bool
+    output_file: str | None
+
+    def __getattr__(self, name: str) -> Any: ...
 
 
 def _disable_progress(args: object) -> bool:
@@ -44,7 +64,7 @@ def detect_device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def create_generation_agent(args: Any) -> Any:
+def create_generation_agent(args: GenerationArgs) -> Any:
     from ragnarok.generate.llm import PromptMode
 
     prompt_mode = (
@@ -106,24 +126,13 @@ def load_request_records(path: str) -> list[dict[str, Any]]:
     return read_jsonl(path)
 
 
-def run_request_generation(
-    requests: list[Any], args: Any, logger: logging.Logger
-) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    from ragnarok.data import result_to_dict, write_results_jsonl
-    from ragnarok.generate.generator import RAG
+def _serialize_results(
+    results: list[Any], args: GenerationArgs
+) -> list[dict[str, Any]]:
+    from ragnarok.data import result_to_dict
 
-    agent = create_generation_agent(args)
-    rag = RAG(agent=agent, run_id=args.run_id)
     disable = _disable_progress(args)
-    logger.info("Generating %d request(s)", len(requests))
-    results = rag.answer_batch(
-        requests,
-        topk=args.topk[-1],
-        shuffle_candidates=args.shuffle_candidates,
-        logging=args.print_prompts_responses,
-        vllm=args.vllm_batched,
-    )
-    serialized = [
+    return [
         result_to_dict(
             result,
             args.run_id,
@@ -134,20 +143,43 @@ def run_request_generation(
             results, desc="Serializing", file=sys.stderr, disable=disable
         )
     ]
+
+
+def _write_results_if_requested(results: list[Any], args: GenerationArgs) -> None:
+    from ragnarok.data import write_results_jsonl
+
     if args.output_file is not None:
         write_results_jsonl(results, args.output_file, args.run_id)
+
+
+def _build_rag(args: GenerationArgs) -> Any:
+    from ragnarok.generate.generator import RAG
+
+    agent = create_generation_agent(args)
+    return RAG(agent=agent, run_id=args.run_id)
+
+
+def run_request_generation(
+    requests: list[Any], args: GenerationArgs, logger: logging.Logger
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    rag = _build_rag(args)
+    logger.info("Generating %d request(s)", len(requests))
+    results = rag.answer_batch(
+        requests,
+        topk=args.topk[-1],
+        shuffle_candidates=args.shuffle_candidates,
+        logging=args.print_prompts_responses,
+        vllm=args.vllm_batched,
+    )
+    serialized = _serialize_results(results, args)
+    _write_results_if_requested(results, args)
     return serialized, {"generated_records": len(serialized)}
 
 
 async def async_run_request_generation(
-    requests: list[Any], args: Any, logger: logging.Logger
+    requests: list[Any], args: GenerationArgs, logger: logging.Logger
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    from ragnarok.data import result_to_dict, write_results_jsonl
-    from ragnarok.generate.generator import RAG
-
-    agent = create_generation_agent(args)
-    rag = RAG(agent=agent, run_id=args.run_id)
-    disable = _disable_progress(args)
+    rag = _build_rag(args)
     logger.info(
         "Generating %d request(s) with async execution (max_concurrency=%d)",
         len(requests),
@@ -161,19 +193,8 @@ async def async_run_request_generation(
         vllm=args.vllm_batched,
         max_concurrency=getattr(args, "max_concurrency", 8),
     )
-    serialized = [
-        result_to_dict(
-            result,
-            args.run_id,
-            include_trace=getattr(args, "include_trace", False),
-            redact_prompts=getattr(args, "redact_prompts", False),
-        )
-        for result in tqdm(
-            results, desc="Serializing", file=sys.stderr, disable=disable
-        )
-    ]
-    if args.output_file is not None:
-        write_results_jsonl(results, args.output_file, args.run_id)
+    serialized = _serialize_results(results, args)
+    _write_results_if_requested(results, args)
     return serialized, {"generated_records": len(serialized)}
 
 

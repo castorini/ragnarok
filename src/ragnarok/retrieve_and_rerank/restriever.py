@@ -3,10 +3,16 @@ from urllib import parse
 import requests
 
 from ragnarok.data import Candidate, Query, Request
-from ragnarok.retrieve_and_rerank.retriever import RetrievalMethod, RetrievalMode
+from ragnarok.retrieve_and_rerank.retriever import (
+    RetrievalMethod,
+    RetrievalMode,
+    normalize_k,
+    normalize_retrieval_methods,
+    validate_dataset_name,
+)
 
 
-class Restriever:
+class ServiceRetriever:
     def __init__(
         self,
         retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
@@ -22,10 +28,9 @@ class Restriever:
         Raises:
             ValueError: If retrieval mode or retrieval method is invalid or missing.
         """
-        retrieval_method = (
-            [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR]
-            if retrieval_method is None
-            else retrieval_method
+        retrieval_method = normalize_retrieval_methods(
+            retrieval_method,
+            default=[RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR],
         )
         self._retrieval_mode = retrieval_mode
         self._retrieval_method = retrieval_method
@@ -33,12 +38,6 @@ class Restriever:
         if retrieval_mode != RetrievalMode.DATASET:
             raise ValueError(
                 f"{retrieval_mode} is not supported for ServiceRetriever. Only DATASET mode is currently supported."
-            )
-        if not retrieval_method:
-            raise ValueError("Please provide a retrieval method.")
-        if retrieval_method == RetrievalMethod.UNSPECIFIED:
-            raise ValueError(
-                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
             )
 
     @staticmethod
@@ -65,20 +64,14 @@ class Restriever:
         Raises:
             ValueError: If dataset name or retrieval method is invalid or missing.
         """
-        retrieval_method = (
-            [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR]
-            if retrieval_method is None
-            else retrieval_method
+        retrieval_method = normalize_retrieval_methods(
+            retrieval_method,
+            default=[RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR],
         )
-        k = [100, 100] if k is None else k
-        if not dataset_name:
-            raise ValueError("Please provide name of the dataset.")
-        if not isinstance(dataset_name, str):
-            raise ValueError(
-                f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
-            )
+        k = normalize_k(k, default=[100, 100])
+        dataset_name = validate_dataset_name(dataset_name)
 
-        retriever = Restriever(
+        retriever = ServiceRetriever(
             RetrievalMode.DATASET,
             retrieval_method=retrieval_method,
         )
@@ -116,7 +109,7 @@ class Restriever:
         Raises:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
-        k = [20, 10] if k is None else k
+        k = normalize_k(k, default=[20, 10])
         parsed_query = parse.quote(request.query.text)
         (retrieval_method, rerank_method) = self._retrieval_method
 
@@ -153,3 +146,7 @@ class Restriever:
                 f"Failed to retrieve data from RankLLM server. Error code: {response.status_code}"
             )
         return retrieved_results
+
+
+class Restriever(ServiceRetriever):
+    """Backward-compatible alias for the service-backed retriever."""

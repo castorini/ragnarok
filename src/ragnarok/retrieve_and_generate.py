@@ -12,6 +12,8 @@ from ragnarok.retrieve_and_rerank.retriever import (
     RetrievalMethod,
     RetrievalMode,
     Retriever,
+    normalize_k,
+    normalize_retrieval_methods,
 )
 
 
@@ -21,6 +23,105 @@ def _missing_extra(extra_name: str, package_hint: str) -> ImportError:
         f"Install it with `uv sync --extra {extra_name}` or "
         f"`pip install -e '.[{extra_name}]'`."
     )
+
+
+def _build_generation_agent(
+    *,
+    generator_path: str,
+    context_size: int,
+    prompt_mode: PromptMode,
+    max_output_tokens: int,
+    num_few_shot_examples: int,
+    include_reasoning: bool,
+    reasoning_effort: str | None,
+    use_azure_openai: bool,
+    device: str,
+    num_gpus: int,
+):
+    lowered_generator_path = generator_path.lower()
+    if "command-r" in generator_path:
+        try:
+            from ragnarok.generate.cohere import Cohere
+        except ImportError as exc:
+            raise _missing_extra("cloud", "cohere") from exc
+        return Cohere(
+            model=generator_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            max_output_tokens=max_output_tokens,
+            num_few_shot_examples=num_few_shot_examples,
+        )
+    if any(name in lowered_generator_path for name in ("llama", "mistral", "qwen")):
+        try:
+            from ragnarok.generate.os_llm import OSLLM
+        except ImportError as exc:
+            raise _missing_extra(
+                "local", "torch,transformers,fschat,vllm,spacy,stanza"
+            ) from exc
+        return OSLLM(
+            model=generator_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            max_output_tokens=max_output_tokens,
+            num_few_shot_examples=num_few_shot_examples,
+            store_reasoning=include_reasoning,
+            device=device,
+            num_gpus=num_gpus,
+        )
+
+    print("Using Azure OpenAI API" if use_azure_openai else "Using OpenAI API")
+    print(f"Model: {generator_path}")
+    try:
+        from ragnarok.generate.gpt import SafeOpenai
+    except ImportError as exc:
+        raise _missing_extra("cloud", "openai,tiktoken") from exc
+    return SafeOpenai(
+        model=generator_path,
+        context_size=context_size,
+        prompt_mode=prompt_mode,
+        max_output_tokens=max_output_tokens,
+        num_few_shot_examples=num_few_shot_examples,
+        store_reasoning=include_reasoning,
+        reasoning_effort=reasoning_effort,
+        **get_openai_compatible_args(generator_path, use_azure_openai),
+    )
+
+
+def _load_requests(
+    *,
+    dataset: str | list[str] | list[dict[str, Any]],
+    retrieval_mode: RetrievalMode,
+    retrieval_method: list[RetrievalMethod],
+    k: list[int],
+    interactive: bool,
+    query: str,
+    qid: int,
+    host_reranker: str,
+    host_retriever: str,
+) -> list[Request]:
+    if retrieval_mode != RetrievalMode.DATASET:
+        raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
+
+    if interactive:
+        return [
+            Restriever.from_dataset_with_prebuilt_index(
+                dataset_name=dataset,
+                retrieval_method=retrieval_method,
+                host_reranker=host_reranker,
+                host_retriever=host_retriever,
+                request=Request(query=Query(text=query, qid=qid)),
+                k=k,
+            )
+        ]
+
+    requests = Retriever.from_dataset_with_prebuilt_index(
+        dataset_name=dataset,
+        retrieval_method=retrieval_method,
+        k=k,
+        cache_input_format=CacheInputFormat.JSONL,
+    )
+    print()
+    return requests
 
 
 def retrieve_and_generate(
@@ -84,88 +185,38 @@ def retrieve_and_generate(
     Returns:
         dict: The generation results in JSON format specified by the TREC 2024 RAG Track.
     """
-    retrieval_method = (
-        [RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR_RHO]
-        if retrieval_method is None
-        else retrieval_method
+    retrieval_method = normalize_retrieval_methods(
+        retrieval_method,
+        default=[RetrievalMethod.BM25, RetrievalMethod.RANK_ZEPHYR_RHO],
     )
-    k = [100, 20] if k is None else k
+    k = normalize_k(k, default=[100, 20])
 
-    # Construct Generation Agent
-    lowered_generator_path = generator_path.lower()
-    if "command-r" in generator_path:
-        try:
-            from ragnarok.generate.cohere import Cohere
-        except ImportError as exc:
-            raise _missing_extra("cloud", "cohere") from exc
-        agent = Cohere(
-            model=generator_path,
-            context_size=context_size,
-            prompt_mode=prompt_mode,
-            max_output_tokens=max_output_tokens,
-            num_few_shot_examples=num_few_shot_examples,
-        )
-    elif any(name in lowered_generator_path for name in ("llama", "mistral", "qwen")):
-        try:
-            from ragnarok.generate.os_llm import OSLLM
-        except ImportError as exc:
-            raise _missing_extra(
-                "local", "torch,transformers,fschat,vllm,spacy,stanza"
-            ) from exc
-        agent = OSLLM(
-            model=generator_path,
-            context_size=context_size,
-            prompt_mode=prompt_mode,
-            max_output_tokens=max_output_tokens,
-            num_few_shot_examples=num_few_shot_examples,
-            store_reasoning=include_reasoning,
-            device=device,
-            num_gpus=num_gpus,
-        )
-    else:
-        print("Using Azure OpenAI API" if use_azure_openai else "Using OpenAI API")
-        print(f"Model: {generator_path}")
-        try:
-            from ragnarok.generate.gpt import SafeOpenai
-        except ImportError as exc:
-            raise _missing_extra("cloud", "openai,tiktoken") from exc
-        agent = SafeOpenai(
-            model=generator_path,
-            context_size=context_size,
-            prompt_mode=prompt_mode,
-            max_output_tokens=max_output_tokens,
-            num_few_shot_examples=num_few_shot_examples,
-            store_reasoning=include_reasoning,
-            reasoning_effort=reasoning_effort,
-            **get_openai_compatible_args(generator_path, use_azure_openai),
-        )
+    agent = _build_generation_agent(
+        generator_path=generator_path,
+        context_size=context_size,
+        prompt_mode=prompt_mode,
+        max_output_tokens=max_output_tokens,
+        num_few_shot_examples=num_few_shot_examples,
+        include_reasoning=include_reasoning,
+        reasoning_effort=reasoning_effort,
+        use_azure_openai=use_azure_openai,
+        device=device,
+        num_gpus=num_gpus,
+    )
 
     # Retrieve + Rerank
     print("Calling reranker API...")
-    # Only DATASET mode is currently supported.
-    if retrieval_mode == RetrievalMode.DATASET:
-        if interactive:
-            # Calls the host_reranker API to obtain the results after first 2 stages (retrieve+rerank)
-            requests = [
-                Restriever.from_dataset_with_prebuilt_index(
-                    dataset_name=dataset,
-                    retrieval_method=retrieval_method,
-                    host_reranker=host_reranker,
-                    host_retriever=host_retriever,
-                    request=Request(query=Query(text=query, qid=qid)),
-                    k=k,
-                )
-            ]
-        else:
-            requests = Retriever.from_dataset_with_prebuilt_index(
-                dataset_name=dataset,
-                retrieval_method=retrieval_method,
-                k=k,
-                cache_input_format=CacheInputFormat.JSONL,
-            )
-            print()
-    else:
-        raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
+    requests = _load_requests(
+        dataset=dataset,
+        retrieval_mode=retrieval_mode,
+        retrieval_method=retrieval_method,
+        k=k,
+        interactive=interactive,
+        query=query,
+        qid=qid,
+        host_reranker=host_reranker,
+        host_retriever=host_retriever,
+    )
 
     # Generation
     print("Generating...")

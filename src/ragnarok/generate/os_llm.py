@@ -13,7 +13,7 @@ except Exception:
 from transformers.generation import GenerationConfig
 
 from ragnarok.data import RAGExecInfo, Request
-from ragnarok.generate.llm import LLM, PromptMode
+from ragnarok.generate.llm import LLM, SUPPORTED_TEMPLATE_PROMPT_MODES, PromptMode
 from ragnarok.generate.post_processor import GPTPostProcessor
 from ragnarok.generate.templates.ragnarok_templates import RagnarokTemplates
 
@@ -69,16 +69,7 @@ class OSLLM(LLM):
         self._name = model
         if self._device == "cuda":
             assert torch.cuda.is_available()
-        if prompt_mode not in [
-            PromptMode.CHATQA,
-            PromptMode.RAGNAROK_V2,
-            PromptMode.RAGNAROK_V3,
-            PromptMode.RAGNAROK_V4,
-            PromptMode.RAGNAROK_V4_BIOGEN,
-            PromptMode.RAGNAROK_V5_BIOGEN,
-            PromptMode.RAGNAROK_V4_NO_CITE,
-            PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
-        ]:
+        if prompt_mode not in SUPPORTED_TEMPLATE_PROMPT_MODES:
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.CHATQA} prompt."
             )
@@ -183,24 +174,8 @@ class OSLLM(LLM):
         query = request.query.text
         max_length = (self._context_size - 400) // topk
         while True:
-            rank = 0
-            context = []
-            for cand in request.candidates[:topk]:
-                rank += 1
-                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-                context.append(
-                    f"[{rank}] {self._replace_number(content)}",
-                )
-            if self._prompt_mode in [
-                PromptMode.CHATQA,
-                PromptMode.RAGNAROK_V2,
-                PromptMode.RAGNAROK_V3,
-                PromptMode.RAGNAROK_V4,
-                PromptMode.RAGNAROK_V4_BIOGEN,
-                PromptMode.RAGNAROK_V5_BIOGEN,
-                PromptMode.RAGNAROK_V4_NO_CITE,
-                PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
-            ]:
+            context = self.build_ranked_context(request, topk, max_length)
+            if self.supports_template_prompt_mode(self._prompt_mode):
                 ragnarok_template = RagnarokTemplates(self._prompt_mode)
                 messages = ragnarok_template(query, context, self._name)
                 prompt = self._tokenizer.apply_chat_template(

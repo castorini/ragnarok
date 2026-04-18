@@ -46,6 +46,36 @@ class RetrievalMethod(Enum):
         raise ValueError(f"Unknown retrieval method: {value}")
 
 
+def normalize_retrieval_methods(
+    retrieval_method: RetrievalMethod | list[RetrievalMethod] | None,
+    *,
+    default: list[RetrievalMethod],
+) -> list[RetrievalMethod]:
+    methods = default if retrieval_method is None else retrieval_method
+    normalized = methods if isinstance(methods, list) else [methods]
+    if not normalized:
+        raise ValueError("Please provide a retrieval method.")
+    if RetrievalMethod.UNSPECIFIED in normalized:
+        raise ValueError(
+            f"Invalid retrieval method: {normalized}. Please provide a specific retrieval method."
+        )
+    return normalized
+
+
+def validate_dataset_name(dataset_name: str) -> str:
+    if not dataset_name:
+        raise ValueError("Please provide name of the dataset.")
+    if not isinstance(dataset_name, str):
+        raise ValueError(
+            f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
+        )
+    return dataset_name
+
+
+def normalize_k(k: list[int] | None, *, default: list[int]) -> list[int]:
+    return default if k is None else k
+
+
 class Retriever:
     def __init__(
         self,
@@ -59,10 +89,9 @@ class Retriever:
     ) -> None:
         self._retrieval_mode = retrieval_mode
         self._dataset = dataset
-        self._retrieval_method = (
-            retrieval_method
-            if isinstance(retrieval_method, list)
-            else [retrieval_method]
+        self._retrieval_method = normalize_retrieval_methods(
+            retrieval_method,
+            default=[RetrievalMethod.UNSPECIFIED],
         )
         self._query = query
         self._index_path = index_path
@@ -90,19 +119,12 @@ class Retriever:
         Raises:
             ValueError: If dataset name or retrieval method is invalid or missing.
         """
-        k = [100, 20] if k is None else k
-        if not dataset_name:
-            raise ValueError("Please provide name of the dataset.")
-        if not isinstance(dataset_name, str):
-            raise ValueError(
-                f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
-            )
-        if not retrieval_method:
-            raise ValueError("Please provide a retrieval method.")
-        if RetrievalMethod.UNSPECIFIED in retrieval_method:
-            raise ValueError(
-                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
-            )
+        k = normalize_k(k, default=[100, 20])
+        dataset_name = validate_dataset_name(dataset_name)
+        retrieval_method = normalize_retrieval_methods(
+            retrieval_method,
+            default=[RetrievalMethod.BM25],
+        )
         retriever = Retriever(
             RetrievalMode.DATASET,
             dataset=dataset_name,
@@ -125,7 +147,7 @@ class Retriever:
         Raises:
             ValueError: If the retrieval mode is invalid or the format is not as expected.
         """
-        k = [100, 20] if k is None else k
+        k = normalize_k(k, default=[100, 20])
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method[-1].name}/retrieve_results_{self._dataset}_top{k[-1]}.{cache_input_format}"

@@ -49,7 +49,7 @@ class Result:
     query: Query
     references: list[str | int] = field(default_factory=list)
     answer: list[CitedSentence] = field(default_factory=list)
-    rag_exec_summary: RAGExecInfo = None
+    rag_exec_summary: RAGExecInfo | None = None
 
 
 class OutputFormat(Enum):
@@ -103,68 +103,40 @@ def write_results_jsonl(results: list[Result], filename: str, run_id: str) -> No
             file_obj.write("\n")
 
 
-def read_requests_from_file(file_path: str) -> list[Request]:
+def _load_json_records(file_path: str) -> list[dict[str, Any]]:
     extension = file_path.split(".")[-1]
-    if extension == "jsonl":
-        requests = []
-        with open(file_path) as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                requests.append(from_dict(data_class=Request, data=json.loads(line)))
-        return requests
-    elif extension == "json":
-        with open(file_path) as f:
-            request_dicts = json.load(f)
-        return [
-            from_dict(data_class=Request, data=request_dict)
-            for request_dict in request_dicts
-        ]
-    else:
-        raise ValueError(f"Expected json or jsonl file format, got {extension}")
+    with open(file_path, encoding="utf-8") as file_obj:
+        if extension == "jsonl":
+            return [json.loads(line) for line in file_obj if line.strip()]
+        if extension == "json":
+            loaded = json.load(file_obj)
+            return loaded if isinstance(loaded, list) else [loaded]
+    raise ValueError(f"Expected json or jsonl file format, got {extension}")
+
+
+def _result_from_dict(result_dict: dict[str, Any]) -> Result:
+    return Result(
+        query=Query(text=result_dict["topic"], qid=result_dict["topic_id"]),
+        references=result_dict["references"],
+        answer=[
+            CitedSentence(text=sentence["text"], citations=sentence["citations"])
+            for sentence in result_dict["answer"]
+        ],
+        rag_exec_summary=None,
+    )
+
+
+def read_requests_from_file(file_path: str) -> list[Request]:
+    return [
+        from_dict(data_class=Request, data=request_dict)
+        for request_dict in _load_json_records(file_path)
+    ]
 
 
 def read_results_from_file(file_path: str) -> list[Result]:
-    extension = file_path.split(".")[-1]
-    if extension == "jsonl":
-        results = []
-        with open(file_path) as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                result_dict = json.loads(line)
-                result = Result(
-                    query=Query(text=result_dict["topic"], qid=result_dict["topic_id"]),
-                    references=result_dict["references"],
-                    answer=[
-                        CitedSentence(
-                            text=sentence["text"], citations=sentence["citations"]
-                        )
-                        for sentence in result_dict["answer"]
-                    ],
-                    rag_exec_summary=None,
-                )
-                results.append(result)
-        return results
-    elif extension == "json":
-        with open(file_path) as f:
-            result_dicts = json.load(f)
-        return [
-            Result(
-                query=Query(text=result_dict["topic"], qid=result_dict["topic_id"]),
-                references=result_dict["references"],
-                answer=[
-                    CitedSentence(
-                        text=sentence["text"], citations=sentence["citations"]
-                    )
-                    for sentence in result_dict["answer"]
-                ],
-                rag_exec_summary=None,
-            )
-            for result_dict in result_dicts
-        ]
-    else:
-        raise ValueError(f"Expected json or jsonl file format, got {extension}")
+    return [
+        _result_from_dict(result_dict) for result_dict in _load_json_records(file_path)
+    ]
 
 
 def remove_unused_references(result: Result, max_per_sentence: int = 3) -> Result:
@@ -217,7 +189,7 @@ class DataWriter:
                 }
                 f.write(json.dumps(exec_summary) + "\n")
 
-    def _convert_result_to_dict(self, result: Result, run_id: str) -> dict:
+    def _convert_result_to_dict(self, result: Result, run_id: str) -> dict[str, Any]:
         return result_to_dict(result, run_id)
 
     def write_in_json_format(self, filename: str, run_id: str):

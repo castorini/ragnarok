@@ -50,6 +50,11 @@ _MODE_TO_TEMPLATE: dict[str, str] = {
     "ragnarok_v5_biogen_no_cite": "ragnarok_v5_biogen_no_cite",
 }
 
+_NO_CITE_MODES = {
+    PromptMode.RAGNAROK_V4_NO_CITE,
+    PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
+}
+
 
 class RagnarokTemplates:
     def __init__(self, prompt_mode: PromptMode):
@@ -68,30 +73,25 @@ class RagnarokTemplates:
         self.system_message_gpt_no_cite = ref.system_message_no_cite
         self.system_message_chatqa = ref.chatqa_system_message
 
-        self.input_context = "Context: {context}"
-        self.user_input = "{query}"
         self.sep = "\n\n"
-
-        # Load per-mode instruction strings from YAML templates
-        self.instruction_official = (
-            "Please give a full and complete answer for the question."
-        )
-        self.instruction_ragnarok = get_template("chatqa").instruction
-        self.instruction_ragnarok_v2 = get_template("ragnarok_v2").instruction
-        self.instruction_ragnarok_v3 = get_template("ragnarok_v3").instruction
-        self.instruction_ragnarok_v4 = get_template("ragnarok_v4").instruction
-        self.instruction_ragnarok_v4_no_cite = get_template(
-            "ragnarok_v4_no_cite"
-        ).instruction
-        self.instruction_ragnarok_v4_biogen = get_template(
-            "ragnarok_v4_biogen"
-        ).instruction
-        self.instruction_ragnarok_v5_biogen = get_template(
-            "ragnarok_v5_biogen"
-        ).instruction
-        self.instruction_ragnarok_v5_biogen_no_cite = get_template(
-            "ragnarok_v5_biogen_no_cite"
-        ).instruction
+        self._instruction_by_mode = {
+            PromptMode.CHATQA: get_template("chatqa").instruction,
+            PromptMode.RAGNAROK_V2: get_template("ragnarok_v2").instruction,
+            PromptMode.RAGNAROK_V3: get_template("ragnarok_v3").instruction,
+            PromptMode.RAGNAROK_V4: get_template("ragnarok_v4").instruction,
+            PromptMode.RAGNAROK_V4_NO_CITE: get_template(
+                "ragnarok_v4_no_cite"
+            ).instruction,
+            PromptMode.RAGNAROK_V4_BIOGEN: get_template(
+                "ragnarok_v4_biogen"
+            ).instruction,
+            PromptMode.RAGNAROK_V5_BIOGEN: get_template(
+                "ragnarok_v5_biogen"
+            ).instruction,
+            PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE: get_template(
+                "ragnarok_v5_biogen_no_cite"
+            ).instruction,
+        }
 
     @property
     def template(self) -> PromptTemplate | None:
@@ -112,10 +112,7 @@ class RagnarokTemplates:
         str_context = sep.join(context)
         instruction = self.get_instruction()
 
-        if (
-            self.prompt_mode == PromptMode.RAGNAROK_V4_NO_CITE
-            or self.prompt_mode == PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE
-        ):
+        if self.prompt_mode in _NO_CITE_MODES:
             user_input_context = (
                 f"Instruction: {instruction}"
                 + sep
@@ -149,11 +146,7 @@ class RagnarokTemplates:
             messages = []
             system_message = (
                 self.system_message_gpt_no_cite
-                if self.prompt_mode
-                in [
-                    PromptMode.RAGNAROK_V4_NO_CITE,
-                    PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
-                ]
+                if self.prompt_mode in _NO_CITE_MODES
                 else self.system_message_gpt
             )
             messages.append(
@@ -180,20 +173,16 @@ class RagnarokTemplates:
                 instruction=instruction,
             )
         elif "chatqa" in model.lower():
-            prompt = f"{self.system_message_chatqa}{sep}{self.input_context.format(context=str_context)}{sep}User: {user_input_context}"
+            prompt = (
+                f"{self.system_message_chatqa}{sep}Context: {str_context}"
+                f"{sep}User: {user_input_context}"
+            )
         else:
             system_message = (
                 self.system_message_gpt_no_cite
-                if self.prompt_mode
-                in [
-                    PromptMode.RAGNAROK_V4_NO_CITE,
-                    PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
-                ]
+                if self.prompt_mode in _NO_CITE_MODES
                 else self.system_message_gpt
             )
-            # conv.set_system_message(system_message)
-            # conv.append_message(conv.roles[0], user_input_context)
-            # conv.append_message(conv.roles[1], None)
             messages = []
             messages.append(
                 {
@@ -235,19 +224,7 @@ class RagnarokTemplates:
         return self.render(query, context, model).runtime_prompt()
 
     def get_instruction(self) -> str:
-        if self.prompt_mode == PromptMode.RAGNAROK_V2:
-            return self.instruction_ragnarok_v2
-        elif self.prompt_mode == PromptMode.RAGNAROK_V3:
-            return self.instruction_ragnarok_v3
-        elif self.prompt_mode == PromptMode.RAGNAROK_V4:
-            return self.instruction_ragnarok_v4
-        elif self.prompt_mode == PromptMode.RAGNAROK_V4_NO_CITE:
-            return self.instruction_ragnarok_v4_no_cite
-        elif self.prompt_mode == PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE:
-            return self.instruction_ragnarok_v5_biogen_no_cite
-        elif self.prompt_mode == PromptMode.RAGNAROK_V4_BIOGEN:
-            return self.instruction_ragnarok_v4_biogen
-        elif self.prompt_mode == PromptMode.RAGNAROK_V5_BIOGEN:
-            return self.instruction_ragnarok_v5_biogen
-        else:
-            return self.instruction_ragnarok
+        return self._instruction_by_mode.get(
+            self.prompt_mode,
+            self._instruction_by_mode[PromptMode.CHATQA],
+        )

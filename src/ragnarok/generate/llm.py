@@ -26,6 +26,18 @@ class PromptMode(Enum):
         return self.value
 
 
+SUPPORTED_TEMPLATE_PROMPT_MODES = (
+    PromptMode.CHATQA,
+    PromptMode.RAGNAROK_V2,
+    PromptMode.RAGNAROK_V3,
+    PromptMode.RAGNAROK_V4,
+    PromptMode.RAGNAROK_V4_BIOGEN,
+    PromptMode.RAGNAROK_V5_BIOGEN,
+    PromptMode.RAGNAROK_V5_BIOGEN_NO_CITE,
+    PromptMode.RAGNAROK_V4_NO_CITE,
+)
+
+
 class LLM(ABC):
     def __init__(
         self,
@@ -397,12 +409,11 @@ class LLM(ABC):
             reasoning = "\n\n".join(reasoning_blocks)
         return reasoning, fix_text(cleaned_response)
 
-    def _clean_response(self, response: str) -> str:
-        _, cleaned_response = self._extract_reasoning_from_text(response)
-        return cleaned_response
-
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
+
+    def supports_template_prompt_mode(self, prompt_mode: PromptMode) -> bool:
+        return prompt_mode in SUPPORTED_TEMPLATE_PROMPT_MODES
 
     def convert_doc_to_prompt_content(
         self, doc: dict[str, Any], max_length: int
@@ -422,3 +433,15 @@ class LLM(ABC):
         content = content.replace("\n", " ")
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
+
+    def build_ranked_context(
+        self,
+        request: Request,
+        topk: int,
+        max_length: int,
+    ) -> list[str]:
+        context = []
+        for rank, candidate in enumerate(request.candidates[:topk], start=1):
+            content = self.convert_doc_to_prompt_content(candidate.doc, max_length)
+            context.append(f"[{rank}] {self._replace_number(content)}")
+        return context

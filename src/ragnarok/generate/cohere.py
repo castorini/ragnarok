@@ -118,12 +118,10 @@ class Cohere(LLM):
         max_length = (self._context_size - 200) // topk
         self._prompt_mode = PromptMode.COHERE
         while True:
-            rank = 0
-            context = []
-            for cand in request.candidates[:topk]:
-                rank += 1
-                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-                context.append(content)
+            context = [
+                self.convert_doc_to_prompt_content(candidate.doc, max_length)
+                for candidate in request.candidates[:topk]
+            ]
             if self._prompt_mode == PromptMode.COHERE:
                 messages = [{"query": query, "context": context}]
             num_tokens = self.get_num_tokens(messages)
