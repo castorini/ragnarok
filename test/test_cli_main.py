@@ -1688,6 +1688,40 @@ class TestRagnarokCLI(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         cli_main.assert_called_once()
 
+    def test_legacy_run_ragnarok_wrapper_translates_snake_case_flags(self):
+        from ragnarok.scripts.run_ragnarok import cli_compatible_main
+
+        with patch("ragnarok.cli.main.main", return_value=0) as cli_main:
+            exit_code = cli_compatible_main(
+                [
+                    "--model_path=gpt-4o",
+                    "--prompt_mode",
+                    "chatqa",
+                    "--use_azure_openai",
+                    "--num_gpus",
+                    "2",
+                    "--num_few_shot_examples=3",
+                    "--reasoning_effort",
+                    "high",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        cli_main.assert_called_once_with(
+            [
+                "generate",
+                "--model=gpt-4o",
+                "--prompt-mode",
+                "chatqa",
+                "--use-azure-openai",
+                "--num-gpus",
+                "2",
+                "--num-few-shot-examples=3",
+                "--reasoning-effort",
+                "high",
+            ]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
